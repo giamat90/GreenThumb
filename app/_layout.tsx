@@ -1,57 +1,145 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
-import 'react-native-reanimated';
+import { useEffect, useState } from "react";
+import { ActivityIndicator, View } from "react-native";
+import { useFonts } from "expo-font";
+import { Slot, useRouter, useSegments } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import "react-native-reanimated";
+import "../global.css";
 
-import { useColorScheme } from '@/components/useColorScheme';
+import { supabase } from "@/lib/supabase";
+import { useUserStore } from "@/store/user";
+import { COLORS } from "@/constants";
+import type { Profile } from "@/types";
+import type { Session } from "@supabase/supabase-js";
 
-export {
-  // Catch any errors thrown by the Layout component.
-  ErrorBoundary,
-} from 'expo-router';
+export { ErrorBoundary } from "expo-router";
 
-export const unstable_settings = {
-  // Ensure that reloading on `/modal` keeps a back button present.
-  initialRouteName: '(tabs)',
-};
-
-// Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  const [loaded, error] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
+  const [fontsLoaded, fontError] = useFonts({
+    SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
   });
+  const [session, setSession] = useState<Session | null>(null);
+  const [authReady, setAuthReady] = useState(false);
+  const [onboardingDone, setOnboardingDone] = useState<boolean | null>(null);
 
-  // Expo Router uses Error Boundaries to catch errors in the navigation tree.
-  useEffect(() => {
-    if (error) throw error;
-  }, [error]);
+  const { setProfile, clearProfile } = useUserStore();
+  const segments = useSegments();
+  const router = useRouter();
 
+  // Listen for auth state changes
   useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      setSession(currentSession);
+      if (currentSession) {
+        fetchProfile(currentSession.user.id);
+      }
+      setAuthReady(true);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
+      setSession(newSession);
+      if (newSession) {
+        fetchProfile(newSession.user.id);
+        // Check onboarding status on sign in
+        const done = await AsyncStorage.getItem("onboarding_complete");
+        setOnboardingDone(done === "true");
+      } else {
+        clearProfile();
+        setOnboardingDone(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Check onboarding status on initial load
+  useEffect(() => {
+    if (authReady && session) {
+      AsyncStorage.getItem("onboarding_complete").then((val) => {
+        setOnboardingDone(val === "true");
+      });
+    } else if (authReady && !session) {
+      setOnboardingDone(null);
     }
-  }, [loaded]);
+  }, [authReady, session]);
 
-  if (!loaded) {
-    return null;
+  async function fetchProfile(userId: string) {
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .single();
+
+      if (error) throw error;
+      setProfile(data as Profile);
+    } catch {
+      // Profile may not exist yet (trigger hasn't fired or is pending)
+      // Set a minimal profile from auth metadata so the app still works
+      const { data: userData } = await supabase.auth.getUser();
+      const user = userData.user;
+      if (user) {
+        setProfile({
+          id: user.id,
+          display_name:
+            (user.user_metadata?.display_name as string) ??
+            user.email?.split("@")[0] ??
+            null,
+          avatar_url: null,
+          subscription: "free",
+          timezone: null,
+          city: null,
+          lat: null,
+          lng: null,
+          created_at: new Date().toISOString(),
+        });
+      }
+    }
   }
 
-  return <RootLayoutNav />;
-}
+  // Redirect based on auth + onboarding state
+  useEffect(() => {
+    if (!authReady || !fontsLoaded) return;
+    // Wait until onboarding status is resolved for signed-in users
+    if (session && onboardingDone === null) return;
 
-function RootLayoutNav() {
-  const colorScheme = useColorScheme();
+    const inAuthGroup = segments[0] === "(auth)";
+    const onOnboarding = segments[1] === "onboarding";
 
-  return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-      </Stack>
-    </ThemeProvider>
-  );
+    if (!session && !inAuthGroup) {
+      // Not signed in — go to login
+      router.replace("/(auth)/login");
+    } else if (session && onboardingDone === false && !onOnboarding) {
+      // Signed in, onboarding not done — go to onboarding
+      router.replace("/(auth)/onboarding");
+    } else if (session && onboardingDone !== false && inAuthGroup) {
+      // Signed in, onboarding done (or skipped), still on auth screen — go to tabs
+      router.replace("/(tabs)");
+    }
+  }, [session, authReady, fontsLoaded, segments, onboardingDone]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (fontError) throw fontError;
+  }, [fontError]);
+
+  useEffect(() => {
+    if (fontsLoaded && authReady) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded, authReady]);
+
+  if (!fontsLoaded || !authReady) {
+    return (
+      <View className="flex-1 items-center justify-center bg-cream">
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </View>
+    );
+  }
+
+  return <Slot />;
 }
