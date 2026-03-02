@@ -1,6 +1,57 @@
 import { Tabs } from "expo-router";
-import { Home, User } from "lucide-react-native";
+import { Home, Leaf, Camera, CalendarDays, User } from "lucide-react-native";
+import { TouchableOpacity, View, type GestureResponderEvent } from "react-native";
 import { COLORS } from "@/constants";
+
+// ─── Custom center tab button for the Identify CTA ────────────────────────────
+
+interface IdentifyTabButtonProps {
+  onPress?: (e: GestureResponderEvent) => void;
+  onLongPress?: (e: GestureResponderEvent) => void;
+  children?: React.ReactNode;
+}
+
+/**
+ * Raised circular green button that sits above the tab bar.
+ * This is the primary CTA of the app — it must stand out visually.
+ */
+function IdentifyTabButton({ onPress }: IdentifyTabButtonProps) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      accessibilityLabel="Identify a plant with your camera"
+      accessibilityRole="button"
+      style={{
+        flex: 1,
+        alignItems: "center",
+        justifyContent: "center",
+        // Raise the button above the tab bar to create the "floating" effect
+        marginTop: -22,
+      }}
+    >
+      <View
+        style={{
+          width: 62,
+          height: 62,
+          borderRadius: 31,
+          backgroundColor: COLORS.primary,
+          alignItems: "center",
+          justifyContent: "center",
+          // Subtle shadow matching the primary green for depth
+          shadowColor: COLORS.primary,
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.4,
+          shadowRadius: 8,
+          elevation: 8,
+        }}
+      >
+        <Camera size={26} color="white" />
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+// ─── Tab layout ───────────────────────────────────────────────────────────────
 
 export default function TabLayout() {
   return (
@@ -10,9 +61,12 @@ export default function TabLayout() {
         tabBarInactiveTintColor: COLORS.textSecondary,
         headerShown: false,
         tabBarStyle: {
-          borderTopWidth: 0,
+          borderTopWidth: 1,
+          borderTopColor: "#EFEFEF",
           elevation: 0,
           shadowOpacity: 0,
+          height: 62,
+          paddingBottom: 6,
         },
       }}
     >
@@ -23,6 +77,34 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => <Home size={size} color={color} />,
         }}
       />
+
+      <Tabs.Screen
+        name="my-plants"
+        options={{
+          title: "My Plants",
+          tabBarIcon: ({ color, size }) => <Leaf size={size} color={color} />,
+        }}
+      />
+
+      {/* Identify — special center button, no icon/label from the default renderer */}
+      <Tabs.Screen
+        name="identify"
+        options={{
+          title: "Identify",
+          tabBarButton: (props) => <IdentifyTabButton {...props} />,
+        }}
+      />
+
+      <Tabs.Screen
+        name="calendar"
+        options={{
+          title: "Calendar",
+          tabBarIcon: ({ color, size }) => (
+            <CalendarDays size={size} color={color} />
+          ),
+        }}
+      />
+
       <Tabs.Screen
         name="profile"
         options={{
