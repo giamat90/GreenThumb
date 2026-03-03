@@ -200,7 +200,7 @@ Pro pricing: **$4.99/month** or **$34.99/year**
 - [x] Authentication (login, signup, onboarding)
 - [x] Plant identification (camera → AI → save)
 - [x] Supabase Storage for plant photos
-- [ ] My Plants dashboard
+- [x] My Plants dashboard
 - [ ] Watering scheduler with weather integration
 - [ ] Push notifications
 - [ ] Disease diagnosis (Claude vision)
