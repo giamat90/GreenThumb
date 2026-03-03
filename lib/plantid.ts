@@ -33,14 +33,15 @@ export async function identifyPlant(
     throw new Error("You must be logged in to identify plants.");
   }
 
+  const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? "";
   const edgeFunctionUrl = `${CONFIG.supabaseUrl}/functions/v1/identify-plant`;
 
   const response = await fetch(edgeFunctionUrl, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${session.access_token}`,
-      apikey: CONFIG.supabaseAnonKey,
+      apikey: anonKey,
+      Authorization: `Bearer ${anonKey}`,
     },
     body: JSON.stringify({ image: base64Image }),
   });

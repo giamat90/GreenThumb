@@ -136,35 +136,24 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
 
     // Call Plant.id v3 identification endpoint
+    console.log("Calling Plant.id with key:", Deno.env.get("PLANT_ID_API_KEY")?.substring(0, 8) + "...");
     const plantIdResponse = await fetch(
-      "https://api.plant.id/v3/identification",
+      "https://api.plant.id/v3/identification?details=common_names,watering,best_light_condition&classification_level=species",
       {
         method: "POST",
         headers: {
           "Api-Key": apiKey,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          images: [body.image],
-          similar_images: false,
-          classification_level: "species",
-          details: [
-            "common_names",
-            "watering",
-            "best_light_condition",
-            "best_soil_type_url",
-            "toxicity",
-          ],
-        }),
+        body: JSON.stringify({ images: [body.image] }),
       }
     );
 
+    console.log("Plant.id response status:", plantIdResponse.status);
+
     if (!plantIdResponse.ok) {
-      const errorText = await plantIdResponse.text();
-      console.error(
-        `Plant.id API error ${plantIdResponse.status}:`,
-        errorText
-      );
+      const errorBody = await plantIdResponse.text();
+      console.error("Plant.id error body:", errorBody);
       return new Response(
         JSON.stringify({ error: "Plant identification service unavailable" }),
         {
@@ -206,7 +195,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error("Unexpected error in identify-plant function:", error);
+    console.error("Function error:", (error as Error).message, (error as Error).stack);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       {

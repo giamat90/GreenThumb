@@ -40,7 +40,16 @@ import type { IdentificationResult, PlantSuggestion } from "@/lib/plantid";
 import { usePlantsStore } from "@/store/plants";
 import { useUserStore } from "@/store/user";
 import { supabase } from "@/lib/supabase";
+import * as FileSystem from "expo-file-system/legacy";
 import type { PlantLocation, PotSize, Plant } from "@/types";
+
+function generateUUID(): string {
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const VIEWFINDER_SIZE = Math.floor(SCREEN_WIDTH * 0.75);
@@ -332,25 +341,41 @@ export default function IdentifyScreen() {
     if (!topSuggestion) return;
 
     setIsSaving(true);
+    console.log("Supabase URL:", process.env.EXPO_PUBLIC_SUPABASE_URL);
     try {
-      const plantId = crypto.randomUUID();
+      const plantId = generateUUID();
       const filePath = `${profile.id}/${plantId}.jpg`;
 
       // Upload photo to Supabase Storage
-      const imageResponse = await fetch(capturedUri);
-      const blob = await imageResponse.blob();
+      let photoUrl: string;
+      try {
+        console.log("Starting photo upload...");
+        console.log("Storage bucket: plant-photos");
+        console.log("Upload path:", filePath);
 
-      const { error: uploadError } = await supabase.storage
-        .from("plant-photos")
-        .upload(filePath, blob, { contentType: "image/jpeg" });
+        const base64 = await FileSystem.readAsStringAsync(capturedUri, {
+          encoding: "base64",
+        });
+        const binaryString = atob(base64);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
 
-      if (uploadError) throw uploadError;
+        const { error: uploadError } = await supabase.storage
+          .from("plant-photos")
+          .upload(filePath, bytes, { contentType: "image/jpeg", upsert: false });
 
-      const { data: urlData } = supabase.storage
-        .from("plant-photos")
-        .getPublicUrl(filePath);
+        if (uploadError) throw uploadError;
 
-      const photoUrl = urlData.publicUrl;
+        const { data: urlData } = supabase.storage
+          .from("plant-photos")
+          .getPublicUrl(filePath);
+        photoUrl = urlData.publicUrl;
+      } catch (error) {
+        console.error("Photo upload failed:", (error as Error).message);
+        throw error;
+      }
 
       // Calculate next watering from care profile
       const nextWatering = calculateNextWatering(
@@ -383,13 +408,22 @@ export default function IdentifyScreen() {
         notes: null,
       };
 
-      const { data: savedPlant, error: insertError } = await supabase
-        .from("plants")
-        .insert(newPlantData)
-        .select()
-        .single();
+      // Insert plant row into database
+      let savedPlant: unknown;
+      try {
+        console.log("Starting database insert...");
+        const { data, error: insertError } = await supabase
+          .from("plants")
+          .insert(newPlantData)
+          .select()
+          .single();
 
-      if (insertError) throw insertError;
+        if (insertError) throw insertError;
+        savedPlant = data;
+      } catch (error) {
+        console.error("Database insert failed:", (error as Error).message);
+        throw error;
+      }
 
       addPlant(savedPlant as Plant);
       closeAddModal();
