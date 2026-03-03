@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useEffect } from "react";
+import React, { useCallback, useRef, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -9,14 +9,16 @@ import {
   TouchableOpacity,
   RefreshControl,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { SlidersHorizontal, Droplets, Heart, Leaf } from "lucide-react-native";
+import { SlidersHorizontal, Droplets, Heart, Leaf, X } from "lucide-react-native";
 
 import { COLORS } from "@/constants";
 import { usePlants } from "@/hooks/usePlants";
 import { usePlantsStore } from "@/store/plants";
 import { useUserStore } from "@/store/user";
+import { useWeather } from "@/hooks/useWeather";
 import { supabase } from "@/lib/supabase";
 import { PlantCard } from "@/components/plants/PlantCard";
 import { EmptyPlants } from "@/components/plants/EmptyPlants";
@@ -105,12 +107,36 @@ function StatPill({
 
 // ─── Main screen ─────────────────────────────────────────────────────────────
 
+const BANNER_DISMISS_KEY = `weather_banner_dismissed_${new Date().toISOString().slice(0, 10)}`;
+
 export default function MyPlantsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { profile } = useUserStore();
   const { updatePlant } = usePlantsStore();
   const { plants, isLoading, refetch } = usePlants();
+  const { weather } = useWeather();
+  const [bannerVisible, setBannerVisible] = useState(false);
+
+  // Show banner when weather has adjusted schedules (rain or extreme temp) and not dismissed today
+  useEffect(() => {
+    if (!weather) return;
+    const hasOutdoorPlants = plants.some((p) => p.location === "outdoor" || p.location === "balcony");
+    const weatherIsSignificant =
+      (weather.rainExpected && weather.rainAmountMm > 2) ||
+      weather.temperature > 32 ||
+      weather.temperature < 5;
+    if (!hasOutdoorPlants || !weatherIsSignificant) return;
+
+    AsyncStorage.getItem(BANNER_DISMISS_KEY).then((val) => {
+      if (val !== "dismissed") setBannerVisible(true);
+    });
+  }, [weather, plants]);
+
+  const dismissBanner = useCallback(async () => {
+    await AsyncStorage.setItem(BANNER_DISMISS_KEY, "dismissed");
+    setBannerVisible(false);
+  }, []);
 
   // Summary stats
   const needsWaterCount = plants.filter(
@@ -204,6 +230,18 @@ export default function MyPlantsScreen() {
           <SlidersHorizontal size={20} color={COLORS.primary} />
         </TouchableOpacity>
       </View>
+
+      {/* Weather adjustment banner */}
+      {bannerVisible && weather && (
+        <View style={styles.weatherBanner}>
+          <Text style={styles.weatherBannerText}>
+            ☔ Watering adjusted for {weather.city} weather
+          </Text>
+          <TouchableOpacity onPress={dismissBanner} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <X size={16} color="#1D4ED8" />
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Summary bar — only shown when there are plants */}
       {plants.length > 0 && !isLoading && (
@@ -370,5 +408,24 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     backgroundColor: "#E5E7EB",
     marginLeft: 8,
+  },
+  // ── Weather banner ───────────────────────────────────────────────────────────
+  weatherBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#DBEAFE",
+    marginHorizontal: 20,
+    marginBottom: 10,
+    borderRadius: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+  },
+  weatherBannerText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#1D4ED8",
+    marginRight: 8,
   },
 });
