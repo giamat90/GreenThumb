@@ -363,6 +363,7 @@ function PlantDetailScreen() {
         <TouchableOpacity
           style={styles.actionButtonSecondary}
           activeOpacity={0.8}
+          onPress={() => Alert.alert("Coming Soon 🔬", "AI disease diagnosis is coming in the next update!", [{ text: "OK" }])}
         >
           <FlaskConical size={18} color={COLORS.primary} />
           <Text style={styles.actionButtonSecondaryText}>Diagnose Health 🔬</Text>
