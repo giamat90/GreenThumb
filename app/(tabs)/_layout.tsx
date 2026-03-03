@@ -1,24 +1,23 @@
-import { Tabs } from "expo-router";
+import { Tabs, useRouter } from "expo-router";
 import { Home, Leaf, Camera, CalendarDays, User } from "lucide-react-native";
-import { TouchableOpacity, View, type GestureResponderEvent } from "react-native";
+import { TouchableOpacity, View } from "react-native";
 import { COLORS } from "@/constants";
 
 // ─── Custom center tab button for the Identify CTA ────────────────────────────
 
-interface IdentifyTabButtonProps {
-  onPress?: (e: GestureResponderEvent) => void;
-  onLongPress?: (e: GestureResponderEvent) => void;
-  children?: React.ReactNode;
-}
-
 /**
  * Raised circular green button that sits above the tab bar.
- * This is the primary CTA of the app — it must stand out visually.
+ * Uses its own useRouter call instead of React Navigation's props-provided
+ * onPress, so it is fully decoupled from the tab navigator's internal state.
+ * This prevents the "Cannot read property 'stale' of undefined" crash that
+ * occurs when the tab bar re-renders during an Android back-gesture animation
+ * and React Navigation's onPress callback tries to read transitional state.
  */
-function IdentifyTabButton({ onPress }: IdentifyTabButtonProps) {
+function IdentifyTabButton() {
+  const router = useRouter();
   return (
     <TouchableOpacity
-      onPress={onPress}
+      onPress={() => router.push("/(tabs)/identify")}
       accessibilityLabel="Identify a plant with your camera"
       accessibilityRole="button"
       style={{
@@ -91,7 +90,7 @@ export default function TabLayout() {
         name="identify"
         options={{
           title: "Identify",
-          tabBarButton: (props) => <IdentifyTabButton {...props} />,
+          tabBarButton: () => <IdentifyTabButton />,
         }}
       />
 

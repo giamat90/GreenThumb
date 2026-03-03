@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -9,7 +9,8 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from "react-native";
-import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { Stack, useLocalSearchParams, useFocusEffect } from "expo-router";
+import { useNavigation } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   ArrowLeft,
@@ -24,7 +25,7 @@ import { COLORS } from "@/constants";
 import { supabase } from "@/lib/supabase";
 import { usePlantsStore } from "@/store/plants";
 import { useUserStore } from "@/store/user";
-import type { Plant, WateringEvent } from "@/types";
+import type { WateringEvent } from "@/types";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -97,11 +98,39 @@ function CareTile({
   );
 }
 
+// ─── Error boundary ───────────────────────────────────────────────────────────
+
+interface ErrorBoundaryState { hasError: boolean }
+
+class PlantDetailErrorBoundary extends React.Component<
+  React.PropsWithChildren<{ onBack: () => void }>,
+  ErrorBoundaryState
+> {
+  constructor(props: React.PropsWithChildren<{ onBack: () => void }>) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() { return { hasError: true }; }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#F8F9FA" }}>
+          <Text style={{ fontSize: 16, color: "#6B7280", marginBottom: 16 }}>Something went wrong</Text>
+          <TouchableOpacity onPress={this.props.onBack}>
+            <Text style={{ fontSize: 16, color: "#2D6A4F", fontWeight: "600" }}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
-export default function PlantDetailScreen() {
+function PlantDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const router = useRouter();
+  const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { profile } = useUserStore();
   const { plants, updatePlant } = usePlantsStore();
@@ -112,21 +141,34 @@ export default function PlantDetailScreen() {
   const [historyLoading, setHistoryLoading] = useState(true);
   const [isWatering, setIsWatering] = useState(false);
 
-  // Fetch last 5 watering events
-  useEffect(() => {
-    if (!id) return;
-    (async () => {
-      setHistoryLoading(true);
-      const { data } = await supabase
-        .from("watering_events")
-        .select("*")
-        .eq("plant_id", id)
-        .order("watered_at", { ascending: false })
-        .limit(5);
-      setWateringHistory((data ?? []) as WateringEvent[]);
-      setHistoryLoading(false);
-    })();
-  }, [id]);
+  // Fetch last 5 watering events — useFocusEffect ties the lifecycle to
+  // screen focus so the isActive flag is set to false before navigation
+  // state is torn down, preventing the 'stale' crash on Android back gesture.
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
+
+      const fetchHistory = async () => {
+        if (!id) return;
+        setHistoryLoading(true);
+        const { data } = await supabase
+          .from("watering_events")
+          .select("*")
+          .eq("plant_id", id)
+          .order("watered_at", { ascending: false })
+          .limit(5);
+        if (!isActive) return;
+        setWateringHistory((data ?? []) as WateringEvent[]);
+        setHistoryLoading(false);
+      };
+
+      fetchHistory();
+
+      return () => {
+        isActive = false;
+      };
+    }, [id])
+  );
 
   // Water now action
   const handleWaterNow = useCallback(async () => {
@@ -191,7 +233,7 @@ export default function PlantDetailScreen() {
       <View style={styles.notFound}>
         <Stack.Screen options={{ headerShown: false }} />
         <Text style={styles.notFoundText}>Plant not found.</Text>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={styles.backLink}>← Go back</Text>
         </TouchableOpacity>
       </View>
@@ -233,7 +275,7 @@ export default function PlantDetailScreen() {
           {/* Back button */}
           <TouchableOpacity
             style={[styles.backButton, { top: insets.top + 12 }]}
-            onPress={() => router.back()}
+            onPress={() => navigation.goBack()}
           >
             <ArrowLeft size={20} color="#fff" />
           </TouchableOpacity>
@@ -343,6 +385,15 @@ export default function PlantDetailScreen() {
         </TouchableOpacity>
       </View>
     </View>
+  );
+}
+
+export default function PlantDetailScreenWrapper() {
+  const navigation = useNavigation();
+  return (
+    <PlantDetailErrorBoundary onBack={() => navigation.goBack()}>
+      <PlantDetailScreen />
+    </PlantDetailErrorBoundary>
   );
 }
 

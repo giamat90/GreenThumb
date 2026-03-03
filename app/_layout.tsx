@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { useFonts } from "expo-font";
-import { Slot, useRouter, useSegments } from "expo-router";
+import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import "react-native-reanimated";
@@ -141,5 +141,17 @@ export default function RootLayout() {
     );
   }
 
-  return <Slot />;
+  // Use an explicit Stack (not Slot) so that plant/[id] is registered as a
+  // named root-level screen that sits ABOVE the tab navigator. With <Slot />,
+  // Expo Router's automatic hierarchy can still tie plant/[id] to the tab
+  // navigator's state, causing the "Cannot read property 'stale' of undefined"
+  // crash when the Android back gesture fires during the tab transition.
+  return (
+    <Stack>
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+      <Stack.Screen name="plant/[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="paywall" options={{ headerShown: false }} />
+    </Stack>
+  );
 }
