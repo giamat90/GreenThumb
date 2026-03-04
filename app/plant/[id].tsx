@@ -19,11 +19,13 @@ import {
   Leaf,
   Calendar,
   FlaskConical,
+  Trash2,
 } from "lucide-react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { COLORS } from "@/constants";
 import { supabase } from "@/lib/supabase";
-import { rescheduleReminderForPlant } from "@/lib/notifications";
+import { rescheduleReminderForPlant, cancelWateringReminder } from "@/lib/notifications";
 import { usePlantsStore } from "@/store/plants";
 import { useUserStore } from "@/store/user";
 import type { WateringEvent, Diagnosis } from "@/types";
@@ -135,13 +137,14 @@ function PlantDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { profile } = useUserStore();
-  const { plants, updatePlant } = usePlantsStore();
+  const { plants, updatePlant, removePlant } = usePlantsStore();
 
   const plant = plants.find((p) => p.id === id) ?? null;
 
   const [wateringHistory, setWateringHistory] = useState<WateringEvent[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
   const [isWatering, setIsWatering] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [diagnosisHistory, setDiagnosisHistory] = useState<Diagnosis[]>([]);
   const [diagnosisLoading, setDiagnosisLoading] = useState(true);
 
@@ -257,6 +260,70 @@ function PlantDetailScreen() {
     }
   }, [plant, profile, updatePlant]);
 
+  // ── Delete plant ──────────────────────────────────────────────────────────
+
+  const confirmDelete = useCallback(() => {
+    if (!plant) return;
+    Alert.alert(
+      "Delete Plant",
+      `Are you sure you want to delete ${plant.name}? This cannot be undone.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Delete", style: "destructive", onPress: handleDelete },
+      ]
+    );
+  }, [plant]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleDelete = useCallback(async () => {
+    if (!plant || !profile) return;
+    setIsDeleting(true);
+    try {
+      // 1. Delete from database (cascade deletes watering_events + diagnoses)
+      const { error: dbError } = await supabase
+        .from("plants")
+        .delete()
+        .eq("id", plant.id)
+        .eq("user_id", profile.id);
+      if (dbError) throw dbError;
+
+      // 2. Delete photo from storage (best-effort — ignore 404s)
+      await supabase.storage
+        .from("plant-photos")
+        .remove([`${profile.id}/${plant.id}.jpg`]);
+
+      // 3. Cancel scheduled notification for this plant
+      try {
+        const raw = await AsyncStorage.getItem("notification_ids");
+        const idMap: Record<string, string> = raw ? JSON.parse(raw) : {};
+        const notifId = idMap[plant.id];
+        if (notifId) {
+          await cancelWateringReminder(notifId);
+          delete idMap[plant.id];
+          await AsyncStorage.setItem("notification_ids", JSON.stringify(idMap));
+        }
+      } catch {
+        // Non-fatal — notification cleanup is best-effort
+      }
+
+      // 4. Remove from Zustand store
+      removePlant(plant.id);
+
+      // 5. Navigate back, then show confirmation
+      navigation.goBack();
+      // Small delay so the alert appears after navigation settles
+      setTimeout(() => {
+        Alert.alert("", `🗑️ ${plant.name} deleted`);
+      }, 400);
+    } catch (err) {
+      Alert.alert(
+        "Error",
+        err instanceof Error ? err.message : "Failed to delete plant."
+      );
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [plant, profile, removePlant, navigation]);
+
   // ── Render ────────────────────────────────────────────────────────────────
 
   if (!plant) {
@@ -307,8 +374,25 @@ function PlantDetailScreen() {
           <TouchableOpacity
             style={[styles.backButton, { top: insets.top + 12 }]}
             onPress={() => navigation.goBack()}
+            accessibilityLabel="Go back"
+            accessibilityRole="button"
           >
             <ArrowLeft size={20} color="#fff" />
+          </TouchableOpacity>
+
+          {/* Delete button */}
+          <TouchableOpacity
+            style={[styles.deleteButton, { top: insets.top + 12 }]}
+            onPress={confirmDelete}
+            disabled={isDeleting}
+            accessibilityLabel={`Delete ${plant.name}`}
+            accessibilityRole="button"
+          >
+            {isDeleting ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Trash2 size={18} color="#fff" />
+            )}
           </TouchableOpacity>
 
           {/* Name overlay */}
@@ -512,6 +596,16 @@ const styles = StyleSheet.create({
   backButton: {
     position: "absolute",
     left: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  deleteButton: {
+    position: "absolute",
+    right: 16,
     width: 40,
     height: 40,
     borderRadius: 20,
