@@ -9,7 +9,7 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from "react-native";
-import { Stack, useLocalSearchParams, useFocusEffect } from "expo-router";
+import { Stack, useLocalSearchParams, useFocusEffect, useRouter } from "expo-router";
 import { useNavigation } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
@@ -26,7 +26,7 @@ import { supabase } from "@/lib/supabase";
 import { rescheduleReminderForPlant } from "@/lib/notifications";
 import { usePlantsStore } from "@/store/plants";
 import { useUserStore } from "@/store/user";
-import type { WateringEvent } from "@/types";
+import type { WateringEvent, Diagnosis } from "@/types";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -132,6 +132,7 @@ class PlantDetailErrorBoundary extends React.Component<
 function PlantDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const navigation = useNavigation();
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const { profile } = useUserStore();
   const { plants, updatePlant } = usePlantsStore();
@@ -141,6 +142,8 @@ function PlantDetailScreen() {
   const [wateringHistory, setWateringHistory] = useState<WateringEvent[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
   const [isWatering, setIsWatering] = useState(false);
+  const [diagnosisHistory, setDiagnosisHistory] = useState<Diagnosis[]>([]);
+  const [diagnosisLoading, setDiagnosisLoading] = useState(true);
 
   // Fetch last 5 watering events — useFocusEffect ties the lifecycle to
   // screen focus so the isActive flag is set to false before navigation
@@ -152,15 +155,29 @@ function PlantDetailScreen() {
       const fetchHistory = async () => {
         if (!id) return;
         setHistoryLoading(true);
-        const { data } = await supabase
-          .from("watering_events")
-          .select("*")
-          .eq("plant_id", id)
-          .order("watered_at", { ascending: false })
-          .limit(5);
+        setDiagnosisLoading(true);
+
+        // Fetch both watering events and diagnosis history in parallel
+        const [wateringResult, diagnosisResult] = await Promise.all([
+          supabase
+            .from("watering_events")
+            .select("*")
+            .eq("plant_id", id)
+            .order("watered_at", { ascending: false })
+            .limit(5),
+          supabase
+            .from("diagnoses")
+            .select("*")
+            .eq("plant_id", id)
+            .order("created_at", { ascending: false })
+            .limit(3),
+        ]);
+
         if (!isActive) return;
-        setWateringHistory((data ?? []) as WateringEvent[]);
+        setWateringHistory((wateringResult.data ?? []) as WateringEvent[]);
+        setDiagnosisHistory((diagnosisResult.data ?? []) as Diagnosis[]);
         setHistoryLoading(false);
+        setDiagnosisLoading(false);
       };
 
       fetchHistory();
@@ -365,6 +382,36 @@ function PlantDetailScreen() {
             ))
           )}
         </View>
+
+        {/* ── Diagnosis history ─────────────────────────────────────────────── */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Diagnosis History</Text>
+          {diagnosisLoading ? (
+            <ActivityIndicator color={COLORS.secondary} style={{ marginTop: 12 }} />
+          ) : diagnosisHistory.length === 0 ? (
+            <Text style={styles.historyEmpty}>
+              No diagnoses yet — tap Diagnose Health to get started
+            </Text>
+          ) : (
+            diagnosisHistory.map((d) => {
+              const result = d.result as { condition?: string } | null;
+              const severityEmoji =
+                d.severity === "healthy" ? "✅" :
+                d.severity === "warning" ? "⚠️" : "🚨";
+              return (
+                <View key={d.id} style={styles.historyRow}>
+                  <View style={styles.historyIconWrap}>
+                    <Text style={{ fontSize: 14 }}>{severityEmoji}</Text>
+                  </View>
+                  <Text style={styles.historyLabel}>
+                    {result?.condition ?? d.severity}
+                  </Text>
+                  <Text style={styles.historyDate}>{timeAgo(d.created_at)}</Text>
+                </View>
+              );
+            })
+          )}
+        </View>
       </ScrollView>
 
       {/* ── Fixed action buttons ─────────────────────────────────────────── */}
@@ -377,7 +424,7 @@ function PlantDetailScreen() {
         <TouchableOpacity
           style={styles.actionButtonSecondary}
           activeOpacity={0.8}
-          onPress={() => Alert.alert("Coming Soon 🔬", "AI disease diagnosis is coming in the next update!", [{ text: "OK" }])}
+          onPress={() => router.push(`/diagnosis/${plant.id}`)}
         >
           <FlaskConical size={18} color={COLORS.primary} />
           <Text style={styles.actionButtonSecondaryText}>Diagnose Health 🔬</Text>
