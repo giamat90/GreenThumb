@@ -181,7 +181,7 @@ export default function RootLayout() {
     });
 
     return () => {
-      listener.remove();
+      try { listener?.remove(); } catch {}
     };
   }, [authReady, session]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -220,7 +220,7 @@ export default function RootLayout() {
       });
 
     return () => {
-      notificationResponseListener.current?.remove();
+      try { notificationResponseListener.current?.remove(); } catch {}
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -233,7 +233,9 @@ export default function RootLayout() {
         });
       }
     });
-    return () => subscription.remove();
+    return () => {
+      try { subscription?.remove(); } catch {}
+    };
   }, []);
 
   if (!fontsLoaded || !authReady) {
