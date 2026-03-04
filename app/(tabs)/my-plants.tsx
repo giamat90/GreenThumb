@@ -20,6 +20,7 @@ import { usePlantsStore } from "@/store/plants";
 import { useUserStore } from "@/store/user";
 import { useWeather } from "@/hooks/useWeather";
 import { supabase } from "@/lib/supabase";
+import { rescheduleReminderForPlant } from "@/lib/notifications";
 import { PlantCard } from "@/components/plants/PlantCard";
 import { EmptyPlants } from "@/components/plants/EmptyPlants";
 import type { PlantWithStatus } from "@/hooks/usePlants";
@@ -187,6 +188,24 @@ export default function MyPlantsScreen() {
                   next_watering: nextWatering,
                   health_score: newHealth,
                 });
+
+                // Reschedule the watering reminder for the updated date
+                const updatedPlant = {
+                  ...plant,
+                  last_watered_at: now,
+                  next_watering: nextWatering,
+                  health_score: newHealth,
+                };
+                rescheduleReminderForPlant(updatedPlant).catch(console.warn);
+
+                const nextDate = new Date(nextWatering).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                });
+                Alert.alert(
+                  "✅ Watered!",
+                  `Next reminder set for ${nextDate}.`
+                );
               } catch (err) {
                 Alert.alert(
                   "Error",

@@ -23,6 +23,7 @@ import {
 
 import { COLORS } from "@/constants";
 import { supabase } from "@/lib/supabase";
+import { rescheduleReminderForPlant } from "@/lib/notifications";
 import { usePlantsStore } from "@/store/plants";
 import { useUserStore } from "@/store/user";
 import type { WateringEvent } from "@/types";
@@ -202,6 +203,15 @@ function PlantDetailScreen() {
         health_score: newHealth,
       });
 
+      // Reschedule the watering reminder for the new next_watering date
+      const updatedPlant = {
+        ...plant,
+        last_watered_at: now,
+        next_watering: nextWatering,
+        health_score: newHealth,
+      };
+      rescheduleReminderForPlant(updatedPlant).catch(console.warn);
+
       // Prepend the new event to local history
       setWateringHistory((prev) => [
         {
@@ -215,7 +225,11 @@ function PlantDetailScreen() {
         ...prev.slice(0, 4),
       ]);
 
-      Alert.alert("Watered! 💧", `${plant.name} has been watered.`);
+      const nextDate = new Date(nextWatering).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      });
+      Alert.alert("✅ Watered!", `Next reminder set for ${nextDate}.`);
     } catch (err) {
       Alert.alert(
         "Error",
