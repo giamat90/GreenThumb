@@ -17,7 +17,7 @@ import {
   Image,
 } from "react-native";
 import { CameraView } from "expo-camera";
-import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { Stack, useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import { useNavigation } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ArrowLeft, RefreshCw } from "lucide-react-native";
@@ -29,7 +29,6 @@ import { compressImage } from "@/lib/imageUtils";
 import { supabase } from "@/lib/supabase";
 import { usePlantsStore } from "@/store/plants";
 import { useUserStore } from "@/store/user";
-import { useProGate } from "@/hooks/useProGate";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -121,18 +120,25 @@ export default function DiagnosisScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
 
-  const { checkGate, showPaywall } = useProGate();
   const { plants, updatePlant } = usePlantsStore();
-  const { profile } = useUserStore();
+  const { profile, subscription } = useUserStore();
+  const isPro = subscription === "pro";
   const plant = plants.find((p) => p.id === plantId) ?? null;
 
-  // Gate: redirect free users to the paywall before they can use the camera
-  useEffect(() => {
-    if (!checkGate("disease_diagnosis")) {
-      showPaywall();
-      router.back();
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // Gate: redirect free users to paywall every time this screen is focused.
+  // useFocusEffect + a short delay ensures the Zustand store is fully hydrated
+  // from the RevenueCat listener before we read isPro, preventing a false
+  // redirect on first render when subscription defaults to "free".
+  useFocusEffect(
+    useCallback(() => {
+      const timer = setTimeout(() => {
+        if (!isPro) {
+          router.replace("/paywall");
+        }
+      }, 300);
+      return () => clearTimeout(timer);
+    }, [isPro]) // eslint-disable-line react-hooks/exhaustive-deps
+  );
 
   const [screenState, setScreenState] = useState<ScreenState>("camera");
   const [capturedUri, setCapturedUri] = useState<string | null>(null);
@@ -257,6 +263,16 @@ export default function DiagnosisScreen() {
       setIsSaving(false);
     }
   }, [router]);
+
+  // ── Guard: subscription not yet confirmed (redirect pending) ──────────────
+
+  if (!isPro) {
+    return (
+      <View style={{ flex: 1, backgroundColor: COLORS.cream, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator color={COLORS.primary} />
+      </View>
+    );
+  }
 
   // ── Guard: plant not found ─────────────────────────────────────────────────
 
