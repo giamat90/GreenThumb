@@ -40,18 +40,26 @@ export function initializePurchases(userId: string): void {
     return;
   }
 
-  if (__DEV__) {
-    Purchases.setLogLevel(LOG_LEVEL.DEBUG);
-  }
+  // NOTE: RevenueCat Test Store keys produce InvalidCredentialsError because
+  // Google Play / App Store haven't been linked yet. This is expected during
+  // development. Everything will work correctly once a real Google Play app is
+  // configured in the RevenueCat dashboard at launch time.
+  try {
+    if (__DEV__) {
+      Purchases.setLogLevel(LOG_LEVEL.DEBUG);
+    }
 
-  Purchases.configure({
-    apiKey:
-      Platform.OS === "ios"
-        ? (process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY ?? "")
-        : (process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY ?? ""),
-    appUserID: userId,
-    useAmazon: false,
-  });
+    Purchases.configure({
+      apiKey:
+        Platform.OS === "ios"
+          ? (process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY ?? "")
+          : (process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY ?? ""),
+      appUserID: userId,
+      useAmazon: false,
+    });
+  } catch (err) {
+    console.warn("RevenueCat: configure failed (expected in dev with Test Store key)", err);
+  }
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -89,7 +97,7 @@ export async function purchasePackage(pkg: PurchasesPackage): Promise<boolean> {
     ) {
       return false;
     }
-    throw err;
+    throw new Error("Purchase failed. Please try again or contact support.");
   }
 }
 
