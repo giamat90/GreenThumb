@@ -24,6 +24,13 @@ export function initializePurchases(userId: string): void {
       ? (process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY ?? "")
       : (process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY ?? "");
 
+  console.log("[RC Debug] Platform:", Platform.OS);
+  console.log("[RC Debug] App User ID:", userId);
+  console.log(
+    "[RC Debug] Initializing with key:",
+    apiKey ? apiKey.substring(0, 10) + "..." : "(empty)"
+  );
+
   if (!apiKey) {
     // Keys are not set yet (normal during early development before RevenueCat
     // account is created). Log a warning but don't crash.
