@@ -8,7 +8,13 @@ import * as Notifications from "expo-notifications";
 import "react-native-reanimated";
 import "../global.css";
 
+import Purchases from "react-native-purchases";
+
 import { supabase } from "@/lib/supabase";
+import {
+  initializePurchases,
+  checkSubscriptionStatus,
+} from "@/lib/revenuecat";
 import { useUserStore } from "@/store/user";
 import { usePlantsStore } from "@/store/plants";
 import { useNotifications } from "@/hooks/useNotifications";
@@ -40,7 +46,7 @@ export default function RootLayout() {
   const [authReady, setAuthReady] = useState(false);
   const [onboardingDone, setOnboardingDone] = useState<boolean | null>(null);
 
-  const { setProfile, clearProfile } = useUserStore();
+  const { setProfile, clearProfile, setSubscription } = useUserStore();
   const { plants } = usePlantsStore();
   const segments = useSegments();
   const router = useRouter();
@@ -153,6 +159,31 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded, authReady]);
+
+  // Initialise RevenueCat once the user is authenticated.
+  // We also attach a real-time listener so the subscription state updates
+  // immediately after a purchase or renewal without requiring a full refetch.
+  useEffect(() => {
+    if (!authReady || !session) return;
+
+    const userId = session.user.id;
+    initializePurchases(userId);
+
+    // Sync current status into the Zustand store
+    checkSubscriptionStatus().then((status) => {
+      setSubscription(status);
+    });
+
+    // Listen for RevenueCat customer info updates (purchase, renewal, expiry)
+    const listener = Purchases.addCustomerInfoUpdateListener((customerInfo) => {
+      const isProActive = "pro" in customerInfo.entitlements.active;
+      setSubscription(isProActive ? "pro" : "free");
+    });
+
+    return () => {
+      listener.remove();
+    };
+  }, [authReady, session]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Request notification permission once auth is confirmed ready.
   // The 500ms delay ensures the component tree is fully mounted before

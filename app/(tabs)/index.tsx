@@ -20,6 +20,8 @@ import { useUserStore } from "@/store/user";
 import { usePlantsStore } from "@/store/plants";
 import { supabase } from "@/lib/supabase";
 import { syncAllPlantSchedules } from "@/lib/syncWateringSchedules";
+import { useProGate } from "@/hooks/useProGate";
+import { UpgradePrompt } from "@/components/ui/UpgradePrompt";
 import type { PlantWithStatus } from "@/hooks/usePlants";
 import type { Plant } from "@/types";
 
@@ -74,10 +76,12 @@ function WeatherCard({
   weather,
   isLoading,
   error,
+  isPro,
 }: {
   weather: ReturnType<typeof useWeather>["weather"];
   isLoading: boolean;
   error: string | null;
+  isPro: boolean;
 }) {
   if (isLoading) {
     return (
@@ -139,9 +143,16 @@ function WeatherCard({
         </View>
       </View>
 
-      {banner ? (
+      {isPro && banner ? (
         <View style={styles.weatherBanner}>
           <Text style={styles.weatherBannerText}>{banner}</Text>
+        </View>
+      ) : !isPro ? (
+        <View style={{ marginTop: 12 }}>
+          <UpgradePrompt
+            featureName="Weather-Smart Scheduling"
+            description="Adjust watering based on live weather"
+          />
         </View>
       ) : null}
     </View>
@@ -189,6 +200,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const { profile } = useUserStore();
   const { updatePlant } = usePlantsStore();
+  const { isPro } = useProGate();
   const { weather, isLoading: weatherLoading, error: weatherError, refresh: refreshWeather } = useWeather();
   const { plants, isLoading: plantsLoading, refetch: refetchPlants } = usePlants();
 
@@ -262,6 +274,7 @@ export default function HomeScreen() {
         weather={weather}
         isLoading={weatherLoading}
         error={weatherError}
+        isPro={isPro}
       />
 
       {/* ── Today's tasks ──────────────────────────────────────────────────── */}

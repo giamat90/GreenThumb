@@ -9,9 +9,11 @@ import {
   Alert,
   StyleSheet,
   Linking,
+  Platform,
 } from "react-native";
-import { LogOut, User, MapPin, Info, Shield, FileText } from "lucide-react-native";
+import { LogOut, MapPin, Info, Shield, FileText, Crown } from "lucide-react-native";
 import Constants from "expo-constants";
+import { useRouter } from "expo-router";
 
 import { supabase } from "@/lib/supabase";
 import { useUserStore } from "@/store/user";
@@ -61,6 +63,8 @@ export default function ProfileScreen() {
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isSavingCity, setIsSavingCity] = useState(false);
   const { profile, setProfile } = useUserStore();
+  const router = useRouter();
+  const isPro = profile?.subscription === "pro";
 
   async function handleSignOut() {
     setIsSigningOut(true);
@@ -149,6 +153,48 @@ export default function ProfileScreen() {
           </View>
         )}
       </View>
+
+      {/* ── Subscription card ─────────────────────────────────────────────── */}
+      {isPro ? (
+        <View style={styles.proCard}>
+          <View style={styles.proCardLeft}>
+            <Crown size={20} color="#FFD700" />
+            <View>
+              <Text style={styles.proCardTitle}>GreenThumb Pro</Text>
+              <Text style={styles.proCardSub}>Active subscription</Text>
+            </View>
+          </View>
+          <TouchableOpacity
+            style={styles.manageButton}
+            onPress={() => {
+              const url = Platform.OS === "android"
+                ? "https://play.google.com/store/account/subscriptions"
+                : "https://apps.apple.com/account/subscriptions";
+              Linking.openURL(url).catch(() => {});
+            }}
+            accessibilityLabel="Manage subscription"
+          >
+            <Text style={styles.manageButtonText}>Manage</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <TouchableOpacity
+          style={styles.upgradeCard}
+          onPress={() => router.push("/paywall")}
+          activeOpacity={0.85}
+          accessibilityLabel="Upgrade to Pro"
+          accessibilityRole="button"
+        >
+          <Crown size={20} color={COLORS.primary} />
+          <View style={styles.upgradeCardText}>
+            <Text style={styles.upgradeCardTitle}>Upgrade to Pro</Text>
+            <Text style={styles.upgradeCardSub}>
+              Unlimited plants, AI diagnosis & more
+            </Text>
+          </View>
+          <Text style={styles.upgradeArrow}>›</Text>
+        </TouchableOpacity>
+      )}
 
       {/* ── Notification settings ─────────────────────────────────────────── */}
       <NotificationSettings />
@@ -290,6 +336,70 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: "#fff",
     letterSpacing: 1,
+  },
+
+  // ── Subscription cards ────────────────────────────────────────────────────
+  proCard: {
+    backgroundColor: COLORS.primary,
+    borderRadius: 20,
+    padding: 18,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  proCardLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    flex: 1,
+  },
+  proCardTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#fff",
+  },
+  proCardSub: {
+    fontSize: 12,
+    color: "rgba(255,255,255,0.75)",
+    marginTop: 1,
+  },
+  manageButton: {
+    backgroundColor: "rgba(255,255,255,0.2)",
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+  },
+  manageButtonText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#fff",
+  },
+  upgradeCard: {
+    backgroundColor: COLORS.lightgreen,
+    borderRadius: 20,
+    padding: 18,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  upgradeCardText: {
+    flex: 1,
+  },
+  upgradeCardTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: COLORS.primary,
+  },
+  upgradeCardSub: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    marginTop: 1,
+  },
+  upgradeArrow: {
+    fontSize: 22,
+    color: COLORS.primary,
+    fontWeight: "300",
   },
 
   // ── Section title ─────────────────────────────────────────────────────────

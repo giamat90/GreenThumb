@@ -29,6 +29,7 @@ import { compressImage } from "@/lib/imageUtils";
 import { supabase } from "@/lib/supabase";
 import { usePlantsStore } from "@/store/plants";
 import { useUserStore } from "@/store/user";
+import { useProGate } from "@/hooks/useProGate";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -120,9 +121,18 @@ export default function DiagnosisScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
 
+  const { checkGate, showPaywall } = useProGate();
   const { plants, updatePlant } = usePlantsStore();
   const { profile } = useUserStore();
   const plant = plants.find((p) => p.id === plantId) ?? null;
+
+  // Gate: redirect free users to the paywall before they can use the camera
+  useEffect(() => {
+    if (!checkGate("disease_diagnosis")) {
+      showPaywall();
+      router.back();
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [screenState, setScreenState] = useState<ScreenState>("camera");
   const [capturedUri, setCapturedUri] = useState<string | null>(null);

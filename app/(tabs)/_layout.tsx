@@ -2,6 +2,7 @@ import { Tabs, useRouter } from "expo-router";
 import { Home, Leaf, Camera, CalendarDays, User } from "lucide-react-native";
 import { TouchableOpacity, View } from "react-native";
 import { COLORS } from "@/constants";
+import { useProGate } from "@/hooks/useProGate";
 
 // ─── Custom center tab button for the Identify CTA ────────────────────────────
 
@@ -15,9 +16,19 @@ import { COLORS } from "@/constants";
  */
 function IdentifyTabButton() {
   const router = useRouter();
+  const { checkGate, showPaywall } = useProGate();
+
+  function handlePress() {
+    if (!checkGate("unlimited_plants")) {
+      showPaywall();
+      return;
+    }
+    router.push("/(tabs)/identify");
+  }
+
   return (
     <TouchableOpacity
-      onPress={() => router.push("/(tabs)/identify")}
+      onPress={handlePress}
       accessibilityLabel="Identify a plant with your camera"
       accessibilityRole="button"
       style={{
