@@ -44,7 +44,14 @@ export function initializePurchases(userId: string): void {
     Purchases.setLogLevel(LOG_LEVEL.DEBUG);
   }
 
-  Purchases.configure({ apiKey, appUserID: userId });
+  Purchases.configure({
+    apiKey:
+      Platform.OS === "ios"
+        ? (process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY ?? "")
+        : (process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY ?? ""),
+    appUserID: userId,
+    useAmazon: false,
+  });
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
