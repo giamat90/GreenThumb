@@ -68,13 +68,10 @@ export default function RootLayout() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
+    } = supabase.auth.onAuthStateChange((_event, newSession) => {
       setSession(newSession);
       if (newSession) {
         fetchProfile(newSession.user.id);
-        // Check onboarding status on sign in
-        const done = await AsyncStorage.getItem("onboarding_complete");
-        setOnboardingDone(done === "true");
       } else {
         clearProfile();
         setOnboardingDone(null);
@@ -84,16 +81,20 @@ export default function RootLayout() {
     return () => subscription.unsubscribe();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Check onboarding status on initial load
+  // Re-read the onboarding flag whenever auth state or navigation changes.
+  // Depending on `segments` is the key fix: without it, the flag written by
+  // handleFinish() in onboarding.tsx is never picked up before the redirect
+  // guard fires, causing an infinite onboarding loop in production builds.
   useEffect(() => {
-    if (authReady && session) {
-      AsyncStorage.getItem("onboarding_complete").then((val) => {
-        setOnboardingDone(val === "true");
-      });
-    } else if (authReady && !session) {
+    if (!authReady) return;
+    if (!session) {
       setOnboardingDone(null);
+      return;
     }
-  }, [authReady, session]);
+    AsyncStorage.getItem("onboarding_complete").then((val) => {
+      setOnboardingDone(val === "true");
+    });
+  }, [authReady, session, segments]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function fetchProfile(userId: string) {
     try {
