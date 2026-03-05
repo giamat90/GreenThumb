@@ -1,4 +1,4 @@
-import { Platform } from "react-native";
+import { Alert, Platform } from "react-native";
 import Purchases, {
   LOG_LEVEL,
   type PurchasesOffering,
@@ -17,48 +17,37 @@ const PRO_ENTITLEMENT_ID = "pro";
  * Must be called once after the user's Supabase auth ID is known.
  * Passing appUserID ties RevenueCat receipts to this specific account,
  * which is critical for restoring purchases across devices.
+ *
+ * NOTE: RevenueCat is only initialised in __DEV__ builds. Preview/production
+ * builds skip initialisation entirely until a real Google Play production key
+ * is configured in the RevenueCat dashboard. Until then all users are treated
+ * as 'free' and the paywall shows a "Coming Soon" message.
  */
 export function initializePurchases(userId: string): void {
+  if (!__DEV__) {
+    console.log(
+      "RevenueCat: skipping initialization in production until real key is configured"
+    );
+    return;
+  }
+
   const apiKey =
     Platform.OS === "ios"
       ? (process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY ?? "")
       : (process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY ?? "");
 
-  console.log("[RC Debug] Platform:", Platform.OS);
-  console.log("[RC Debug] App User ID:", userId);
-  console.log(
-    "[RC Debug] Initializing with key:",
-    apiKey ? apiKey.substring(0, 10) + "..." : "(empty)"
-  );
-
   if (!apiKey) {
-    // Keys are not set yet (normal during early development before RevenueCat
-    // account is created). Log a warning but don't crash.
     console.warn(
       "RevenueCat: API key not configured. Set EXPO_PUBLIC_REVENUECAT_ANDROID_KEY / IOS_KEY in .env"
     );
     return;
   }
 
-  // NOTE: RevenueCat Test Store keys produce InvalidCredentialsError because
-  // Google Play / App Store haven't been linked yet. This is expected during
-  // development. Everything will work correctly once a real Google Play app is
-  // configured in the RevenueCat dashboard at launch time.
   try {
-    if (__DEV__) {
-      Purchases.setLogLevel(LOG_LEVEL.DEBUG);
-    }
-
-    Purchases.configure({
-      apiKey:
-        Platform.OS === "ios"
-          ? (process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY ?? "")
-          : (process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY ?? ""),
-      appUserID: userId,
-      useAmazon: false,
-    });
+    Purchases.setLogLevel(LOG_LEVEL.DEBUG);
+    Purchases.configure({ apiKey, appUserID: userId, useAmazon: false });
   } catch (err) {
-    console.warn("RevenueCat: configure failed (expected in dev with Test Store key)", err);
+    console.warn("RevenueCat: configure failed", err);
   }
 }
 
@@ -66,9 +55,11 @@ export function initializePurchases(userId: string): void {
 
 /**
  * Fetches the current RevenueCat offering.
- * Returns null when no offerings are configured (pre-dashboard-setup).
+ * Returns null in production (pre-launch) or when no offerings are configured.
  */
 export async function getOfferings(): Promise<PurchasesOffering | null> {
+  if (!__DEV__) return null;
+
   try {
     const offerings = await Purchases.getOfferings();
     return offerings.current ?? null;
@@ -80,10 +71,19 @@ export async function getOfferings(): Promise<PurchasesOffering | null> {
 
 /**
  * Initiates a purchase for the given package.
+ * In production (pre-launch) shows a "Coming Soon" alert instead.
  * Returns true on success, false if the user cancels.
  * Throws a user-facing error string on hard failures.
  */
 export async function purchasePackage(pkg: PurchasesPackage): Promise<boolean> {
+  if (!__DEV__) {
+    Alert.alert(
+      "Coming Soon",
+      "Subscriptions will be available at launch! Stay tuned."
+    );
+    return false;
+  }
+
   try {
     const { customerInfo } = await Purchases.purchasePackage(pkg);
     return isPro(customerInfo);
@@ -106,6 +106,8 @@ export async function purchasePackage(pkg: PurchasesPackage): Promise<boolean> {
  * is found among them.
  */
 export async function restorePurchases(): Promise<boolean> {
+  if (!__DEV__) return false;
+
   try {
     const customerInfo = await Purchases.restorePurchases();
     return isPro(customerInfo);
@@ -118,8 +120,11 @@ export async function restorePurchases(): Promise<boolean> {
 /**
  * Reads the current customer info and returns 'pro' if the 'pro' entitlement
  * is active, 'free' otherwise.
+ * Always returns 'free' in production until a real key is configured.
  */
 export async function checkSubscriptionStatus(): Promise<Subscription> {
+  if (!__DEV__) return "free";
+
   try {
     const customerInfo = await Purchases.getCustomerInfo();
     return isPro(customerInfo) ? "pro" : "free";

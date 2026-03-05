@@ -101,6 +101,7 @@ All required assets present in `assets/images/`:
 - `favicon.png` — web favicon
 
 ## RevenueCat Notes
-- Test Store keys cause `InvalidCredentialsError` during development — this is expected and silently caught in `lib/revenuecat.ts`
-- Production keys work once Google Play app is linked in RevenueCat dashboard
+- RevenueCat is **only initialised in `__DEV__` builds**. Preview/production builds skip it entirely to avoid fatal crashes from Test Store keys.
+- In non-dev builds: `checkSubscriptionStatus` → `'free'`, `getOfferings` → `null`, `purchasePackage` → shows "Coming Soon" alert, `restorePurchases` → `false`.
+- Production keys + full purchase flow will work once a real Google Play app is linked in the RevenueCat dashboard.
 - Entitlement ID: `pro`
