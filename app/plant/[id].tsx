@@ -19,7 +19,7 @@ import {
   Sun,
   Leaf,
   Calendar,
-  FlaskConical,
+  Stethoscope,
   MapPin,
   Layers,
   TrendingUp,
@@ -59,12 +59,17 @@ function formatDate(iso: string): string {
   });
 }
 
-function timeAgo(iso: string): string {
+function wateringDateLabel(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-  if (days === 0) return "Today";
-  if (days === 1) return "Yesterday";
-  return `${days} days ago`;
+  const dateStr = new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+  if (days === 0) return `Today · ${dateStr}`;
+  if (days === 1) return `Yesterday · ${dateStr}`;
+  return dateStr;
 }
 
 function healthMessage(score: number): string {
@@ -97,11 +102,31 @@ function CareTile({
   label: string;
   value: string;
 }) {
+  const [expanded, setExpanded] = useState(false);
+  // Show toggle only when value is long enough to potentially overflow 2 lines
+  const canExpand = value.length > 45;
+
   return (
     <View style={styles.careTile}>
       {icon}
       <Text style={styles.careTileLabel}>{label}</Text>
-      <Text style={styles.careTileValue}>{value}</Text>
+      <Text
+        style={styles.careTileValue}
+        numberOfLines={expanded ? undefined : 2}
+        ellipsizeMode="tail"
+      >
+        {value}
+      </Text>
+      {canExpand && (
+        <TouchableOpacity
+          onPress={() => setExpanded((v) => !v)}
+          hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+        >
+          <Text style={styles.careTileReadMore}>
+            {expanded ? "Read less" : "Read more"}
+          </Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -470,7 +495,7 @@ function PlantDetailScreen() {
         style={styles.scroll}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingBottom: insets.bottom + 120 },
+          { paddingBottom: insets.bottom + 220 },
         ]}
         showsVerticalScrollIndicator={false}
       >
@@ -644,7 +669,7 @@ function PlantDetailScreen() {
                   <Droplets size={16} color={COLORS.secondary} />
                 </View>
                 <Text style={styles.historyLabel}>Watered</Text>
-                <Text style={styles.historyDate}>{timeAgo(event.watered_at)}</Text>
+                <Text style={styles.historyDate}>{wateringDateLabel(event.watered_at)}</Text>
               </View>
             ))
           )}
@@ -688,7 +713,7 @@ function PlantDetailScreen() {
                   <Text style={styles.historyLabel}>
                     {result?.condition ?? d.severity}
                   </Text>
-                  <Text style={styles.historyDate}>{timeAgo(d.created_at)}</Text>
+                  <Text style={styles.historyDate}>{wateringDateLabel(d.created_at)}</Text>
                   <ChevronRight size={16} color={COLORS.textSecondary} />
                 </TouchableOpacity>
               );
@@ -760,7 +785,7 @@ function PlantDetailScreen() {
                 <Text style={styles.historyLabel}>
                   {f.fertilizer_type ? f.fertilizer_type.charAt(0).toUpperCase() + f.fertilizer_type.slice(1) : "Fertilized"}
                 </Text>
-                <Text style={styles.historyDate}>{timeAgo(f.fertilized_at)}</Text>
+                <Text style={styles.historyDate}>{wateringDateLabel(f.fertilized_at)}</Text>
               </View>
             ))
           )}
@@ -882,8 +907,8 @@ function PlantDetailScreen() {
               accessibilityLabel="Diagnose plant health"
               accessibilityRole="button"
             >
-              <FlaskConical size={16} color={COLORS.primary} />
-              <Text style={styles.actionButtonSecondaryText}>Diagnose 🔬</Text>
+              <Stethoscope size={16} color={COLORS.primary} />
+              <Text style={styles.actionButtonSecondaryText}>Diagnose</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -894,7 +919,7 @@ function PlantDetailScreen() {
               accessibilityRole="button"
             >
               <MapPin size={16} color={COLORS.primary} />
-              <Text style={styles.actionButtonSecondaryText}>Placement 📍</Text>
+              <Text style={styles.actionButtonSecondaryText}>Placement</Text>
             </TouchableOpacity>
           </View>
 
@@ -907,7 +932,7 @@ function PlantDetailScreen() {
               accessibilityRole="button"
             >
               <Layers size={16} color={COLORS.primary} />
-              <Text style={styles.actionButtonSecondaryText}>Repot 🪴</Text>
+              <Text style={styles.actionButtonSecondaryText}>Repot</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -918,7 +943,7 @@ function PlantDetailScreen() {
               accessibilityRole="button"
             >
               <TrendingUp size={16} color={COLORS.primary} />
-              <Text style={styles.actionButtonSecondaryText}>Growth 📈</Text>
+              <Text style={styles.actionButtonSecondaryText}>Growth</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1075,6 +1100,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     padding: 14,
     gap: 4,
+    minHeight: 100,
   },
   careTileLabel: {
     fontSize: 11,
@@ -1088,6 +1114,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: COLORS.textPrimary,
+  },
+  careTileReadMore: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: COLORS.primary,
+    marginTop: 2,
   },
 
   // ── Health ────────────────────────────────────────────────────────────────

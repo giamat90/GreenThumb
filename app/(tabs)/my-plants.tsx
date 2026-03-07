@@ -300,6 +300,13 @@ export default function MyPlantsScreen() {
             plants.length === 0 && styles.listContentEmpty,
           ]}
           ListEmptyComponent={<EmptyPlants />}
+          ListFooterComponent={
+            plants.length > 0 ? (
+              <View style={styles.listFooter}>
+                <Text style={styles.listFooterText}>Your garden is looking great!</Text>
+              </View>
+            ) : null
+          }
           refreshControl={
             <RefreshControl
               refreshing={isLoading}
@@ -389,6 +396,15 @@ const styles = StyleSheet.create({
   },
   listContentEmpty: {
     flex: 1,
+  },
+  listFooter: {
+    paddingVertical: 24,
+    alignItems: "center",
+  },
+  listFooterText: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    fontStyle: "italic",
   },
   // ── Skeleton ────────────────────────────────────────────────────────────────
   skeletonCard: {

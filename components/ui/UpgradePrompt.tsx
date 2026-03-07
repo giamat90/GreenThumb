@@ -1,5 +1,5 @@
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { Lock } from "lucide-react-native";
+import { Sparkles } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import { COLORS } from "@/constants";
 
@@ -20,7 +20,7 @@ export function UpgradePrompt({ featureName, description }: UpgradePromptProps) 
     <View style={styles.container}>
       <View style={styles.left}>
         <View style={styles.iconWrap}>
-          <Lock size={16} color={COLORS.primary} />
+          <Sparkles size={16} color="#fff" />
         </View>
         <View style={styles.textGroup}>
           <Text style={styles.featureName}>{featureName}</Text>
@@ -43,14 +43,16 @@ export function UpgradePrompt({ featureName, description }: UpgradePromptProps) 
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: COLORS.lightgreen,
+    backgroundColor: "#EAF5EE",
     borderRadius: 16,
-    paddingVertical: 12,
+    paddingVertical: 14,
     paddingHorizontal: 14,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     gap: 12,
+    borderWidth: 1,
+    borderColor: "#C3E6CB",
   },
   left: {
     flexDirection: "row",
@@ -59,10 +61,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   iconWrap: {
-    width: 32,
-    height: 32,
+    width: 34,
+    height: 34,
     borderRadius: 10,
-    backgroundColor: "#fff",
+    backgroundColor: COLORS.primary,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -82,8 +84,13 @@ const styles = StyleSheet.create({
   button: {
     backgroundColor: COLORS.primary,
     borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 3,
   },
   buttonText: {
     fontSize: 13,

@@ -221,6 +221,11 @@ export default function CalendarScreen() {
             onPress={() => router.push(`/plant/${item.plant.id}`)}
           />
         )}
+        ListFooterComponent={
+          <View style={styles.listFooter}>
+            <Text style={styles.listFooterText}>All care tasks shown</Text>
+          </View>
+        }
       />
     </View>
   );
@@ -243,7 +248,17 @@ const styles = StyleSheet.create({
   },
   list: {
     paddingHorizontal: 16,
-    paddingBottom: 32,
+    paddingBottom: 16,
+    flexGrow: 1,
+  },
+  listFooter: {
+    paddingVertical: 24,
+    alignItems: "center",
+  },
+  listFooterText: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    fontStyle: "italic",
   },
   sectionHeader: {
     paddingTop: 20,
