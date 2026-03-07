@@ -10,6 +10,7 @@ import {
   Animated,
   Dimensions,
   Image,
+  Modal,
 } from "react-native";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useNavigation } from "@react-navigation/native";
@@ -25,6 +26,7 @@ import {
 } from "lucide-react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system/legacy";
+import { Magnetometer } from "expo-sensors";
 
 import { COLORS } from "@/constants";
 import { compressImage } from "@/lib/imageUtils";
@@ -207,6 +209,22 @@ function FactorCard({
   );
 }
 
+// ─── Compass helpers ──────────────────────────────────────────────────────────
+
+/** Convert raw magnetometer x/y to a 0–360 heading (0 = magnetic north). */
+function headingFromMagnetometer(x: number, y: number): number {
+  let angle = Math.atan2(y, x) * (180 / Math.PI);
+  if (angle < 0) angle += 360;
+  return angle;
+}
+
+function headingToDirection(heading: number): Exclude<WindowDirection, "none"> {
+  if (heading >= 315 || heading < 45) return "north";
+  if (heading >= 45 && heading < 135) return "east";
+  if (heading >= 135 && heading < 225) return "south";
+  return "west";
+}
+
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function PlacementScreen() {
@@ -227,6 +245,67 @@ export default function PlacementScreen() {
   // ── Screen state ────────────────────────────────────────────────────────────
   const [screenState, setScreenState] = useState<ScreenState>("form");
   const [result, setResult] = useState<PlacementResult | null>(null);
+
+  // ── Compass state ────────────────────────────────────────────────────────────
+  // null = availability not yet known; false = unavailable; true = available
+  const [compassAvailable, setCompassAvailable] = useState<boolean | null>(null);
+  const [showCompassModal, setShowCompassModal] = useState(false);
+  const [compassDetected, setCompassDetected] = useState<Exclude<WindowDirection, "none"> | null>(null);
+  const compassRotation = useRef(new Animated.Value(0)).current;
+  const compassAnimRef = useRef<Animated.CompositeAnimation | null>(null);
+
+  // Check magnetometer availability once on mount
+  useEffect(() => {
+    Magnetometer.isAvailableAsync()
+      .then(setCompassAvailable)
+      .catch(() => setCompassAvailable(false));
+  }, []);
+
+  // ── Detect window direction with compass ─────────────────────────────────────
+
+  const handleDetectCompass = useCallback(async () => {
+    setCompassDetected(null);
+    setShowCompassModal(true);
+
+    // Spin the compass arrow while collecting readings
+    compassRotation.setValue(0);
+    const anim = Animated.loop(
+      Animated.timing(compassRotation, {
+        toValue: 1,
+        duration: 1500,
+        useNativeDriver: true,
+      })
+    );
+    compassAnimRef.current = anim;
+    anim.start();
+
+    const readings: { x: number; y: number }[] = [];
+    Magnetometer.setUpdateInterval(100); // 10 readings/sec
+
+    const subscription = Magnetometer.addListener(({ x, y }) => {
+      readings.push({ x, y });
+    });
+
+    // Collect for 3 seconds then resolve
+    await new Promise<void>((resolve) => setTimeout(resolve, 3000));
+
+    subscription.remove();
+    compassAnimRef.current?.stop();
+    setShowCompassModal(false);
+
+    if (readings.length === 0) return;
+
+    const avgX = readings.reduce((s, r) => s + r.x, 0) / readings.length;
+    const avgY = readings.reduce((s, r) => s + r.y, 0) / readings.length;
+    const heading = headingFromMagnetometer(avgX, avgY);
+    const detected = headingToDirection(heading);
+
+    setWindowDirection(detected);
+    setCompassDetected(detected);
+
+    // Clear confirmation badge after 3 s
+    setTimeout(() => setCompassDetected(null), 3000);
+  }, [compassRotation]);
 
   // ── Pick spot photo ──────────────────────────────────────────────────────────
 
@@ -402,7 +481,19 @@ export default function PlacementScreen() {
 
           {/* ── Window direction ─────────────────────────────────────────── */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Nearest window direction</Text>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Nearest window direction</Text>
+              {compassAvailable && (
+                <TouchableOpacity
+                  style={styles.detectButton}
+                  onPress={handleDetectCompass}
+                  accessibilityLabel="Detect window direction with compass"
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.detectButtonText}>🧭 Detect</Text>
+                </TouchableOpacity>
+              )}
+            </View>
             <View style={styles.pillRow}>
               {WINDOW_OPTIONS.map((opt) => (
                 <PillOption
@@ -415,6 +506,11 @@ export default function PlacementScreen() {
                 />
               ))}
             </View>
+            {compassDetected && (
+              <Text style={styles.detectedConfirm}>
+                Detected: {compassDetected.charAt(0).toUpperCase() + compassDetected.slice(1)} ✅
+              </Text>
+            )}
           </View>
 
           {/* ── Room type ────────────────────────────────────────────────── */}
@@ -514,6 +610,40 @@ export default function PlacementScreen() {
             )}
           </View>
         </ScrollView>
+
+        {/* ── Compass detection modal ───────────────────────────────────── */}
+        <Modal
+          visible={showCompassModal}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowCompassModal(false)}
+        >
+          <View style={styles.compassModalBackdrop}>
+            <View style={styles.compassModalSheet}>
+              <Animated.Text
+                style={[
+                  styles.compassArrow,
+                  {
+                    transform: [
+                      {
+                        rotate: compassRotation.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: ["0deg", "360deg"],
+                        }),
+                      },
+                    ],
+                  },
+                ]}
+              >
+                ↑
+              </Animated.Text>
+              <Text style={styles.compassTitle}>Point your phone at the window</Text>
+              <Text style={styles.compassSubtitle}>
+                Hold steady for 3 seconds while facing the window
+              </Text>
+            </View>
+          </View>
+        </Modal>
 
         {/* ── Analyze button ─────────────────────────────────────────────── */}
         <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 12 }]}>
@@ -1138,5 +1268,64 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: COLORS.textSecondary,
     lineHeight: 22,
+  },
+
+  // ── Compass ────────────────────────────────────────────────────────────────
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
+  detectButton: {
+    backgroundColor: COLORS.lightgreen,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderWidth: 1,
+    borderColor: COLORS.secondary,
+  },
+  detectButtonText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: COLORS.primary,
+  },
+  detectedConfirm: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: COLORS.primary,
+    marginTop: 8,
+  },
+  compassModalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  compassModalSheet: {
+    backgroundColor: "#fff",
+    borderRadius: 24,
+    paddingVertical: 36,
+    paddingHorizontal: 32,
+    alignItems: "center",
+    width: 280,
+    gap: 12,
+  },
+  compassArrow: {
+    fontSize: 64,
+    lineHeight: 72,
+    color: COLORS.primary,
+  },
+  compassTitle: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: COLORS.textPrimary,
+    textAlign: "center",
+  },
+  compassSubtitle: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    textAlign: "center",
+    lineHeight: 19,
   },
 });
