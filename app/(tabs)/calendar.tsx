@@ -8,7 +8,7 @@ import {
   StyleSheet,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { CalendarDays, Droplets } from "lucide-react-native";
+import { CalendarDays, Droplets, Leaf } from "lucide-react-native";
 import { COLORS } from "@/constants";
 import { usePlantsStore } from "@/store/plants";
 import type { Plant } from "@/types";
@@ -41,6 +41,7 @@ interface CalendarEntry {
   plant: Plant;
   days: number;
   section: Section;
+  type: "watering" | "fertilizer";
 }
 
 const SECTION_ORDER: Section[] = ["overdue", "today", "tomorrow", "week", "later"];
@@ -55,14 +56,14 @@ const SECTION_LABEL: Record<Section, string> = {
 
 // ─── Entry row ────────────────────────────────────────────────────────────────
 
-function WateringEntry({
+function CareEntry({
   entry,
   onPress,
 }: {
   entry: CalendarEntry;
   onPress: () => void;
 }) {
-  const { plant, days, section } = entry;
+  const { plant, days, section, type } = entry;
 
   const dayColor =
     section === "overdue" || section === "today"
@@ -82,9 +83,14 @@ function WateringEntry({
           ? "Tomorrow"
           : `In ${days} days`;
 
+  const icon = type === "fertilizer"
+    ? <Leaf size={14} color={dayColor} />
+    : <Droplets size={14} color={dayColor} />;
+
+  const actionLabel = type === "fertilizer" ? "Fertilize" : "Water";
+
   return (
     <TouchableOpacity style={styles.entry} onPress={onPress} activeOpacity={0.8}>
-      {/* Thumbnail */}
       {plant.photo_url ? (
         <Image
           source={{ uri: plant.photo_url }}
@@ -97,12 +103,11 @@ function WateringEntry({
         </View>
       )}
 
-      {/* Label */}
       <View style={styles.entryContent}>
         <View style={styles.entryRow}>
-          <Droplets size={14} color={dayColor} />
+          {icon}
           <Text style={styles.entryTitle} numberOfLines={1}>
-            Water {plant.name}
+            {actionLabel} {plant.name}
           </Text>
         </View>
         {plant.species || plant.common_name ? (
@@ -112,7 +117,6 @@ function WateringEntry({
         ) : null}
       </View>
 
-      {/* Days badge */}
       <View style={[styles.badge, { borderColor: dayColor }]}>
         <Text style={[styles.badgeText, { color: dayColor }]}>{dayLabel}</Text>
       </View>
@@ -139,13 +143,20 @@ export default function CalendarScreen() {
   const plants = usePlantsStore((s) => s.plants);
 
   const sections = useMemo(() => {
-    const entries: CalendarEntry[] = plants
-      .filter((p) => p.next_watering != null)
-      .map((p) => {
-        const days = daysFromToday(p.next_watering!);
-        return { plant: p, days, section: getSection(days) };
-      })
-      .sort((a, b) => a.days - b.days);
+    const entries: CalendarEntry[] = [];
+
+    for (const p of plants) {
+      if (p.next_watering) {
+        const days = daysFromToday(p.next_watering);
+        entries.push({ plant: p, days, section: getSection(days), type: "watering" });
+      }
+      if (p.next_fertilizer_at) {
+        const days = daysFromToday(p.next_fertilizer_at);
+        entries.push({ plant: p, days, section: getSection(days), type: "fertilizer" });
+      }
+    }
+
+    entries.sort((a, b) => a.days - b.days);
 
     const grouped = new Map<Section, CalendarEntry[]>();
     for (const entry of entries) {
@@ -195,7 +206,7 @@ export default function CalendarScreen() {
       <Text style={styles.heading}>Care Calendar</Text>
       <SectionList
         sections={sections}
-        keyExtractor={(item) => item.plant.id}
+        keyExtractor={(item) => `${item.plant.id}-${item.type}`}
         contentContainerStyle={styles.list}
         stickySectionHeadersEnabled={false}
         renderSectionHeader={({ section }) => (
@@ -205,7 +216,7 @@ export default function CalendarScreen() {
           />
         )}
         renderItem={({ item }) => (
-          <WateringEntry
+          <CareEntry
             entry={item}
             onPress={() => router.push(`/plant/${item.plant.id}`)}
           />

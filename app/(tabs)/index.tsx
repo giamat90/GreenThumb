@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { Droplets } from "lucide-react-native";
+import { Droplets, Leaf } from "lucide-react-native";
 
 import { COLORS } from "@/constants";
 import { useWeather } from "@/hooks/useWeather";
@@ -20,6 +20,7 @@ import { useUserStore } from "@/store/user";
 import { usePlantsStore } from "@/store/plants";
 import { supabase } from "@/lib/supabase";
 import { syncAllPlantSchedules } from "@/lib/syncWateringSchedules";
+import { calculateFertilizerInterval } from "@/lib/fertilizer";
 import { useProGate } from "@/hooks/useProGate";
 import { UpgradePrompt } from "@/components/ui/UpgradePrompt";
 import type { PlantWithStatus } from "@/hooks/usePlants";
@@ -193,6 +194,40 @@ function TaskCard({
   );
 }
 
+function FertilizerTaskCard({
+  plant,
+  onFertilize,
+}: {
+  plant: PlantWithStatus;
+  onFertilize: () => void;
+}) {
+  return (
+    <View style={styles.taskCard}>
+      {plant.photo_url ? (
+        <Image source={{ uri: plant.photo_url }} style={styles.taskPhoto} />
+      ) : (
+        <View style={[styles.taskPhoto, styles.taskPhotoPlaceholder]}>
+          <Text>🌿</Text>
+        </View>
+      )}
+      <View style={styles.taskContent}>
+        <Text style={styles.taskName} numberOfLines={1}>
+          {plant.name}
+        </Text>
+        <Text style={[styles.taskStatus, { color: COLORS.primary }]}>
+          Fertilize today
+        </Text>
+      </View>
+      <TouchableOpacity
+        style={[styles.taskWaterButton, { backgroundColor: COLORS.primary }]}
+        onPress={onFertilize}
+      >
+        <Leaf size={16} color="#fff" />
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function HomeScreen() {
@@ -214,6 +249,7 @@ export default function HomeScreen() {
   const needsWater = plants.filter(
     (p) => p.wateringStatus === "overdue" || p.wateringStatus === "today"
   );
+  const needsFertilizer = plants.filter((p) => p.fertilizerStatus === "due");
 
   const thriving = plants.filter((p) => p.health_score >= 70).length;
   const needsAttention = plants.filter((p) => p.health_score < 70).length;
@@ -238,6 +274,27 @@ export default function HomeScreen() {
       .update({ last_watered_at: now, next_watering: nextWatering, health_score: newHealth })
       .eq("id", plant.id);
     updatePlant(plant.id, { last_watered_at: now, next_watering: nextWatering, health_score: newHealth });
+  };
+
+  const handleFertilize = async (plant: PlantWithStatus) => {
+    if (!profile) return;
+    const now = new Date().toISOString();
+    const intervalDays = plant.fertilizer_interval_days ?? calculateFertilizerInterval(plant.species, new Date().getMonth());
+    const nextDate = new Date();
+    nextDate.setDate(nextDate.getDate() + intervalDays);
+    const nextFertilizerAt = nextDate.toISOString();
+
+    await supabase.from("fertilizer_logs").insert({
+      plant_id: plant.id,
+      user_id: profile.id,
+      fertilized_at: now,
+      fertilizer_type: plant.fertilizer_type ?? "liquid",
+    });
+    await supabase
+      .from("plants")
+      .update({ last_fertilized_at: now, next_fertilizer_at: nextFertilizerAt })
+      .eq("id", plant.id);
+    updatePlant(plant.id, { last_fertilized_at: now, next_fertilizer_at: nextFertilizerAt });
   };
 
   const onRefresh = () => {
@@ -282,20 +339,29 @@ export default function HomeScreen() {
         <Text style={styles.sectionTitle}>Today's Tasks</Text>
         {plantsLoading ? (
           <ActivityIndicator color={COLORS.primary} style={{ marginTop: 12 }} />
-        ) : needsWater.length === 0 ? (
+        ) : needsWater.length === 0 && needsFertilizer.length === 0 ? (
           <View style={styles.allCaughtUp}>
             <Text style={styles.allCaughtUpEmoji}>🎉</Text>
             <Text style={styles.allCaughtUpText}>All caught up!</Text>
             <Text style={styles.allCaughtUpSub}>All your plants are happy</Text>
           </View>
         ) : (
-          needsWater.map((plant) => (
-            <TaskCard
-              key={plant.id}
-              plant={plant}
-              onWater={() => handleWater(plant)}
-            />
-          ))
+          <>
+            {needsWater.map((plant) => (
+              <TaskCard
+                key={`water-${plant.id}`}
+                plant={plant}
+                onWater={() => handleWater(plant)}
+              />
+            ))}
+            {needsFertilizer.map((plant) => (
+              <FertilizerTaskCard
+                key={`fertilize-${plant.id}`}
+                plant={plant}
+                onFertilize={() => handleFertilize(plant)}
+              />
+            ))}
+          </>
         )}
       </View>
 

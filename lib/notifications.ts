@@ -4,6 +4,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { Plant } from "@/types";
 
 const NOTIFICATION_IDS_KEY = "notification_ids";
+const FERTILIZER_NOTIFICATION_IDS_KEY = "fertilizer_notification_ids";
 const REMINDER_TIME_KEY = "reminder_time";
 const REMINDER_MINUTES_KEY = "reminder_minutes";
 const NOTIFICATIONS_ENABLED_KEY = "notifications_enabled";
@@ -139,6 +140,76 @@ export async function cancelAllReminders(): Promise<void> {
   } catch (err) {
     console.warn("notifications: failed to cancel all reminders", err);
   }
+}
+
+/**
+ * Schedules a local notification for a single plant's next_fertilizer_at date.
+ * Fires at the user's preferred reminder hour (default 9 AM).
+ */
+export async function scheduleFertilizerReminder(plant: Plant): Promise<string | null> {
+  if (!plant.next_fertilizer_at) return null;
+
+  const nextDate = new Date(plant.next_fertilizer_at);
+  const now = new Date();
+  if (nextDate <= now) return null;
+
+  const { hour, minute } = await getReminderTime();
+  const triggerDate = new Date(nextDate);
+  triggerDate.setHours(hour, minute, 0, 0);
+  if (triggerDate <= now) return null;
+
+  try {
+    const identifier = await Notifications.scheduleNotificationAsync({
+      content: {
+        title: `🌱 Time to fertilize ${plant.name}!`,
+        body: `Give your ${plant.common_name ?? plant.species ?? "plant"} a nutrient boost.`,
+        data: { plantId: plant.id, type: "fertilizer" },
+        sound: "default",
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: triggerDate,
+      },
+    });
+    return identifier;
+  } catch (err) {
+    console.warn(`notifications: failed to schedule fertilizer for ${plant.name}`, err);
+    return null;
+  }
+}
+
+/** Cancels a scheduled fertilizer notification by its Expo identifier. */
+export async function cancelFertilizerReminder(notificationId: string): Promise<void> {
+  try {
+    await Notifications.cancelScheduledNotificationAsync(notificationId);
+  } catch (err) {
+    console.warn("notifications: failed to cancel fertilizer notification", notificationId, err);
+  }
+}
+
+/**
+ * Re-schedules the fertilizer notification for a single plant after it has been fertilized.
+ */
+export async function rescheduleFertilizerReminderForPlant(
+  plant: Plant
+): Promise<string | null> {
+  const enabledRaw = await AsyncStorage.getItem(NOTIFICATIONS_ENABLED_KEY);
+  const enabled = enabledRaw !== "false";
+  if (!enabled) return null;
+
+  const raw = await AsyncStorage.getItem(FERTILIZER_NOTIFICATION_IDS_KEY);
+  const idMap: NotificationIdMap = raw ? (JSON.parse(raw) as NotificationIdMap) : {};
+  const existingId = idMap[plant.id];
+  if (existingId) await cancelFertilizerReminder(existingId);
+
+  const newId = await scheduleFertilizerReminder(plant);
+  if (newId) {
+    idMap[plant.id] = newId;
+  } else {
+    delete idMap[plant.id];
+  }
+  await AsyncStorage.setItem(FERTILIZER_NOTIFICATION_IDS_KEY, JSON.stringify(idMap));
+  return newId;
 }
 
 /**

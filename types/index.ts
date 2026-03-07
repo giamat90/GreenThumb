@@ -38,6 +38,10 @@ export interface Plant {
   care_profile: Record<string, unknown> | null;
   notes: string | null;
   created_at: string;
+  fertilizer_interval_days: number | null;
+  last_fertilized_at: string | null;
+  next_fertilizer_at: string | null;
+  fertilizer_type: string | null;
 }
 
 export interface WateringEvent {
@@ -66,6 +70,15 @@ export interface CareEvent {
   type: CareEventType;
   scheduled_for: string | null;
   completed_at: string | null;
+  notes: string | null;
+}
+
+export interface FertilizerLog {
+  id: string;
+  plant_id: string;
+  user_id: string;
+  fertilized_at: string;
+  fertilizer_type: string | null;
   notes: string | null;
 }
 

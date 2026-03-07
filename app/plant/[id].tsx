@@ -27,10 +27,11 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { COLORS } from "@/constants";
 import { supabase } from "@/lib/supabase";
-import { rescheduleReminderForPlant, cancelWateringReminder } from "@/lib/notifications";
+import { rescheduleReminderForPlant, cancelWateringReminder, rescheduleFertilizerReminderForPlant } from "@/lib/notifications";
+import { calculateFertilizerInterval } from "@/lib/fertilizer";
 import { usePlantsStore } from "@/store/plants";
 import { useUserStore } from "@/store/user";
-import type { WateringEvent, Diagnosis, PlacementAnalysis } from "@/types";
+import type { WateringEvent, Diagnosis, PlacementAnalysis, FertilizerLog } from "@/types";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -151,6 +152,9 @@ function PlantDetailScreen() {
   const [diagnosisLoading, setDiagnosisLoading] = useState(true);
   const [placementHistory, setPlacementHistory] = useState<PlacementAnalysis[]>([]);
   const [placementLoading, setPlacementLoading] = useState(true);
+  const [fertilizerHistory, setFertilizerHistory] = useState<FertilizerLog[]>([]);
+  const [fertilizerLoading, setFertilizerLoading] = useState(true);
+  const [isFertilizing, setIsFertilizing] = useState(false);
 
   // Fetch last 5 watering events — useFocusEffect ties the lifecycle to
   // screen focus so the isActive flag is set to false before navigation
@@ -164,9 +168,10 @@ function PlantDetailScreen() {
         setHistoryLoading(true);
         setDiagnosisLoading(true);
         setPlacementLoading(true);
+        setFertilizerLoading(true);
 
-        // Fetch watering events, diagnosis history, and placement history in parallel
-        const [wateringResult, diagnosisResult, placementResult] = await Promise.all([
+        // Fetch all history in parallel
+        const [wateringResult, diagnosisResult, placementResult, fertilizerLogsResult] = await Promise.all([
           supabase
             .from("watering_events")
             .select("*")
@@ -185,15 +190,23 @@ function PlantDetailScreen() {
             .eq("plant_id", id)
             .order("created_at", { ascending: false })
             .limit(3),
+          supabase
+            .from("fertilizer_logs")
+            .select("*")
+            .eq("plant_id", id)
+            .order("fertilized_at", { ascending: false })
+            .limit(3),
         ]);
 
         if (!isActive) return;
         setWateringHistory((wateringResult.data ?? []) as WateringEvent[]);
         setDiagnosisHistory((diagnosisResult.data ?? []) as Diagnosis[]);
         setPlacementHistory((placementResult.data ?? []) as PlacementAnalysis[]);
+        setFertilizerHistory((fertilizerLogsResult.data ?? []) as FertilizerLog[]);
         setHistoryLoading(false);
         setDiagnosisLoading(false);
         setPlacementLoading(false);
+        setFertilizerLoading(false);
       };
 
       fetchHistory();
@@ -337,6 +350,77 @@ function PlantDetailScreen() {
     }
   }, [plant, profile, removePlant, navigation]);
 
+  // ── Fertilize now ─────────────────────────────────────────────────────────
+
+  const handleFertilizeNow = useCallback(async () => {
+    if (!plant || !profile) return;
+    setIsFertilizing(true);
+    try {
+      const now = new Date().toISOString();
+      const intervalDays = plant.fertilizer_interval_days ?? calculateFertilizerInterval(plant.species, new Date().getMonth());
+      const nextDate = new Date();
+      nextDate.setDate(nextDate.getDate() + intervalDays);
+      const nextFertilizerAt = nextDate.toISOString();
+
+      await supabase.from("fertilizer_logs").insert({
+        plant_id: plant.id,
+        user_id: profile.id,
+        fertilized_at: now,
+        fertilizer_type: plant.fertilizer_type ?? "liquid",
+      });
+
+      const { error } = await supabase
+        .from("plants")
+        .update({ last_fertilized_at: now, next_fertilizer_at: nextFertilizerAt })
+        .eq("id", plant.id);
+      if (error) throw error;
+
+      updatePlant(plant.id, { last_fertilized_at: now, next_fertilizer_at: nextFertilizerAt });
+
+      rescheduleFertilizerReminderForPlant({ ...plant, last_fertilized_at: now, next_fertilizer_at: nextFertilizerAt }).catch(console.warn);
+
+      setFertilizerHistory((prev) => [
+        { id: now, plant_id: plant.id, user_id: profile.id, fertilized_at: now, fertilizer_type: plant.fertilizer_type ?? "liquid", notes: null },
+        ...prev.slice(0, 2),
+      ]);
+
+      const nextDateStr = nextDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      Alert.alert("🌱 Fertilized!", `Next fertilizer reminder set for ${nextDateStr}.`);
+    } catch (err) {
+      Alert.alert("Error", err instanceof Error ? err.message : "Failed to record fertilization.");
+    } finally {
+      setIsFertilizing(false);
+    }
+  }, [plant, profile, updatePlant]);
+
+  const handleChangeFertilizerType = useCallback(() => {
+    if (!plant || !profile) return;
+    Alert.alert("Fertilizer Type", "Choose your fertilizer type:", [
+      {
+        text: "Liquid",
+        onPress: async () => {
+          await supabase.from("plants").update({ fertilizer_type: "liquid" }).eq("id", plant.id);
+          updatePlant(plant.id, { fertilizer_type: "liquid" });
+        },
+      },
+      {
+        text: "Granular",
+        onPress: async () => {
+          await supabase.from("plants").update({ fertilizer_type: "granular" }).eq("id", plant.id);
+          updatePlant(plant.id, { fertilizer_type: "granular" });
+        },
+      },
+      {
+        text: "Slow-release",
+        onPress: async () => {
+          await supabase.from("plants").update({ fertilizer_type: "slow-release" }).eq("id", plant.id);
+          updatePlant(plant.id, { fertilizer_type: "slow-release" });
+        },
+      },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  }, [plant, profile, updatePlant]);
+
   // ── Render ────────────────────────────────────────────────────────────────
 
   if (!plant) {
@@ -447,6 +531,68 @@ function PlantDetailScreen() {
             />
           </View>
         </View>
+
+        {/* ── Fertilizer ───────────────────────────────────────────────────── */}
+        {(() => {
+          const intervalDays = plant.fertilizer_interval_days ?? calculateFertilizerInterval(plant.species, new Date().getMonth());
+          const nextFertDate = plant.next_fertilizer_at
+            ? new Date(plant.next_fertilizer_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+            : "Not set";
+          const fertType = plant.fertilizer_type ?? "liquid";
+          const isOverdue = plant.next_fertilizer_at && new Date(plant.next_fertilizer_at) <= new Date();
+          return (
+            <View style={styles.card}>
+              <View style={styles.fertCardHeader}>
+                <Text style={styles.cardTitle}>Fertilizer</Text>
+                {isOverdue && (
+                  <View style={styles.fertDueBadge}>
+                    <Text style={styles.fertDueBadgeText}>Due</Text>
+                  </View>
+                )}
+              </View>
+
+              <View style={styles.fertInfoRow}>
+                <View style={styles.fertInfoItem}>
+                  <Text style={styles.fertInfoLabel}>Next</Text>
+                  <Text style={styles.fertInfoValue}>{nextFertDate}</Text>
+                </View>
+                <View style={styles.fertInfoItem}>
+                  <Text style={styles.fertInfoLabel}>Interval</Text>
+                  <Text style={styles.fertInfoValue}>Every {intervalDays}d</Text>
+                </View>
+              </View>
+
+              <Text style={styles.fertTypeLabel}>Type</Text>
+              <View style={styles.fertTypeRow}>
+                {(["liquid", "granular", "slow-release"] as const).map((t) => (
+                  <TouchableOpacity
+                    key={t}
+                    style={[styles.fertTypePill, fertType === t && styles.fertTypePillSelected]}
+                    onPress={handleChangeFertilizerType}
+                    accessibilityLabel={`Set fertilizer type to ${t}`}
+                  >
+                    <Text style={[styles.fertTypePillText, fertType === t && styles.fertTypePillTextSelected]}>
+                      {t.charAt(0).toUpperCase() + t.slice(1)}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <TouchableOpacity
+                style={styles.fertilizeButton}
+                onPress={handleFertilizeNow}
+                disabled={isFertilizing}
+                activeOpacity={0.85}
+              >
+                {isFertilizing ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Text style={styles.fertilizeButtonText}>Fertilize Now 🌱</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          );
+        })()}
 
         {/* ── Health ──────────────────────────────────────────────────────── */}
         <View style={styles.card}>
@@ -570,6 +716,29 @@ function PlantDetailScreen() {
                 </TouchableOpacity>
               );
             })
+          )}
+        </View>
+        {/* ── Fertilizer logs ───────────────────────────────────────────────── */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Fertilizer History</Text>
+          {fertilizerLoading ? (
+            <ActivityIndicator color={COLORS.secondary} style={{ marginTop: 12 }} />
+          ) : fertilizerHistory.length === 0 ? (
+            <Text style={styles.historyEmpty}>
+              No fertilizations yet — tap Fertilize Now to get started
+            </Text>
+          ) : (
+            fertilizerHistory.map((f) => (
+              <View key={f.id} style={styles.historyRow}>
+                <View style={styles.historyIconWrap}>
+                  <Text style={{ fontSize: 14 }}>🌱</Text>
+                </View>
+                <Text style={styles.historyLabel}>
+                  {f.fertilizer_type ? f.fertilizer_type.charAt(0).toUpperCase() + f.fertilizer_type.slice(1) : "Fertilized"}
+                </Text>
+                <Text style={styles.historyDate}>{timeAgo(f.fertilized_at)}</Text>
+              </View>
+            ))
           )}
         </View>
       </ScrollView>
@@ -880,5 +1049,94 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
     color: COLORS.primary,
+  },
+
+  // ── Fertilizer card ───────────────────────────────────────────────────────
+  fertCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 16,
+  },
+  fertDueBadge: {
+    backgroundColor: "#FEE2E2",
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  fertDueBadgeText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#991B1B",
+  },
+  fertInfoRow: {
+    flexDirection: "row",
+    gap: 16,
+    marginBottom: 16,
+  },
+  fertInfoItem: {
+    flex: 1,
+    backgroundColor: COLORS.cream,
+    borderRadius: 12,
+    padding: 12,
+  },
+  fertInfoLabel: {
+    fontSize: 11,
+    color: COLORS.textSecondary,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 4,
+    fontWeight: "500",
+  },
+  fertInfoValue: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: COLORS.textPrimary,
+  },
+  fertTypeLabel: {
+    fontSize: 11,
+    color: COLORS.textSecondary,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    fontWeight: "500",
+    marginBottom: 8,
+  },
+  fertTypeRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 16,
+  },
+  fertTypePill: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: COLORS.cream,
+    borderWidth: 1.5,
+    borderColor: "#E5E7EB",
+  },
+  fertTypePillSelected: {
+    backgroundColor: COLORS.lightgreen,
+    borderColor: COLORS.secondary,
+  },
+  fertTypePillText: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: COLORS.textSecondary,
+  },
+  fertTypePillTextSelected: {
+    color: COLORS.primary,
+    fontWeight: "700",
+  },
+  fertilizeButton: {
+    backgroundColor: COLORS.primary,
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: "center",
+  },
+  fertilizeButtonText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#fff",
   },
 });

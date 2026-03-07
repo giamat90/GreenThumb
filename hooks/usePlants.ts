@@ -2,14 +2,19 @@ import { useState, useCallback, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { usePlantsStore } from "@/store/plants";
 import { useUserStore } from "@/store/user";
+import { getDaysUntilFertilizer, getFertilizerStatus } from "@/lib/fertilizer";
+import type { FertilizerStatus } from "@/lib/fertilizer";
 import type { Plant } from "@/types";
 
 export type WateringStatus = "overdue" | "today" | "soon" | "ok";
+export type { FertilizerStatus };
 
 export interface PlantWithStatus extends Plant {
   daysUntilWatering: number | null;
   wateringStatus: WateringStatus | null;
   wateredToday: boolean;
+  daysUntilFertilizer: number | null;
+  fertilizerStatus: FertilizerStatus;
 }
 
 function getDaysUntilWatering(nextWatering: string | null): number | null {
@@ -77,6 +82,8 @@ export function usePlants() {
       daysUntilWatering: days,
       wateringStatus: getWateringStatus(days),
       wateredToday: checkWateredToday(plant.last_watered_at),
+      daysUntilFertilizer: getDaysUntilFertilizer(plant.next_fertilizer_at ?? null),
+      fertilizerStatus: getFertilizerStatus(plant),
     };
   });
 
