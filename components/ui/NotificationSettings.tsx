@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, Platform } from "react";
 import {
   View,
   Text,
@@ -7,7 +7,11 @@ import {
   ActivityIndicator,
   Alert,
   StyleSheet,
+  Modal,
 } from "react-native";
+import DateTimePicker, {
+  type DateTimePickerEvent,
+} from "@react-native-community/datetimepicker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Bell, Clock } from "lucide-react-native";
 
@@ -21,30 +25,42 @@ import {
 
 const NOTIFICATIONS_ENABLED_KEY = "notifications_enabled";
 const REMINDER_TIME_KEY = "reminder_time";
+const REMINDER_MINUTES_KEY = "reminder_minutes";
 
-// Reminder time options shown in the selector
-const REMINDER_TIMES: { label: string; hour: number }[] = [
-  { label: "8:00 AM", hour: 8 },
-  { label: "9:00 AM", hour: 9 },
-  { label: "10:00 AM", hour: 10 },
-  { label: "6:00 PM", hour: 18 },
-];
+function formatTime(hour: number, minute: number): string {
+  const period = hour >= 12 ? "PM" : "AM";
+  const h = hour % 12 || 12;
+  const m = minute.toString().padStart(2, "0");
+  return `${h}:${m} ${period}`;
+}
+
+/** Builds a Date object set to today at the given hour/minute. */
+function buildPickerDate(hour: number, minute: number): Date {
+  const d = new Date();
+  d.setHours(hour, minute, 0, 0);
+  return d;
+}
 
 export function NotificationSettings() {
   const [enabled, setEnabled] = useState(true);
   const [reminderHour, setReminderHour] = useState(9);
+  const [reminderMinute, setReminderMinute] = useState(0);
   const [isRescheduling, setIsRescheduling] = useState(false);
+  // Android: whether the native dialog is open; iOS: whether the inline picker shows
+  const [showPicker, setShowPicker] = useState(false);
   const { plants } = usePlantsStore();
 
   // Load persisted preferences on mount
   useEffect(() => {
     async function load() {
-      const [enabledRaw, hourRaw] = await Promise.all([
+      const [enabledRaw, hourRaw, minuteRaw] = await Promise.all([
         AsyncStorage.getItem(NOTIFICATIONS_ENABLED_KEY),
         AsyncStorage.getItem(REMINDER_TIME_KEY),
+        AsyncStorage.getItem(REMINDER_MINUTES_KEY),
       ]);
       setEnabled(enabledRaw !== "false");
       if (hourRaw) setReminderHour(parseInt(hourRaw, 10));
+      if (minuteRaw) setReminderMinute(parseInt(minuteRaw, 10));
     }
     load();
   }, []);
@@ -54,9 +70,9 @@ export function NotificationSettings() {
     await AsyncStorage.setItem(NOTIFICATIONS_ENABLED_KEY, value ? "true" : "false");
 
     if (!value) {
+      setShowPicker(false);
       await cancelAllReminders();
     } else {
-      // Reschedule all reminders when re-enabling
       setIsRescheduling(true);
       try {
         await scheduleAllReminders(plants);
@@ -68,13 +84,16 @@ export function NotificationSettings() {
     }
   }
 
-  async function handleTimeSelect(hour: number) {
+  async function applyNewTime(hour: number, minute: number) {
     setReminderHour(hour);
-    await AsyncStorage.setItem(REMINDER_TIME_KEY, String(hour));
+    setReminderMinute(minute);
+    await Promise.all([
+      AsyncStorage.setItem(REMINDER_TIME_KEY, String(hour)),
+      AsyncStorage.setItem(REMINDER_MINUTES_KEY, String(minute)),
+    ]);
 
     if (!enabled) return;
 
-    // Re-schedule everything at the new time
     setIsRescheduling(true);
     try {
       await scheduleAllReminders(plants);
@@ -82,6 +101,14 @@ export function NotificationSettings() {
       console.warn("NotificationSettings: reschedule after time change failed", err);
     } finally {
       setIsRescheduling(false);
+    }
+  }
+
+  function handlePickerChange(_event: DateTimePickerEvent, selected?: Date) {
+    // On Android the dialog closes automatically after selection or dismissal.
+    if (Platform.OS === "android") setShowPicker(false);
+    if (selected) {
+      applyNewTime(selected.getHours(), selected.getMinutes());
     }
   }
 
@@ -97,6 +124,8 @@ export function NotificationSettings() {
       console.warn("NotificationSettings: test notification failed", err);
     }
   }
+
+  const pickerDate = buildPickerDate(reminderHour, reminderMinute);
 
   return (
     <View style={styles.container}>
@@ -129,45 +158,70 @@ export function NotificationSettings() {
           )}
         </View>
 
-        {/* ── Reminder time selector ─────────────────────────────────────── */}
+        {/* ── Reminder time picker ───────────────────────────────────────── */}
         {enabled && (
           <>
             <View style={styles.divider} />
-            <View style={styles.timeSelectorRow}>
+            <TouchableOpacity
+              style={styles.timeRow}
+              onPress={() => setShowPicker(true)}
+              accessibilityLabel={`Change reminder time, currently ${formatTime(reminderHour, reminderMinute)}`}
+              accessibilityRole="button"
+            >
               <View style={styles.rowLeft}>
                 <View style={styles.iconWrap}>
                   <Clock size={18} color={COLORS.primary} />
                 </View>
                 <Text style={styles.rowLabel}>Reminder Time</Text>
               </View>
-            </View>
-            <View style={styles.timeOptions}>
-              {REMINDER_TIMES.map((opt) => {
-                const selected = opt.hour === reminderHour;
-                return (
-                  <TouchableOpacity
-                    key={opt.hour}
-                    style={[
-                      styles.timeChip,
-                      selected && styles.timeChipSelected,
-                    ]}
-                    onPress={() => handleTimeSelect(opt.hour)}
-                    accessibilityLabel={`Set reminder time to ${opt.label}`}
-                    accessibilityRole="radio"
-                    accessibilityState={{ selected }}
-                  >
-                    <Text
-                      style={[
-                        styles.timeChipText,
-                        selected && styles.timeChipTextSelected,
-                      ]}
-                    >
-                      {opt.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+              <View style={styles.timeDisplay}>
+                <Text style={styles.timeText}>
+                  {formatTime(reminderHour, reminderMinute)}
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            {/* Android: render the picker only when active (it opens as a dialog) */}
+            {Platform.OS === "android" && showPicker && (
+              <DateTimePicker
+                value={pickerDate}
+                mode="time"
+                is24Hour={false}
+                onChange={handlePickerChange}
+              />
+            )}
+
+            {/* iOS: show an inline picker inside a modal */}
+            {Platform.OS === "ios" && (
+              <Modal
+                visible={showPicker}
+                transparent
+                animationType="slide"
+                onRequestClose={() => setShowPicker(false)}
+              >
+                <View style={styles.iosModalBackdrop}>
+                  <View style={styles.iosPickerSheet}>
+                    <View style={styles.iosPickerHeader}>
+                      <Text style={styles.iosPickerTitle}>Reminder Time</Text>
+                      <TouchableOpacity
+                        onPress={() => setShowPicker(false)}
+                        accessibilityLabel="Done"
+                        accessibilityRole="button"
+                      >
+                        <Text style={styles.iosDoneButton}>Done</Text>
+                      </TouchableOpacity>
+                    </View>
+                    <DateTimePicker
+                      value={pickerDate}
+                      mode="time"
+                      display="spinner"
+                      onChange={handlePickerChange}
+                      style={styles.iosPicker}
+                    />
+                  </View>
+                </View>
+              </Modal>
+            )}
           </>
         )}
       </View>
@@ -245,36 +299,57 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: "#F3F4F6",
   },
-  timeSelectorRow: {
-    paddingVertical: 14,
-    paddingBottom: 8,
-  },
-  timeOptions: {
+  timeRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    paddingBottom: 14,
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 14,
   },
-  timeChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: "#F3F4F6",
-    borderWidth: 1.5,
-    borderColor: "transparent",
-  },
-  timeChipSelected: {
+  timeDisplay: {
     backgroundColor: COLORS.lightgreen,
-    borderColor: COLORS.secondary,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
   },
-  timeChipText: {
-    fontSize: 13,
-    fontWeight: "500",
-    color: COLORS.textSecondary,
-  },
-  timeChipTextSelected: {
-    color: COLORS.primary,
+  timeText: {
+    fontSize: 14,
     fontWeight: "700",
+    color: COLORS.primary,
+  },
+
+  // ── iOS modal picker ──────────────────────────────────────────────────────
+  iosModalBackdrop: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0,0,0,0.35)",
+  },
+  iosPickerSheet: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 32,
+  },
+  iosPickerHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+  },
+  iosPickerTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: COLORS.textPrimary,
+  },
+  iosDoneButton: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: COLORS.primary,
+  },
+  iosPicker: {
+    height: 200,
   },
   testButton: {
     marginTop: 12,

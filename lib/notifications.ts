@@ -5,6 +5,7 @@ import type { Plant } from "@/types";
 
 const NOTIFICATION_IDS_KEY = "notification_ids";
 const REMINDER_TIME_KEY = "reminder_time";
+const REMINDER_MINUTES_KEY = "reminder_minutes";
 const NOTIFICATIONS_ENABLED_KEY = "notifications_enabled";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -26,13 +27,19 @@ async function saveNotificationIds(map: NotificationIdMap): Promise<void> {
   await AsyncStorage.setItem(NOTIFICATION_IDS_KEY, JSON.stringify(map));
 }
 
-/** Returns the user-preferred reminder hour (default 9 AM). */
-async function getReminderHour(): Promise<number> {
+/** Returns the user-preferred reminder hour and minute (default 9:00 AM). */
+async function getReminderTime(): Promise<{ hour: number; minute: number }> {
   try {
-    const raw = await AsyncStorage.getItem(REMINDER_TIME_KEY);
-    return raw ? parseInt(raw, 10) : 9;
+    const [hourRaw, minuteRaw] = await Promise.all([
+      AsyncStorage.getItem(REMINDER_TIME_KEY),
+      AsyncStorage.getItem(REMINDER_MINUTES_KEY),
+    ]);
+    return {
+      hour: hourRaw ? parseInt(hourRaw, 10) : 9,
+      minute: minuteRaw ? parseInt(minuteRaw, 10) : 0,
+    };
   } catch {
-    return 9;
+    return { hour: 9, minute: 0 };
   }
 }
 
@@ -54,11 +61,11 @@ export async function scheduleWateringReminder(plant: Plant): Promise<string | n
   // Only schedule if the watering date is in the future
   if (nextWateringDate <= now) return null;
 
-  const hour = await getReminderHour();
+  const { hour, minute } = await getReminderTime();
 
-  // Build the trigger date: same date as next_watering but at the preferred hour
+  // Build the trigger date: same date as next_watering but at the preferred time
   const triggerDate = new Date(nextWateringDate);
-  triggerDate.setHours(hour, 0, 0, 0);
+  triggerDate.setHours(hour, minute, 0, 0);
 
   // If setting the hour pushed the trigger into the past, skip it
   if (triggerDate <= now) return null;
