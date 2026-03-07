@@ -115,7 +115,14 @@ function ScanLine() {
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function DiagnosisScreen() {
-  const { id: plantId } = useLocalSearchParams<{ id: string }>();
+  const params = useLocalSearchParams<{
+    id: string;
+    existingResult?: string;
+    severity?: string;
+    createdAt?: string;
+  }>();
+  const plantId = params.id;
+
   const router = useRouter();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -124,6 +131,18 @@ export default function DiagnosisScreen() {
   const { profile, subscription } = useUserStore();
   const isPro = subscription === "pro";
   const plant = plants.find((p) => p.id === plantId) ?? null;
+
+  // Parse existing diagnosis data passed from the history list so we can skip
+  // directly to the results view without re-running the API call.
+  let initialDiagnosis: DiagnosisResult | null = null;
+  try {
+    if (params.existingResult) {
+      initialDiagnosis = JSON.parse(params.existingResult) as DiagnosisResult;
+    }
+  } catch {
+    initialDiagnosis = null;
+  }
+  const isViewingExisting = initialDiagnosis !== null;
 
   // Gate: redirect free users to paywall every time this screen is focused.
   // useFocusEffect + a short delay ensures the Zustand store is fully hydrated
@@ -140,9 +159,11 @@ export default function DiagnosisScreen() {
     }, [isPro]) // eslint-disable-line react-hooks/exhaustive-deps
   );
 
-  const [screenState, setScreenState] = useState<ScreenState>("camera");
+  const [screenState, setScreenState] = useState<ScreenState>(
+    isViewingExisting ? "results" : "camera"
+  );
   const [capturedUri, setCapturedUri] = useState<string | null>(null);
-  const [diagnosis, setDiagnosis] = useState<DiagnosisResult | null>(null);
+  const [diagnosis, setDiagnosis] = useState<DiagnosisResult | null>(initialDiagnosis);
   const [isSaving, setIsSaving] = useState(false);
 
   const { hasPermission, requestPermission } = useCamera();
@@ -485,49 +506,65 @@ export default function DiagnosisScreen() {
           </View>
         )}
 
-        {/* ── Health score change ───────────────────────────────────────── */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Health Score Impact</Text>
-          <View style={styles.healthScoreRow}>
-            <Text style={styles.healthScoreValue}>{plant.health_score}</Text>
-            <Text style={styles.healthScoreArrow}>→</Text>
-            <Text style={[styles.healthScoreValue, { color: diagnosis.severity === "healthy" ? COLORS.success : COLORS.danger }]}>
-              {diagnosis.severity === "healthy"
-                ? Math.min(100, plant.health_score + 5)
-                : diagnosis.severity === "warning"
-                ? Math.max(0, plant.health_score - 15)
-                : Math.max(0, plant.health_score - 30)}
-            </Text>
+        {/* ── Health score change — only shown for fresh diagnoses ─────── */}
+        {!isViewingExisting && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Health Score Impact</Text>
+            <View style={styles.healthScoreRow}>
+              <Text style={styles.healthScoreValue}>{plant.health_score}</Text>
+              <Text style={styles.healthScoreArrow}>→</Text>
+              <Text style={[styles.healthScoreValue, { color: diagnosis.severity === "healthy" ? COLORS.success : COLORS.danger }]}>
+                {diagnosis.severity === "healthy"
+                  ? Math.min(100, plant.health_score + 5)
+                  : diagnosis.severity === "warning"
+                  ? Math.max(0, plant.health_score - 15)
+                  : Math.max(0, plant.health_score - 30)}
+              </Text>
+            </View>
+            <Text style={styles.healthScoreLabel}>Updated health score for {plant.name}</Text>
           </View>
-          <Text style={styles.healthScoreLabel}>Updated health score for {plant.name}</Text>
-        </View>
+        )}
       </ScrollView>
 
       {/* ── Fixed action bar ──────────────────────────────────────────── */}
       <View style={[styles.actionBar, { paddingBottom: insets.bottom + 12 }]}>
-        <TouchableOpacity
-          style={styles.tryAgainButton}
-          onPress={handleTryAgain}
-          accessibilityLabel="Try again with a new photo"
-          accessibilityRole="button"
-        >
-          <RefreshCw size={18} color={COLORS.primary} />
-          <Text style={styles.tryAgainText}>Try Again</Text>
-        </TouchableOpacity>
+        {isViewingExisting ? (
+          // Viewing a past diagnosis — just allow going back
+          <TouchableOpacity
+            style={styles.saveButton}
+            onPress={() => navigation.goBack()}
+            accessibilityLabel="Go back to plant detail"
+            accessibilityRole="button"
+          >
+            <Text style={styles.saveButtonText}>Done</Text>
+          </TouchableOpacity>
+        ) : (
+          <>
+            <TouchableOpacity
+              style={styles.tryAgainButton}
+              onPress={handleTryAgain}
+              accessibilityLabel="Try again with a new photo"
+              accessibilityRole="button"
+            >
+              <RefreshCw size={18} color={COLORS.primary} />
+              <Text style={styles.tryAgainText}>Try Again</Text>
+            </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.saveButton}
-          onPress={handleSave}
-          disabled={isSaving}
-          accessibilityLabel="Save diagnosis and go back"
-          accessibilityRole="button"
-        >
-          {isSaving ? (
-            <ActivityIndicator color="#fff" size="small" />
-          ) : (
-            <Text style={styles.saveButtonText}>Save Diagnosis ✓</Text>
-          )}
-        </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.saveButton}
+              onPress={handleSave}
+              disabled={isSaving}
+              accessibilityLabel="Save diagnosis and go back"
+              accessibilityRole="button"
+            >
+              {isSaving ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Text style={styles.saveButtonText}>Save Diagnosis ✓</Text>
+              )}
+            </TouchableOpacity>
+          </>
+        )}
       </View>
     </View>
   );

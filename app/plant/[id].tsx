@@ -14,6 +14,7 @@ import { useNavigation } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   ArrowLeft,
+  ChevronRight,
   Droplets,
   Sun,
   Leaf,
@@ -483,7 +484,24 @@ function PlantDetailScreen() {
                 d.severity === "healthy" ? "✅" :
                 d.severity === "warning" ? "⚠️" : "🚨";
               return (
-                <View key={d.id} style={styles.historyRow}>
+                <TouchableOpacity
+                  key={d.id}
+                  style={styles.historyRow}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/diagnosis/[id]",
+                      params: {
+                        id: plant.id,
+                        existingResult: JSON.stringify(d.result),
+                        severity: d.severity,
+                        createdAt: d.created_at,
+                      },
+                    })
+                  }
+                  activeOpacity={0.7}
+                  accessibilityLabel={`View diagnosis: ${result?.condition ?? d.severity}`}
+                  accessibilityRole="button"
+                >
                   <View style={styles.historyIconWrap}>
                     <Text style={{ fontSize: 14 }}>{severityEmoji}</Text>
                   </View>
@@ -491,7 +509,8 @@ function PlantDetailScreen() {
                     {result?.condition ?? d.severity}
                   </Text>
                   <Text style={styles.historyDate}>{timeAgo(d.created_at)}</Text>
-                </View>
+                  <ChevronRight size={16} color={COLORS.textSecondary} />
+                </TouchableOpacity>
               );
             })
           )}
