@@ -1,6 +1,7 @@
 import { Tabs, useRouter } from "expo-router";
 import { Home, Leaf, Camera, CalendarDays, User } from "lucide-react-native";
 import { TouchableOpacity, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { COLORS } from "@/constants";
 import { useProGate } from "@/hooks/useProGate";
 
@@ -64,6 +65,8 @@ function IdentifyTabButton() {
 // ─── Tab layout ───────────────────────────────────────────────────────────────
 
 export default function TabLayout() {
+  const { bottom } = useSafeAreaInsets();
+
   return (
     <Tabs
       screenOptions={{
@@ -75,8 +78,9 @@ export default function TabLayout() {
           borderTopColor: "#EFEFEF",
           elevation: 0,
           shadowOpacity: 0,
-          height: 62,
-          paddingBottom: 6,
+          // Account for Android system navigation bar (gesture or button nav)
+          height: 60 + bottom,
+          paddingBottom: bottom + 8,
         },
       }}
     >
