@@ -130,18 +130,19 @@ export default function DiagnosisScreen() {
   const plant = plants.find((p) => p.id === plantId) ?? null;
 
   // Gate: redirect free users to paywall every time this screen is focused.
-  // useFocusEffect + a short delay ensures the Zustand store is fully hydrated
-  // from the RevenueCat listener before we read isPro, preventing a false
-  // redirect on first render when subscription defaults to "free".
+  // Skipped when viewing an existing saved diagnosis — the user already paid
+  // for that result and should always be able to access it regardless of the
+  // current subscription state (e.g. RevenueCat test key returning "free").
   useFocusEffect(
     useCallback(() => {
+      if (existingDiagnosis) return;
       const timer = setTimeout(() => {
         if (!isPro) {
           router.replace("/paywall");
         }
       }, 300);
       return () => clearTimeout(timer);
-    }, [isPro]) // eslint-disable-line react-hooks/exhaustive-deps
+    }, [isPro, existingDiagnosis]) // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   const [screenState, setScreenState] = useState<ScreenState>("camera");
@@ -289,8 +290,9 @@ export default function DiagnosisScreen() {
   }, [router]);
 
   // ── Guard: subscription not yet confirmed (redirect pending) ──────────────
+  // Bypass for existing diagnoses — no need to wait for RevenueCat hydration.
 
-  if (!isPro) {
+  if (!isPro && !existingDiagnosis) {
     return (
       <View style={{ flex: 1, backgroundColor: COLORS.cream, justifyContent: "center", alignItems: "center" }}>
         <ActivityIndicator color={COLORS.primary} />
