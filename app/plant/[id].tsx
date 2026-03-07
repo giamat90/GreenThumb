@@ -30,7 +30,7 @@ import { supabase } from "@/lib/supabase";
 import { rescheduleReminderForPlant, cancelWateringReminder } from "@/lib/notifications";
 import { usePlantsStore } from "@/store/plants";
 import { useUserStore } from "@/store/user";
-import type { WateringEvent, Diagnosis } from "@/types";
+import type { WateringEvent, Diagnosis, PlacementAnalysis } from "@/types";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -149,6 +149,8 @@ function PlantDetailScreen() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [diagnosisHistory, setDiagnosisHistory] = useState<Diagnosis[]>([]);
   const [diagnosisLoading, setDiagnosisLoading] = useState(true);
+  const [placementHistory, setPlacementHistory] = useState<PlacementAnalysis[]>([]);
+  const [placementLoading, setPlacementLoading] = useState(true);
 
   // Fetch last 5 watering events — useFocusEffect ties the lifecycle to
   // screen focus so the isActive flag is set to false before navigation
@@ -161,9 +163,10 @@ function PlantDetailScreen() {
         if (!id) return;
         setHistoryLoading(true);
         setDiagnosisLoading(true);
+        setPlacementLoading(true);
 
-        // Fetch both watering events and diagnosis history in parallel
-        const [wateringResult, diagnosisResult] = await Promise.all([
+        // Fetch watering events, diagnosis history, and placement history in parallel
+        const [wateringResult, diagnosisResult, placementResult] = await Promise.all([
           supabase
             .from("watering_events")
             .select("*")
@@ -176,13 +179,21 @@ function PlantDetailScreen() {
             .eq("plant_id", id)
             .order("created_at", { ascending: false })
             .limit(3),
+          supabase
+            .from("placement_analyses")
+            .select("*")
+            .eq("plant_id", id)
+            .order("created_at", { ascending: false })
+            .limit(3),
         ]);
 
         if (!isActive) return;
         setWateringHistory((wateringResult.data ?? []) as WateringEvent[]);
         setDiagnosisHistory((diagnosisResult.data ?? []) as Diagnosis[]);
+        setPlacementHistory((placementResult.data ?? []) as PlacementAnalysis[]);
         setHistoryLoading(false);
         setDiagnosisLoading(false);
+        setPlacementLoading(false);
       };
 
       fetchHistory();
@@ -508,6 +519,53 @@ function PlantDetailScreen() {
                     {result?.condition ?? d.severity}
                   </Text>
                   <Text style={styles.historyDate}>{timeAgo(d.created_at)}</Text>
+                  <ChevronRight size={16} color={COLORS.textSecondary} />
+                </TouchableOpacity>
+              );
+            })
+          )}
+        </View>
+
+        {/* ── Placement history ─────────────────────────────────────────────── */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Placement History</Text>
+          {placementLoading ? (
+            <ActivityIndicator color={COLORS.secondary} style={{ marginTop: 12 }} />
+          ) : placementHistory.length === 0 ? (
+            <Text style={styles.historyEmpty}>
+              No placement checks yet — tap Placement to get started
+            </Text>
+          ) : (
+            placementHistory.map((p) => {
+              const overallEmoji =
+                p.overall === "good" ? "✅" :
+                p.overall === "warning" ? "⚠️" : "❌";
+              const shortDate = new Date(p.created_at).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+              });
+              return (
+                <TouchableOpacity
+                  key={p.id}
+                  style={styles.historyRow}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/placement/[id]",
+                      params: {
+                        id: plant.id,
+                        existingAnalysis: JSON.stringify(p),
+                      },
+                    })
+                  }
+                  activeOpacity={0.7}
+                  accessibilityLabel={`View placement analysis: ${p.overall}, score ${p.score}`}
+                  accessibilityRole="button"
+                >
+                  <View style={styles.historyIconWrap}>
+                    <Text style={{ fontSize: 14 }}>{overallEmoji}</Text>
+                  </View>
+                  <Text style={styles.historyLabel}>{p.score}/100</Text>
+                  <Text style={styles.historyDate}>{shortDate}</Text>
                   <ChevronRight size={16} color={COLORS.textSecondary} />
                 </TouchableOpacity>
               );

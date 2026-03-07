@@ -29,8 +29,10 @@ import * as FileSystem from "expo-file-system/legacy";
 import { Magnetometer } from "expo-sensors";
 
 import { COLORS } from "@/constants";
+import { supabase } from "@/lib/supabase";
 import { compressImage } from "@/lib/imageUtils";
 import { usePlantsStore } from "@/store/plants";
+import { useUserStore } from "@/store/user";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -228,12 +230,13 @@ function headingToDirection(heading: number): Exclude<WindowDirection, "none"> {
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function PlacementScreen() {
-  const { id: plantId } = useLocalSearchParams<{ id: string }>();
+  const { id: plantId, existingAnalysis } = useLocalSearchParams<{ id: string; existingAnalysis?: string }>();
   const navigation = useNavigation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
   const { plants } = usePlantsStore();
+  const { profile } = useUserStore();
   const plant = plants.find((p) => p.id === plantId) ?? null;
 
   // ── Form state ──────────────────────────────────────────────────────────────
@@ -245,6 +248,20 @@ export default function PlacementScreen() {
   // ── Screen state ────────────────────────────────────────────────────────────
   const [screenState, setScreenState] = useState<ScreenState>("form");
   const [result, setResult] = useState<PlacementResult | null>(null);
+  const [isViewingExisting, setIsViewingExisting] = useState(false);
+
+  // Jump straight to results when viewing an existing analysis from history
+  useEffect(() => {
+    if (!existingAnalysis) return;
+    try {
+      const record = JSON.parse(existingAnalysis as string) as PlacementResult;
+      setResult(record);
+      setScreenState("results");
+      setIsViewingExisting(true);
+    } catch {
+      // fall back to form
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Compass state ────────────────────────────────────────────────────────────
   // null = availability not yet known; false = unavailable; true = available
@@ -399,6 +416,27 @@ export default function PlacementScreen() {
       }
 
       const data = await response.json() as PlacementResult;
+
+      // Save to Supabase (best-effort — don't block results on failure)
+      if (profile) {
+        supabase.from("placement_analyses").insert({
+          plant_id: plantId,
+          user_id: profile.id,
+          overall: data.overall,
+          score: data.score,
+          light: data.light,
+          humidity: data.humidity,
+          temperature: data.temperature,
+          summary: data.summary,
+          tips: data.tips,
+          window_direction: windowDirection,
+          room_type: roomType,
+          light_level: lightLevel,
+        }).then(({ error }) => {
+          if (error) console.warn("placement: failed to save analysis", error);
+        });
+      }
+
       setResult(data);
       setScreenState("results");
     } catch (err) {
@@ -778,11 +816,13 @@ export default function PlacementScreen() {
         <TouchableOpacity
           style={styles.retakeButton}
           onPress={handleRetake}
-          accessibilityLabel="Change conditions and re-analyze"
+          accessibilityLabel={isViewingExisting ? "Run a new analysis" : "Change conditions and re-analyze"}
           accessibilityRole="button"
         >
           <RefreshCw size={18} color={COLORS.primary} />
-          <Text style={styles.retakeButtonText}>Change conditions</Text>
+          <Text style={styles.retakeButtonText}>
+            {isViewingExisting ? "New Analysis" : "Change conditions"}
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity

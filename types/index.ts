@@ -68,3 +68,20 @@ export interface CareEvent {
   completed_at: string | null;
   notes: string | null;
 }
+
+export interface PlacementAnalysis {
+  id: string;
+  plant_id: string;
+  user_id: string;
+  overall: "good" | "warning" | "poor";
+  score: number;
+  light: { status: string; advice: string };
+  humidity: { status: string; advice: string };
+  temperature: { status: string; advice: string };
+  summary: string;
+  tips: string[];
+  window_direction: string | null;
+  room_type: string | null;
+  light_level: string | null;
+  created_at: string;
+}
