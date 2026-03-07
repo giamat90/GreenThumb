@@ -1,4 +1,4 @@
-import { useEffect, useState, Platform } from "react";
+import { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -8,10 +8,9 @@ import {
   Alert,
   StyleSheet,
   Modal,
+  Platform,
 } from "react-native";
-import DateTimePicker, {
-  type DateTimePickerEvent,
-} from "@react-native-community/datetimepicker";
+import type { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Bell, Clock } from "lucide-react-native";
 
@@ -181,15 +180,21 @@ export function NotificationSettings() {
               </View>
             </TouchableOpacity>
 
-            {/* Android: render the picker only when active (it opens as a dialog) */}
-            {Platform.OS === "android" && showPicker && (
-              <DateTimePicker
-                value={pickerDate}
-                mode="time"
-                is24Hour={false}
-                onChange={handlePickerChange}
-              />
-            )}
+            {/* Android: render the picker only when active (it opens as a dialog).
+                Lazy require avoids the "Platform is undefined" crash that occurs
+                when the module is imported at the top level before RN is ready. */}
+            {Platform.OS === "android" && showPicker && (() => {
+              // eslint-disable-next-line @typescript-eslint/no-var-requires
+              const DateTimePicker = require("@react-native-community/datetimepicker").default;
+              return (
+                <DateTimePicker
+                  value={pickerDate}
+                  mode="time"
+                  is24Hour={false}
+                  onChange={handlePickerChange}
+                />
+              );
+            })()}
 
             {/* iOS: show an inline picker inside a modal */}
             {Platform.OS === "ios" && (
@@ -211,13 +216,19 @@ export function NotificationSettings() {
                         <Text style={styles.iosDoneButton}>Done</Text>
                       </TouchableOpacity>
                     </View>
-                    <DateTimePicker
-                      value={pickerDate}
-                      mode="time"
-                      display="spinner"
-                      onChange={handlePickerChange}
-                      style={styles.iosPicker}
-                    />
+                    {(() => {
+                      // eslint-disable-next-line @typescript-eslint/no-var-requires
+                      const DateTimePicker = require("@react-native-community/datetimepicker").default;
+                      return (
+                        <DateTimePicker
+                          value={pickerDate}
+                          mode="time"
+                          display="spinner"
+                          onChange={handlePickerChange}
+                          style={styles.iosPicker}
+                        />
+                      );
+                    })()}
                   </View>
                 </View>
               </Modal>
