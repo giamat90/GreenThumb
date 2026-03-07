@@ -1,9 +1,14 @@
 import { useState, useEffect } from "react";
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
+import Constants from "expo-constants";
 
 import { supabase } from "@/lib/supabase";
 import { useUserStore } from "@/store/user";
+
+// Remote push tokens are not available in Expo Go since SDK 53.
+// Local notifications (scheduling, cancelling) still work fine.
+const isExpoGo = Constants.appOwnership === "expo";
 
 export interface UseNotificationsResult {
   hasPermission: boolean;
@@ -42,9 +47,25 @@ export function useNotifications(): UseNotificationsResult {
   }
 
   async function fetchAndSaveToken(): Promise<string | null> {
+    // Android notification channel works in Expo Go; push token registration does not
+    if (Platform.OS === "android") {
+      try {
+        await Notifications.setNotificationChannelAsync("watering", {
+          name: "Watering Reminders",
+          importance: Notifications.AndroidImportance.HIGH,
+          vibrationPattern: [0, 250, 250, 250],
+          lightColor: "#52B788",
+          sound: "default",
+        });
+      } catch (err) {
+        console.warn("useNotifications: could not set notification channel", err);
+      }
+    }
+
+    // Push token fetch requires a development build — skip in Expo Go
+    if (isExpoGo) return null;
+
     try {
-      // Expo push tokens are only available on physical devices.
-      // On simulators / Expo Go on web this returns undefined gracefully.
       const tokenData = await Notifications.getExpoPushTokenAsync();
       const token = tokenData.data;
       setPushToken(token);
@@ -55,17 +76,6 @@ export function useNotifications(): UseNotificationsResult {
           .from("profiles")
           .update({ push_token: token })
           .eq("id", profile.id);
-      }
-
-      // Android requires a notification channel to be configured
-      if (Platform.OS === "android") {
-        await Notifications.setNotificationChannelAsync("watering", {
-          name: "Watering Reminders",
-          importance: Notifications.AndroidImportance.HIGH,
-          vibrationPattern: [0, 250, 250, 250],
-          lightColor: "#52B788",
-          sound: "default",
-        });
       }
 
       return token;

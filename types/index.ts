@@ -73,6 +73,16 @@ export interface CareEvent {
   notes: string | null;
 }
 
+export interface GrowthLog {
+  id: string;
+  plant_id: string;
+  user_id: string;
+  photo_url: string | null;
+  height_cm: number | null;
+  notes: string | null;
+  logged_at: string;
+}
+
 export interface FertilizerLog {
   id: string;
   plant_id: string;

@@ -22,6 +22,7 @@ import {
   FlaskConical,
   MapPin,
   Layers,
+  TrendingUp,
   Trash2,
 } from "lucide-react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -32,7 +33,7 @@ import { rescheduleReminderForPlant, cancelWateringReminder, rescheduleFertilize
 import { calculateFertilizerInterval } from "@/lib/fertilizer";
 import { usePlantsStore } from "@/store/plants";
 import { useUserStore } from "@/store/user";
-import type { WateringEvent, Diagnosis, PlacementAnalysis, FertilizerLog, RepottingAnalysis } from "@/types";
+import type { WateringEvent, Diagnosis, PlacementAnalysis, FertilizerLog, RepottingAnalysis, GrowthLog } from "@/types";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -158,6 +159,8 @@ function PlantDetailScreen() {
   const [isFertilizing, setIsFertilizing] = useState(false);
   const [repottingHistory, setRepottingHistory] = useState<RepottingAnalysis[]>([]);
   const [repottingLoading, setRepottingLoading] = useState(true);
+  const [growthPreview, setGrowthPreview] = useState<GrowthLog[]>([]);
+  const [growthLoading, setGrowthLoading] = useState(true);
 
   // Fetch last 5 watering events — useFocusEffect ties the lifecycle to
   // screen focus so the isActive flag is set to false before navigation
@@ -173,9 +176,10 @@ function PlantDetailScreen() {
         setPlacementLoading(true);
         setFertilizerLoading(true);
         setRepottingLoading(true);
+        setGrowthLoading(true);
 
         // Fetch all history in parallel
-        const [wateringResult, diagnosisResult, placementResult, fertilizerLogsResult, repottingResult] = await Promise.all([
+        const [wateringResult, diagnosisResult, placementResult, fertilizerLogsResult, repottingResult, growthResult] = await Promise.all([
           supabase
             .from("watering_events")
             .select("*")
@@ -206,6 +210,12 @@ function PlantDetailScreen() {
             .eq("plant_id", id)
             .order("created_at", { ascending: false })
             .limit(3),
+          supabase
+            .from("growth_logs")
+            .select("*")
+            .eq("plant_id", id)
+            .order("logged_at", { ascending: false })
+            .limit(2),
         ]);
 
         if (!isActive) return;
@@ -214,11 +224,13 @@ function PlantDetailScreen() {
         setPlacementHistory((placementResult.data ?? []) as PlacementAnalysis[]);
         setFertilizerHistory((fertilizerLogsResult.data ?? []) as FertilizerLog[]);
         setRepottingHistory((repottingResult.data ?? []) as RepottingAnalysis[]);
+        setGrowthPreview((growthResult.data ?? []) as GrowthLog[]);
         setHistoryLoading(false);
         setDiagnosisLoading(false);
         setPlacementLoading(false);
         setFertilizerLoading(false);
         setRepottingLoading(false);
+        setGrowthLoading(false);
       };
 
       fetchHistory();
@@ -799,6 +811,58 @@ function PlantDetailScreen() {
             })
           )}
         </View>
+        {/* ── Growth timeline preview ───────────────────────────────────────── */}
+        <View style={styles.card}>
+          <View style={styles.growthPreviewHeader}>
+            <Text style={[styles.cardTitle, { marginBottom: 0 }]}>Growth Timeline</Text>
+            <TouchableOpacity
+              onPress={() => router.push({ pathname: "/growth/[id]", params: { id: plant.id } })}
+              accessibilityLabel="View full growth timeline"
+              accessibilityRole="button"
+            >
+              <Text style={styles.viewAllText}>View all →</Text>
+            </TouchableOpacity>
+          </View>
+          {growthLoading ? (
+            <ActivityIndicator color={COLORS.secondary} style={{ marginTop: 12 }} />
+          ) : growthPreview.length === 0 ? (
+            <TouchableOpacity
+              onPress={() => router.push({ pathname: "/growth/[id]", params: { id: plant.id } })}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.historyEmpty}>Track growth → Log your first height measurement</Text>
+            </TouchableOpacity>
+          ) : (
+            growthPreview.map((log) => (
+              <TouchableOpacity
+                key={log.id}
+                style={styles.growthPreviewRow}
+                onPress={() => router.push({ pathname: "/growth/[id]", params: { id: plant.id } })}
+                activeOpacity={0.7}
+                accessibilityLabel={`Growth entry from ${formatDate(log.logged_at)}`}
+                accessibilityRole="button"
+              >
+                {log.photo_url ? (
+                  <Image source={{ uri: log.photo_url }} style={styles.growthThumb} />
+                ) : (
+                  <View style={styles.growthThumbPlaceholder}>
+                    <Text style={{ fontSize: 18 }}>🌿</Text>
+                  </View>
+                )}
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.historyDate}>{formatDate(log.logged_at)}</Text>
+                  {log.height_cm != null && (
+                    <Text style={styles.historyLabel}>📏 {log.height_cm} cm</Text>
+                  )}
+                  {log.notes ? (
+                    <Text style={[styles.historyDate, { marginTop: 2 }]} numberOfLines={1}>{log.notes}</Text>
+                  ) : null}
+                </View>
+                <ChevronRight size={16} color={COLORS.textSecondary} />
+              </TouchableOpacity>
+            ))
+          )}
+        </View>
       </ScrollView>
 
       {/* ── Fixed action buttons ─────────────────────────────────────────── */}
@@ -808,40 +872,55 @@ function PlantDetailScreen() {
           { paddingBottom: insets.bottom + 12 },
         ]}
       >
-        {/* Secondary actions: Diagnose and Check Placement side-by-side */}
-        <View style={styles.actionButtonRow}>
-          <TouchableOpacity
-            style={styles.actionButtonSecondary}
-            activeOpacity={0.8}
-            onPress={() => router.push(`/diagnosis/${plant.id}`)}
-            accessibilityLabel="Diagnose plant health"
-            accessibilityRole="button"
-          >
-            <FlaskConical size={16} color={COLORS.primary} />
-            <Text style={styles.actionButtonSecondaryText}>Diagnose 🔬</Text>
-          </TouchableOpacity>
+        {/* Secondary actions: 2×2 grid */}
+        <View style={styles.actionButtonGrid}>
+          <View style={styles.actionButtonRow}>
+            <TouchableOpacity
+              style={styles.actionButtonSecondary}
+              activeOpacity={0.8}
+              onPress={() => router.push(`/diagnosis/${plant.id}`)}
+              accessibilityLabel="Diagnose plant health"
+              accessibilityRole="button"
+            >
+              <FlaskConical size={16} color={COLORS.primary} />
+              <Text style={styles.actionButtonSecondaryText}>Diagnose 🔬</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.actionButtonSecondary}
-            activeOpacity={0.8}
-            onPress={() => router.push({ pathname: "/placement/[id]", params: { id: plant.id } })}
-            accessibilityLabel="Check plant placement"
-            accessibilityRole="button"
-          >
-            <MapPin size={16} color={COLORS.primary} />
-            <Text style={styles.actionButtonSecondaryText}>Placement 📍</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.actionButtonSecondary}
+              activeOpacity={0.8}
+              onPress={() => router.push({ pathname: "/placement/[id]", params: { id: plant.id } })}
+              accessibilityLabel="Check plant placement"
+              accessibilityRole="button"
+            >
+              <MapPin size={16} color={COLORS.primary} />
+              <Text style={styles.actionButtonSecondaryText}>Placement 📍</Text>
+            </TouchableOpacity>
+          </View>
 
-          <TouchableOpacity
-            style={styles.actionButtonSecondary}
-            activeOpacity={0.8}
-            onPress={() => router.push({ pathname: "/repotting/[id]", params: { id: plant.id } })}
-            accessibilityLabel="Repotting advisor"
-            accessibilityRole="button"
-          >
-            <Layers size={16} color={COLORS.primary} />
-            <Text style={styles.actionButtonSecondaryText}>Repot 🪴</Text>
-          </TouchableOpacity>
+          <View style={styles.actionButtonRow}>
+            <TouchableOpacity
+              style={styles.actionButtonSecondary}
+              activeOpacity={0.8}
+              onPress={() => router.push({ pathname: "/repotting/[id]", params: { id: plant.id } })}
+              accessibilityLabel="Repotting advisor"
+              accessibilityRole="button"
+            >
+              <Layers size={16} color={COLORS.primary} />
+              <Text style={styles.actionButtonSecondaryText}>Repot 🪴</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionButtonSecondary}
+              activeOpacity={0.8}
+              onPress={() => router.push({ pathname: "/growth/[id]", params: { id: plant.id } })}
+              accessibilityLabel="Track plant growth"
+              accessibilityRole="button"
+            >
+              <TrendingUp size={16} color={COLORS.primary} />
+              <Text style={styles.actionButtonSecondaryText}>Growth 📈</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <TouchableOpacity
@@ -1099,9 +1178,12 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#fff",
   },
+  actionButtonGrid: {
+    gap: 8,
+  },
   actionButtonRow: {
     flexDirection: "row",
-    gap: 10,
+    gap: 8,
   },
   actionButtonSecondary: {
     flex: 1,
@@ -1115,7 +1197,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   actionButtonSecondaryText: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: "600",
     color: COLORS.primary,
   },
@@ -1207,5 +1289,39 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "700",
     color: "#fff",
+  },
+
+  // ── Growth preview ────────────────────────────────────────────────────────
+  growthPreviewHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 16,
+  },
+  viewAllText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: COLORS.primary,
+  },
+  growthPreviewRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.cream,
+  },
+  growthThumb: {
+    width: 52,
+    height: 52,
+    borderRadius: 10,
+  },
+  growthThumbPlaceholder: {
+    width: 52,
+    height: 52,
+    borderRadius: 10,
+    backgroundColor: COLORS.lightgreen,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });
