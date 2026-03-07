@@ -3,7 +3,13 @@
     "allow": [
       "Bash(npx supabase:*)",
       "Bash(ls:*)",
-      "Bash(npx expo:*)"
+      "Bash(npx expo:*)",
+      "Bash(xargs grep:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(npx eas:*)",
+      "Bash(python:*)"
     ]
   }
 }
