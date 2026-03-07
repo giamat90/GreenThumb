@@ -21,6 +21,7 @@ import {
   Calendar,
   FlaskConical,
   MapPin,
+  Layers,
   Trash2,
 } from "lucide-react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -31,7 +32,7 @@ import { rescheduleReminderForPlant, cancelWateringReminder, rescheduleFertilize
 import { calculateFertilizerInterval } from "@/lib/fertilizer";
 import { usePlantsStore } from "@/store/plants";
 import { useUserStore } from "@/store/user";
-import type { WateringEvent, Diagnosis, PlacementAnalysis, FertilizerLog } from "@/types";
+import type { WateringEvent, Diagnosis, PlacementAnalysis, FertilizerLog, RepottingAnalysis } from "@/types";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -155,6 +156,8 @@ function PlantDetailScreen() {
   const [fertilizerHistory, setFertilizerHistory] = useState<FertilizerLog[]>([]);
   const [fertilizerLoading, setFertilizerLoading] = useState(true);
   const [isFertilizing, setIsFertilizing] = useState(false);
+  const [repottingHistory, setRepottingHistory] = useState<RepottingAnalysis[]>([]);
+  const [repottingLoading, setRepottingLoading] = useState(true);
 
   // Fetch last 5 watering events — useFocusEffect ties the lifecycle to
   // screen focus so the isActive flag is set to false before navigation
@@ -169,9 +172,10 @@ function PlantDetailScreen() {
         setDiagnosisLoading(true);
         setPlacementLoading(true);
         setFertilizerLoading(true);
+        setRepottingLoading(true);
 
         // Fetch all history in parallel
-        const [wateringResult, diagnosisResult, placementResult, fertilizerLogsResult] = await Promise.all([
+        const [wateringResult, diagnosisResult, placementResult, fertilizerLogsResult, repottingResult] = await Promise.all([
           supabase
             .from("watering_events")
             .select("*")
@@ -196,6 +200,12 @@ function PlantDetailScreen() {
             .eq("plant_id", id)
             .order("fertilized_at", { ascending: false })
             .limit(3),
+          supabase
+            .from("repotting_analyses")
+            .select("*")
+            .eq("plant_id", id)
+            .order("created_at", { ascending: false })
+            .limit(3),
         ]);
 
         if (!isActive) return;
@@ -203,10 +213,12 @@ function PlantDetailScreen() {
         setDiagnosisHistory((diagnosisResult.data ?? []) as Diagnosis[]);
         setPlacementHistory((placementResult.data ?? []) as PlacementAnalysis[]);
         setFertilizerHistory((fertilizerLogsResult.data ?? []) as FertilizerLog[]);
+        setRepottingHistory((repottingResult.data ?? []) as RepottingAnalysis[]);
         setHistoryLoading(false);
         setDiagnosisLoading(false);
         setPlacementLoading(false);
         setFertilizerLoading(false);
+        setRepottingLoading(false);
       };
 
       fetchHistory();
@@ -741,6 +753,52 @@ function PlantDetailScreen() {
             ))
           )}
         </View>
+
+        {/* ── Repotting history ─────────────────────────────────────────────── */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Repotting History</Text>
+          {repottingLoading ? (
+            <ActivityIndicator color={COLORS.secondary} style={{ marginTop: 12 }} />
+          ) : repottingHistory.length === 0 ? (
+            <Text style={styles.historyEmpty}>
+              No repotting checks yet — tap Repot to get started
+            </Text>
+          ) : (
+            repottingHistory.map((r) => {
+              const recEmoji =
+                r.recommendation === "repot_now" ? "🚨" :
+                r.recommendation === "repot_soon" ? "⚠️" : "✅";
+              const recLabel =
+                r.recommendation === "repot_now" ? "Repot Now" :
+                r.recommendation === "repot_soon" ? "Repot Soon" : "All Good";
+              const shortDate = new Date(r.created_at).toLocaleDateString("en-US", {
+                month: "short", day: "numeric",
+              });
+              return (
+                <TouchableOpacity
+                  key={r.id}
+                  style={styles.historyRow}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/repotting/[id]",
+                      params: { id: plant.id, existingAnalysis: JSON.stringify(r) },
+                    })
+                  }
+                  activeOpacity={0.7}
+                  accessibilityLabel={`View repotting analysis: ${recLabel}`}
+                  accessibilityRole="button"
+                >
+                  <View style={styles.historyIconWrap}>
+                    <Text style={{ fontSize: 14 }}>{recEmoji}</Text>
+                  </View>
+                  <Text style={styles.historyLabel}>{recLabel}</Text>
+                  <Text style={styles.historyDate}>{shortDate}</Text>
+                  <ChevronRight size={16} color={COLORS.textSecondary} />
+                </TouchableOpacity>
+              );
+            })
+          )}
+        </View>
       </ScrollView>
 
       {/* ── Fixed action buttons ─────────────────────────────────────────── */}
@@ -772,6 +830,17 @@ function PlantDetailScreen() {
           >
             <MapPin size={16} color={COLORS.primary} />
             <Text style={styles.actionButtonSecondaryText}>Placement 📍</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionButtonSecondary}
+            activeOpacity={0.8}
+            onPress={() => router.push({ pathname: "/repotting/[id]", params: { id: plant.id } })}
+            accessibilityLabel="Repotting advisor"
+            accessibilityRole="button"
+          >
+            <Layers size={16} color={COLORS.primary} />
+            <Text style={styles.actionButtonSecondaryText}>Repot 🪴</Text>
           </TouchableOpacity>
         </View>
 

@@ -82,6 +82,25 @@ export interface FertilizerLog {
   notes: string | null;
 }
 
+export interface RepottingAnalysis {
+  id: string;
+  plant_id: string;
+  user_id: string;
+  recommendation: "repot_now" | "repot_soon" | "wait";
+  urgency_score: number;
+  reasons: string[];
+  best_time: string | null;
+  pot_size: string | null;
+  soil_mix: string | null;
+  steps: string[];
+  warnings: string[] | null;
+  summary: string;
+  current_pot_size: string | null;
+  current_pot_material: string | null;
+  observed_signs: string[] | null;
+  created_at: string;
+}
+
 export interface PlacementAnalysis {
   id: string;
   plant_id: string;
