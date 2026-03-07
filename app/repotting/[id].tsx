@@ -11,10 +11,10 @@ import {
   Dimensions,
   Image,
 } from "react-native";
-import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { Stack, useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import { useNavigation } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ArrowLeft, RefreshCw, Camera, ImageIcon } from "lucide-react-native";
+import { ArrowLeft, RefreshCw, Camera, Plus } from "lucide-react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system/legacy";
 
@@ -43,6 +43,22 @@ interface RepottingResult {
   warnings: string[];
   summary: string;
 }
+
+// ─── Photo slots ──────────────────────────────────────────────────────────────
+
+interface PhotoSlot {
+  key: string;
+  emoji: string;
+  label: string;
+  hint: string;
+}
+
+const PHOTO_SLOTS: PhotoSlot[] = [
+  { key: "overall",  emoji: "🪴", label: "Overall Plant",   hint: "Full plant in frame"       },
+  { key: "soil",     emoji: "🌱", label: "Soil Surface",    hint: "Top of soil texture"       },
+  { key: "drainage", emoji: "🕳️", label: "Drainage Holes",  hint: "Underside of pot"          },
+  { key: "roots",    emoji: "🌿", label: "Roots",           hint: "If roots are visible"      },
+];
 
 // ─── Option data ──────────────────────────────────────────────────────────────
 
@@ -121,18 +137,31 @@ export default function RepottingScreen() {
   const insets = useSafeAreaInsets();
 
   const { plants } = usePlantsStore();
-  const { profile } = useUserStore();
+  const { profile, subscription } = useUserStore();
+  const isPro = subscription === "pro";
   const plant = plants.find((p) => p.id === plantId) ?? null;
+
+  // ── Pro gate — __DEV__ bypass for development testing ─────────────────────
+  useFocusEffect(
+    useCallback(() => {
+      if (__DEV__ || existingAnalysis) return;
+      const timer = setTimeout(() => {
+        if (!isPro) router.replace("/paywall");
+      }, 300);
+      return () => clearTimeout(timer);
+    }, [isPro, existingAnalysis]) // eslint-disable-line react-hooks/exhaustive-deps
+  );
 
   // ── Form state ──────────────────────────────────────────────────────────────
   const [potSize, setPotSize] = useState(POT_SIZE_OPTIONS[1]);
   const [potMaterial, setPotMaterial] = useState(POT_MATERIAL_OPTIONS[0]);
   const [lastRepotted, setLastRepotted] = useState(LAST_REPOTTED_OPTIONS[3]);
   const [selectedSigns, setSelectedSigns] = useState<Set<string>>(new Set());
-  const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [slotUris, setSlotUris] = useState<Record<string, string | null>>({});
 
   // ── Screen state ────────────────────────────────────────────────────────────
   const [screenState, setScreenState] = useState<ScreenState>("form");
+  const [primaryUri, setPrimaryUri] = useState<string | null>(null);
   const [result, setResult] = useState<RepottingResult | null>(null);
   const [isViewingExisting, setIsViewingExisting] = useState(false);
 
@@ -169,41 +198,63 @@ export default function RepottingScreen() {
     });
   }, []);
 
-  // ── Pick photo ───────────────────────────────────────────────────────────────
-  const handlePickPhoto = useCallback(async (source: "camera" | "gallery") => {
-    try {
-      let pickerResult: ImagePicker.ImagePickerResult;
-      if (source === "camera") {
-        const { status } = await ImagePicker.requestCameraPermissionsAsync();
-        if (status !== "granted") {
-          Alert.alert("Camera access required", "Please allow camera access in your device settings.");
-          return;
-        }
-        pickerResult = await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], quality: 0.7 });
-      } else {
-        pickerResult = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.7 });
-      }
-      if (!pickerResult.canceled && pickerResult.assets[0]?.uri) {
-        setPhotoUri(pickerResult.assets[0].uri);
-      }
-    } catch {
-      Alert.alert("Error", "Could not access photo. Please try again.");
-    }
+  // ── Pick photo for a slot ────────────────────────────────────────────────────
+  const handlePickPhoto = useCallback((slotKey: string) => {
+    Alert.alert("Add Photo", "Choose a source", [
+      {
+        text: "Camera",
+        onPress: async () => {
+          try {
+            const result = await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], quality: 0.85 });
+            if (!result.canceled && result.assets[0]?.uri) {
+              setSlotUris((prev) => ({ ...prev, [slotKey]: result.assets[0].uri }));
+            }
+          } catch {
+            Alert.alert("Error", "Could not access camera. Please try again.");
+          }
+        },
+      },
+      {
+        text: "Photo Library",
+        onPress: async () => {
+          try {
+            const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.85 });
+            if (!result.canceled && result.assets[0]?.uri) {
+              setSlotUris((prev) => ({ ...prev, [slotKey]: result.assets[0].uri }));
+            }
+          } catch {
+            Alert.alert("Error", "Could not access library. Please try again.");
+          }
+        },
+      },
+      { text: "Cancel", style: "cancel" },
+    ]);
   }, []);
 
   // ── Analyze ──────────────────────────────────────────────────────────────────
   const handleAnalyze = useCallback(async () => {
     if (!plant) return;
+
+    const filledSlots = PHOTO_SLOTS.filter((s) => slotUris[s.key]);
+    // Use the first filled slot's URI as the analyzing background
+    const bgUri = filledSlots.length > 0
+      ? (slotUris[filledSlots[0].key] ?? null)
+      : null;
+    setPrimaryUri(bgUri);
     setScreenState("analyzing");
 
     try {
-      let photoBase64: string | undefined;
-      if (photoUri) {
-        const filename = `repot_${Date.now()}.jpg`;
-        const destUri = `${FileSystem.cacheDirectory}${filename}`;
-        await FileSystem.copyAsync({ from: photoUri, to: destUri });
-        photoBase64 = await compressImage(destUri);
-      }
+      // Process all selected photos in parallel
+      const photos = await Promise.all(
+        filledSlots.map(async (slot) => {
+          const uri = slotUris[slot.key]!;
+          const filename = `repot_${slot.key}_${Date.now()}.jpg`;
+          const destUri = `${FileSystem.cacheDirectory}${filename}`;
+          await FileSystem.copyAsync({ from: uri, to: destUri });
+          const base64 = await compressImage(destUri);
+          return { base64, part: slot.label };
+        })
+      );
 
       const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
       const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
@@ -223,7 +274,7 @@ export default function RepottingScreen() {
           currentPotMaterial: potMaterial,
           lastRepotted,
           observedSigns: Array.from(selectedSigns),
-          photoBase64,
+          photos: photos.length > 0 ? photos : undefined,
         }),
       });
 
@@ -262,15 +313,25 @@ export default function RepottingScreen() {
       Alert.alert("Analysis Failed", err instanceof Error ? err.message : "Something went wrong. Please try again.");
       setScreenState("form");
     }
-  }, [plant, potSize, potMaterial, lastRepotted, selectedSigns, photoUri, profile, plantId]);
+  }, [plant, potSize, potMaterial, lastRepotted, selectedSigns, slotUris, profile, plantId]);
 
   const handleRetake = useCallback(() => {
     setResult(null);
+    setSlotUris({});
+    setPrimaryUri(null);
     setIsViewingExisting(false);
     setScreenState("form");
   }, []);
 
-  // ── Guard ─────────────────────────────────────────────────────────────────
+  // ── Guards ─────────────────────────────────────────────────────────────────
+  if (!__DEV__ && !isPro && !existingAnalysis) {
+    return (
+      <View style={{ flex: 1, backgroundColor: COLORS.cream, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator color={COLORS.primary} />
+      </View>
+    );
+  }
+
   if (!plant) {
     return (
       <View style={styles.notFound}>
@@ -376,36 +437,59 @@ export default function RepottingScreen() {
             })}
           </View>
 
-          {/* ── Photo (optional) ──────────────────────────────────────────── */}
+          {/* ── Photos (optional) ─────────────────────────────────────────── */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Photo of plant/roots (optional)</Text>
-            <Text style={styles.sectionSubtitle}>Adding a photo helps AI spot root-bound signs</Text>
-            {photoUri ? (
-              <View style={styles.photoWrap}>
-                <Image source={{ uri: photoUri }} style={styles.photo} resizeMode="cover" />
-                <TouchableOpacity style={styles.removePhotoButton} onPress={() => setPhotoUri(null)}>
-                  <Text style={styles.removePhotoText}>✕ Remove</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <View style={styles.photoButtonRow}>
-                <TouchableOpacity style={styles.photoButton} onPress={() => handlePickPhoto("camera")}>
-                  <Camera size={20} color={COLORS.primary} />
-                  <Text style={styles.photoButtonText}>Camera</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.photoButton} onPress={() => handlePickPhoto("gallery")}>
-                  <ImageIcon size={20} color={COLORS.primary} />
-                  <Text style={styles.photoButtonText}>Library</Text>
-                </TouchableOpacity>
-              </View>
-            )}
+            <Text style={styles.sectionTitle}>Photos (optional)</Text>
+            <Text style={styles.sectionSubtitle}>Add photos for better assessment — tap any slot to add</Text>
+            <View style={styles.slotGrid}>
+              {PHOTO_SLOTS.map((slot) => {
+                const uri = slotUris[slot.key] ?? null;
+                return (
+                  <TouchableOpacity
+                    key={slot.key}
+                    style={[styles.slot, uri && styles.slotFilled]}
+                    onPress={() => handlePickPhoto(slot.key)}
+                    activeOpacity={0.8}
+                    accessibilityLabel={`Add ${slot.label} photo`}
+                    accessibilityRole="button"
+                  >
+                    {uri ? (
+                      <>
+                        <Image source={{ uri }} style={styles.slotImage} resizeMode="cover" />
+                        <View style={styles.slotOverlay}>
+                          <Text style={styles.slotOverlayEmoji}>{slot.emoji}</Text>
+                          <Text style={styles.slotOverlayLabel}>{slot.label}</Text>
+                        </View>
+                        <View style={styles.slotChangeBtn}>
+                          <Camera size={12} color="#fff" />
+                        </View>
+                      </>
+                    ) : (
+                      <>
+                        <Text style={styles.slotEmoji}>{slot.emoji}</Text>
+                        <Text style={styles.slotLabel}>{slot.label}</Text>
+                        <Text style={styles.slotHint}>{slot.hint}</Text>
+                        <View style={styles.slotAddIcon}>
+                          <Plus size={16} color={COLORS.primary} />
+                        </View>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           </View>
         </ScrollView>
 
         {/* Analyze button */}
         <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 12 }]}>
           <TouchableOpacity style={styles.analyzeButton} onPress={handleAnalyze} activeOpacity={0.85}>
-            <Text style={styles.analyzeButtonText}>Analyze Repotting Need 🪴</Text>
+            <Text style={styles.analyzeButtonText}>
+              {(() => {
+                const n = PHOTO_SLOTS.filter((s) => slotUris[s.key]).length;
+                return n > 0 ? `Check Repotting Need (${n} photo${n > 1 ? "s" : ""})` : "Check Repotting Need";
+              })()}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -421,15 +505,15 @@ export default function RepottingScreen() {
       <View style={[styles.screen, styles.analyzingScreen]}>
         <Stack.Screen options={{ headerShown: false }} />
 
-        {photoUri && (
-          <Image source={{ uri: photoUri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+        {primaryUri && (
+          <Image source={{ uri: primaryUri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
         )}
         <View style={[StyleSheet.absoluteFill, styles.analyzingDim]} />
         <ScanLine />
 
         <View style={styles.analyzingContent}>
           <ActivityIndicator color={COLORS.secondary} size="large" />
-          <Text style={styles.analyzingTitle}>Analyzing repotting needs...</Text>
+          <Text style={styles.analyzingTitle}>Analyzing your plant...</Text>
           <Text style={styles.analyzingSubtitle}>Checking root health, pot fit, and growth stage</Text>
         </View>
       </View>
@@ -610,22 +694,39 @@ const styles = StyleSheet.create({
   checkLabel: { flex: 1, fontSize: 14, color: COLORS.textSecondary },
   checkLabelChecked: { color: COLORS.textPrimary, fontWeight: "600" },
 
-  // ── Photo ─────────────────────────────────────────────────────────────────
-  photoButtonRow: { flexDirection: "row", gap: 10 },
-  photoButton: {
-    flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center",
-    gap: 8, backgroundColor: "#fff", borderRadius: 14, paddingVertical: 14,
-    borderWidth: 1.5, borderColor: COLORS.secondary,
+  // ── Photo slots ───────────────────────────────────────────────────────────
+  slotGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  slot: {
+    width: "47.5%", aspectRatio: 1,
+    backgroundColor: "#fff", borderRadius: 16,
+    alignItems: "center", justifyContent: "center",
+    borderWidth: 2, borderColor: "#E5E7EB", borderStyle: "dashed",
+    padding: 10, gap: 3, overflow: "hidden",
+    shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 3, elevation: 1,
   },
-  photoButtonText: { fontSize: 14, fontWeight: "600", color: COLORS.primary },
-  photoWrap: { borderRadius: 16, overflow: "hidden" },
-  photo: { width: "100%", height: 160, borderRadius: 16 },
-  removePhotoButton: {
-    position: "absolute", top: 8, right: 8,
-    backgroundColor: "rgba(0,0,0,0.55)", borderRadius: 12,
-    paddingHorizontal: 10, paddingVertical: 5,
+  slotFilled: { borderStyle: "solid", borderColor: COLORS.primary, padding: 0 },
+  slotImage: { width: "100%", height: "100%", borderRadius: 14 },
+  slotOverlay: {
+    position: "absolute", bottom: 0, left: 0, right: 0,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    paddingVertical: 7, paddingHorizontal: 8,
+    borderBottomLeftRadius: 14, borderBottomRightRadius: 14,
+    flexDirection: "row", alignItems: "center", gap: 4,
   },
-  removePhotoText: { color: "#fff", fontSize: 12, fontWeight: "600" },
+  slotOverlayEmoji: { fontSize: 12 },
+  slotOverlayLabel: { fontSize: 11, fontWeight: "700", color: "#fff" },
+  slotChangeBtn: {
+    position: "absolute", top: 7, right: 7,
+    width: 24, height: 24, borderRadius: 12,
+    backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center",
+  },
+  slotEmoji: { fontSize: 24, marginBottom: 1 },
+  slotLabel: { fontSize: 12, fontWeight: "700", color: COLORS.textPrimary, textAlign: "center" },
+  slotHint: { fontSize: 10, color: COLORS.textSecondary, textAlign: "center", lineHeight: 14 },
+  slotAddIcon: {
+    width: 28, height: 28, borderRadius: 14,
+    backgroundColor: COLORS.lightgreen, alignItems: "center", justifyContent: "center", marginTop: 3,
+  },
 
   // ── Analyzing ─────────────────────────────────────────────────────────────
   analyzingScreen: { backgroundColor: "#000" },

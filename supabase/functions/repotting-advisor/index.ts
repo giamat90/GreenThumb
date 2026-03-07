@@ -5,6 +5,11 @@ import { corsHeaders } from "./cors.ts";
 
 // ─── Request types ────────────────────────────────────────────────────────────
 
+interface PhotoInput {
+  base64: string; // base64 encoded JPEG
+  part: string;   // "Overall Plant" | "Soil Surface" | "Drainage Holes" | "Roots"
+}
+
 interface RepottingRequestBody {
   plantName: string;
   species?: string;
@@ -12,7 +17,7 @@ interface RepottingRequestBody {
   currentPotMaterial: string;
   lastRepotted: string;
   observedSigns: string[];
-  photoBase64?: string;
+  photos?: PhotoInput[]; // optional — analysis works from form data alone
 }
 
 // ─── Response types ───────────────────────────────────────────────────────────
@@ -84,6 +89,21 @@ Deno.serve(async (req: Request): Promise<Response> => {
       ? body.observedSigns.map((s) => `- ${s}`).join("\n")
       : "- No specific signs observed";
 
+    const photos = body.photos ?? [];
+    const photoCount = photos.length;
+    const hasPhotos = photoCount > 0;
+    const partLabels = photos.map((p) => p.part).join(", ");
+
+    const photoLine = hasPhotos
+      ? `\nPHOTOS PROVIDED (${photoCount}): ${partLabels}
+Cross-reference visual evidence with the form data above:
+- Visible roots escaping drainage holes = definitely needs repotting now
+- Roots circling or matted on soil surface = repot soon
+- Compacted, cracked, or hydrophobic soil surface = likely needs repot
+- Healthy soil with visible space around plant = can wait
+- Roots circling inside pot = repot soon`
+      : "";
+
     const textPrompt = `You are an expert botanist and horticulturist specialising in indoor plant care and repotting.
 
 PLANT INFORMATION:
@@ -97,9 +117,9 @@ CURRENT POT:
 
 OBSERVED SIGNS:
 ${signsText}
-${body.photoBase64 ? "\nA photo of the plant has been provided — analyze the visible roots, pot, and plant size for additional clues." : ""}
+${photoLine}
 
-Based on this information, assess whether this plant needs repotting now, soon, or can wait.
+Based on all the information above, assess whether this plant needs repotting now, soon, or can wait.
 
 Respond ONLY with this exact JSON structure, no other text:
 {
@@ -117,18 +137,23 @@ Respond ONLY with this exact JSON structure, no other text:
 Scoring guide: 85-100 = repot_now, 50-84 = repot_soon, 0-49 = wait.
 The recommendation field must match the score band.`;
 
+    // Build content: labeled image blocks first, then the text prompt
     const userContent: AnthropicContentBlock[] = [];
 
-    if (body.photoBase64) {
+    for (const photo of photos) {
+      userContent.push({ type: "text", text: `[Photo: ${photo.part}]` });
       userContent.push({
         type: "image",
-        source: { type: "base64", media_type: "image/jpeg", data: body.photoBase64 },
+        source: { type: "base64", media_type: "image/jpeg", data: photo.base64 },
       });
     }
 
     userContent.push({ type: "text", text: textPrompt });
 
-    console.log(`Analyzing repotting for: ${body.plantName} in ${body.currentPotSize} ${body.currentPotMaterial} pot`);
+    console.log(
+      `Analyzing repotting for: ${body.plantName} in ${body.currentPotSize} ${body.currentPotMaterial} pot` +
+      (hasPhotos ? `, ${photoCount} photo(s): ${partLabels}` : ", no photos")
+    );
 
     const anthropicResponse = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -140,7 +165,7 @@ The recommendation field must match the score band.`;
       body: JSON.stringify({
         model: "claude-opus-4-5",
         max_tokens: 1000,
-        system: "You are an expert botanist specialising in indoor plant repotting. Always respond in valid JSON format only.",
+        system: "You are an expert botanist specialising in indoor plant repotting. When photos are provided, cross-reference visual evidence with the form data for the most accurate assessment. Always respond in valid JSON format only.",
         messages: [{ role: "user", content: userContent }],
       }),
     });
