@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useEffect, useState } from "react";
+import React, { useCallback, useRef, useEffect, useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -8,11 +8,12 @@ import {
   Animated,
   TouchableOpacity,
   RefreshControl,
+  Modal,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { SlidersHorizontal, Droplets, Heart, Leaf, X } from "lucide-react-native";
+import { SlidersHorizontal, Droplets, Heart, Leaf, X, Check } from "lucide-react-native";
 
 import { COLORS } from "@/constants";
 import { usePlants } from "@/hooks/usePlants";
@@ -106,6 +107,29 @@ function StatPill({
   );
 }
 
+// ─── Filter / sort types ──────────────────────────────────────────────────────
+
+type SortOption = "name_asc" | "name_desc" | "needs_water" | "health_asc" | "recently_added";
+type FilterOption = "all" | "needs_water" | "healthy" | "needs_attention";
+
+const SORT_LABELS: Record<SortOption, string> = {
+  name_asc: "Name (A–Z)",
+  name_desc: "Name (Z–A)",
+  needs_water: "Needs water first",
+  health_asc: "Health score (lowest first)",
+  recently_added: "Recently added",
+};
+
+const FILTER_LABELS: Record<FilterOption, string> = {
+  all: "All plants",
+  needs_water: "Needs water today",
+  healthy: "Healthy only (health > 80)",
+  needs_attention: "Needs attention (health ≤ 80)",
+};
+
+const DEFAULT_SORT: SortOption = "name_asc";
+const DEFAULT_FILTER: FilterOption = "all";
+
 // ─── Main screen ─────────────────────────────────────────────────────────────
 
 const BANNER_DISMISS_KEY = `weather_banner_dismissed_${new Date().toISOString().slice(0, 10)}`;
@@ -118,6 +142,41 @@ export default function MyPlantsScreen() {
   const { plants, isLoading, refetch } = usePlants();
   const { weather } = useWeather();
   const [bannerVisible, setBannerVisible] = useState(false);
+  const [filterSheetVisible, setFilterSheetVisible] = useState(false);
+  const [sortBy, setSortBy] = useState<SortOption>(DEFAULT_SORT);
+  const [filterBy, setFilterBy] = useState<FilterOption>(DEFAULT_FILTER);
+
+  const isFiltered = sortBy !== DEFAULT_SORT || filterBy !== DEFAULT_FILTER;
+
+  const displayedPlants = useMemo(() => {
+    let list = [...plants];
+
+    // Apply filter
+    if (filterBy === "needs_water") {
+      list = list.filter((p) => p.wateringStatus === "overdue" || p.wateringStatus === "today");
+    } else if (filterBy === "healthy") {
+      list = list.filter((p) => p.health_score > 80);
+    } else if (filterBy === "needs_attention") {
+      list = list.filter((p) => p.health_score <= 80);
+    }
+
+    // Apply sort
+    list.sort((a, b) => {
+      if (sortBy === "name_asc") return a.name.localeCompare(b.name);
+      if (sortBy === "name_desc") return b.name.localeCompare(a.name);
+      if (sortBy === "needs_water") {
+        const order = { overdue: 0, today: 1, soon: 2, ok: 3 };
+        return (order[a.wateringStatus] ?? 3) - (order[b.wateringStatus] ?? 3);
+      }
+      if (sortBy === "health_asc") return a.health_score - b.health_score;
+      if (sortBy === "recently_added") {
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      }
+      return 0;
+    });
+
+    return list;
+  }, [plants, sortBy, filterBy]);
 
   // Show banner when weather has adjusted schedules (rain or extreme temp) and not dismissed today
   useEffect(() => {
@@ -245,8 +304,13 @@ export default function MyPlantsScreen() {
             {plants.length} {plants.length === 1 ? "plant" : "plants"}
           </Text>
         </View>
-        <TouchableOpacity style={styles.sortButton}>
-          <SlidersHorizontal size={20} color={COLORS.primary} />
+        <TouchableOpacity
+          style={[styles.sortButton, isFiltered && styles.sortButtonActive]}
+          onPress={() => setFilterSheetVisible(true)}
+          accessibilityLabel="Filter and sort plants"
+          accessibilityRole="button"
+        >
+          <SlidersHorizontal size={20} color={isFiltered ? "#fff" : COLORS.primary} />
         </TouchableOpacity>
       </View>
 
@@ -292,16 +356,27 @@ export default function MyPlantsScreen() {
         </View>
       ) : (
         <FlatList
-          data={plants}
+          data={displayedPlants}
           keyExtractor={keyExtractor}
           renderItem={renderItem}
           contentContainerStyle={[
             styles.listContent,
-            plants.length === 0 && styles.listContentEmpty,
+            displayedPlants.length === 0 && styles.listContentEmpty,
           ]}
-          ListEmptyComponent={<EmptyPlants />}
+          ListEmptyComponent={
+            plants.length === 0 ? (
+              <EmptyPlants />
+            ) : (
+              <View style={styles.emptyFilter}>
+                <Text style={styles.emptyFilterText}>No plants match this filter.</Text>
+                <TouchableOpacity onPress={() => { setSortBy(DEFAULT_SORT); setFilterBy(DEFAULT_FILTER); }}>
+                  <Text style={styles.emptyFilterReset}>Clear filters</Text>
+                </TouchableOpacity>
+              </View>
+            )
+          }
           ListFooterComponent={
-            plants.length > 0 ? (
+            displayedPlants.length > 0 ? (
               <View style={styles.listFooter}>
                 <Text style={styles.listFooterText}>Your garden is looking great!</Text>
               </View>
@@ -318,6 +393,73 @@ export default function MyPlantsScreen() {
           showsVerticalScrollIndicator={false}
         />
       )}
+
+      {/* ── Filter / Sort sheet ───────────────────────────────────────────── */}
+      <Modal
+        visible={filterSheetVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setFilterSheetVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.sheetBackdrop}
+          activeOpacity={1}
+          onPress={() => setFilterSheetVisible(false)}
+        />
+        <View style={[styles.sheet, { paddingBottom: insets.bottom + 16 }]}>
+          {/* Handle */}
+          <View style={styles.sheetHandle} />
+
+          <View style={styles.sheetHeader}>
+            <Text style={styles.sheetTitle}>Sort & Filter</Text>
+            <TouchableOpacity onPress={() => setFilterSheetVisible(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <X size={20} color={COLORS.textSecondary} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Sort section */}
+          <Text style={styles.sheetSectionLabel}>SORT BY</Text>
+          {(Object.keys(SORT_LABELS) as SortOption[]).map((opt) => (
+            <TouchableOpacity
+              key={opt}
+              style={styles.sheetRow}
+              onPress={() => { setSortBy(opt); setFilterSheetVisible(false); }}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.sheetRowText, sortBy === opt && styles.sheetRowTextActive]}>
+                {SORT_LABELS[opt]}
+              </Text>
+              {sortBy === opt && <Check size={16} color={COLORS.primary} />}
+            </TouchableOpacity>
+          ))}
+
+          {/* Filter section */}
+          <Text style={[styles.sheetSectionLabel, { marginTop: 16 }]}>FILTER BY STATUS</Text>
+          {(Object.keys(FILTER_LABELS) as FilterOption[]).map((opt) => (
+            <TouchableOpacity
+              key={opt}
+              style={styles.sheetRow}
+              onPress={() => { setFilterBy(opt); setFilterSheetVisible(false); }}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.sheetRowText, filterBy === opt && styles.sheetRowTextActive]}>
+                {FILTER_LABELS[opt]}
+              </Text>
+              {filterBy === opt && <Check size={16} color={COLORS.primary} />}
+            </TouchableOpacity>
+          ))}
+
+          {/* Reset */}
+          {isFiltered && (
+            <TouchableOpacity
+              style={styles.sheetResetButton}
+              onPress={() => { setSortBy(DEFAULT_SORT); setFilterBy(DEFAULT_FILTER); setFilterSheetVisible(false); }}
+            >
+              <Text style={styles.sheetResetText}>Reset to defaults</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -353,6 +495,9 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.lightgreen,
     alignItems: "center",
     justifyContent: "center",
+  },
+  sortButtonActive: {
+    backgroundColor: COLORS.primary,
   },
   summaryBar: {
     flexDirection: "row",
@@ -444,6 +589,97 @@ const styles = StyleSheet.create({
     backgroundColor: "#E5E7EB",
     marginLeft: 8,
   },
+  // ── Empty filter state ───────────────────────────────────────────────────────
+  emptyFilter: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingTop: 60,
+    gap: 12,
+  },
+  emptyFilterText: {
+    fontSize: 15,
+    color: COLORS.textSecondary,
+  },
+  emptyFilterReset: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: COLORS.primary,
+  },
+
+  // ── Filter sheet ─────────────────────────────────────────────────────────────
+  sheetBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.4)",
+  },
+  sheet: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+  },
+  sheetHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#E5E7EB",
+    alignSelf: "center",
+    marginBottom: 16,
+  },
+  sheetHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 20,
+  },
+  sheetTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: COLORS.textPrimary,
+  },
+  sheetSectionLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: COLORS.textSecondary,
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+    marginBottom: 8,
+  },
+  sheetRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 13,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+  },
+  sheetRowText: {
+    fontSize: 15,
+    color: COLORS.textPrimary,
+  },
+  sheetRowTextActive: {
+    fontWeight: "700",
+    color: COLORS.primary,
+  },
+  sheetResetButton: {
+    marginTop: 20,
+    alignItems: "center",
+    paddingVertical: 12,
+    borderWidth: 1.5,
+    borderColor: COLORS.primary,
+    borderRadius: 14,
+  },
+  sheetResetText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: COLORS.primary,
+  },
+
   // ── Weather banner ───────────────────────────────────────────────────────────
   weatherBanner: {
     flexDirection: "row",
