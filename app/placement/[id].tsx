@@ -12,7 +12,7 @@ import {
   Image,
   Modal,
 } from "react-native";
-import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { Stack, useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import { useNavigation } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
@@ -22,7 +22,7 @@ import {
   Droplets,
   Thermometer,
   Camera,
-  ImageIcon,
+  Plus,
 } from "lucide-react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system/legacy";
@@ -35,6 +35,22 @@ import { usePlantsStore } from "@/store/plants";
 import { useUserStore } from "@/store/user";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
+
+// ─── Photo slots ──────────────────────────────────────────────────────────────
+
+interface PhotoSlot {
+  key: string;
+  emoji: string;
+  label: string;
+  hint: string;
+}
+
+const PHOTO_SLOTS: PhotoSlot[] = [
+  { key: "window",  emoji: "🪟", label: "Window / Light Source",    hint: "Show the nearest window"         },
+  { key: "room",    emoji: "🏠", label: "Full Room View",            hint: "Wide shot of the whole room"     },
+  { key: "spot",    emoji: "🌡️", label: "Placement Spot",            hint: "The exact spot you have in mind" },
+  { key: "current", emoji: "🌿", label: "Current Plant Location",    hint: "Where the plant sits now"        },
+];
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -236,17 +252,30 @@ export default function PlacementScreen() {
   const insets = useSafeAreaInsets();
 
   const { plants } = usePlantsStore();
-  const { profile } = useUserStore();
+  const { profile, subscription } = useUserStore();
+  const isPro = subscription === "pro";
   const plant = plants.find((p) => p.id === plantId) ?? null;
+
+  // ── Pro gate — __DEV__ bypass for development testing ─────────────────────
+  useFocusEffect(
+    useCallback(() => {
+      if (__DEV__ || existingAnalysis) return;
+      const timer = setTimeout(() => {
+        if (!isPro) router.replace("/paywall");
+      }, 300);
+      return () => clearTimeout(timer);
+    }, [isPro, existingAnalysis]) // eslint-disable-line react-hooks/exhaustive-deps
+  );
 
   // ── Form state ──────────────────────────────────────────────────────────────
   const [windowDirection, setWindowDirection] = useState<WindowDirection>("east");
   const [roomType, setRoomType] = useState<RoomType>("living room");
   const [lightLevel, setLightLevel] = useState<LightLevel>("bright indirect");
-  const [spotPhotoUri, setSpotPhotoUri] = useState<string | null>(null);
+  const [slotUris, setSlotUris] = useState<Record<string, string | null>>({});
 
   // ── Screen state ────────────────────────────────────────────────────────────
   const [screenState, setScreenState] = useState<ScreenState>("form");
+  const [primaryUri, setPrimaryUri] = useState<string | null>(null);
   const [result, setResult] = useState<PlacementResult | null>(null);
   const [isViewingExisting, setIsViewingExisting] = useState(false);
 
@@ -324,63 +353,62 @@ export default function PlacementScreen() {
     setTimeout(() => setCompassDetected(null), 3000);
   }, [compassRotation]);
 
-  // ── Pick spot photo ──────────────────────────────────────────────────────────
+  // ── Pick photo for a slot ────────────────────────────────────────────────────
 
-  const handlePickPhoto = useCallback(async (source: "camera" | "gallery") => {
-    try {
-      let pickerResult: ImagePicker.ImagePickerResult;
-
-      if (source === "camera") {
-        const { status } = await ImagePicker.requestCameraPermissionsAsync();
-        if (status !== "granted") {
-          Alert.alert("Camera access required", "Please allow camera access in your device settings.");
-          return;
-        }
-        pickerResult = await ImagePicker.launchCameraAsync({
-          mediaTypes: ["images"],
-          quality: 0.7,
-        });
-      } else {
-        pickerResult = await ImagePicker.launchImageLibraryAsync({
-          mediaTypes: ["images"],
-          quality: 0.7,
-        });
-      }
-
-      if (!pickerResult.canceled && pickerResult.assets[0]?.uri) {
-        setSpotPhotoUri(pickerResult.assets[0].uri);
-      }
-    } catch (err) {
-      Alert.alert("Error", "Could not access photo. Please try again.");
-      console.warn("placement: photo pick failed", err);
-    }
-  }, []);
-
-  const handlePhotoPrompt = useCallback(() => {
-    Alert.alert("Add spot photo", "Choose a photo source", [
-      { text: "Camera", onPress: () => handlePickPhoto("camera") },
-      { text: "Photo Library", onPress: () => handlePickPhoto("gallery") },
+  const handlePickPhoto = useCallback((slotKey: string) => {
+    Alert.alert("Add Photo", "Choose a source", [
+      {
+        text: "Camera",
+        onPress: async () => {
+          try {
+            const result = await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], quality: 0.85 });
+            if (!result.canceled && result.assets[0]?.uri) {
+              setSlotUris((prev) => ({ ...prev, [slotKey]: result.assets[0].uri }));
+            }
+          } catch {
+            Alert.alert("Error", "Could not access camera. Please try again.");
+          }
+        },
+      },
+      {
+        text: "Photo Library",
+        onPress: async () => {
+          try {
+            const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.85 });
+            if (!result.canceled && result.assets[0]?.uri) {
+              setSlotUris((prev) => ({ ...prev, [slotKey]: result.assets[0].uri }));
+            }
+          } catch {
+            Alert.alert("Error", "Could not access library. Please try again.");
+          }
+        },
+      },
       { text: "Cancel", style: "cancel" },
     ]);
-  }, [handlePickPhoto]);
+  }, []);
 
   // ── Analyze ──────────────────────────────────────────────────────────────────
 
   const handleAnalyze = useCallback(async () => {
     if (!plant) return;
 
+    const filledSlots = PHOTO_SLOTS.filter((s) => slotUris[s.key]);
+    const bgUri = filledSlots.length > 0 ? (slotUris[filledSlots[0].key] ?? null) : null;
+    setPrimaryUri(bgUri);
     setScreenState("analyzing");
 
     try {
-      let photoBase64: string | undefined;
-
-      if (spotPhotoUri) {
-        // Copy to cache dir in case of Android content:// URI, then compress
-        const filename = `spot_${Date.now()}.jpg`;
-        const destUri = `${FileSystem.cacheDirectory}${filename}`;
-        await FileSystem.copyAsync({ from: spotPhotoUri, to: destUri });
-        photoBase64 = await compressImage(destUri);
-      }
+      // Process all selected photos in parallel
+      const photos = await Promise.all(
+        filledSlots.map(async (slot) => {
+          const uri = slotUris[slot.key]!;
+          const filename = `placement_${slot.key}_${Date.now()}.jpg`;
+          const destUri = `${FileSystem.cacheDirectory}${filename}`;
+          await FileSystem.copyAsync({ from: uri, to: destUri });
+          const base64 = await compressImage(destUri);
+          return { base64, part: slot.label };
+        })
+      );
 
       const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
       const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
@@ -405,7 +433,7 @@ export default function PlacementScreen() {
             windowDirection,
             roomType,
             lightLevel,
-            photoBase64,
+            photos: photos.length > 0 ? photos : undefined,
           }),
         }
       );
@@ -446,14 +474,24 @@ export default function PlacementScreen() {
       );
       setScreenState("form");
     }
-  }, [plant, windowDirection, roomType, lightLevel, spotPhotoUri]);
+  }, [plant, windowDirection, roomType, lightLevel, slotUris, profile, plantId]);
 
   const handleRetake = useCallback(() => {
     setResult(null);
+    setSlotUris({});
+    setPrimaryUri(null);
     setScreenState("form");
   }, []);
 
-  // ── Guard: plant not found ─────────────────────────────────────────────────
+  // ── Guards ─────────────────────────────────────────────────────────────────
+
+  if (!__DEV__ && !isPro && !existingAnalysis) {
+    return (
+      <View style={{ flex: 1, backgroundColor: COLORS.cream, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator color={COLORS.primary} />
+      </View>
+    );
+  }
 
   if (!plant) {
     return (
@@ -602,50 +640,47 @@ export default function PlacementScreen() {
             ))}
           </View>
 
-          {/* ── Spot photo (optional) ─────────────────────────────────────── */}
+          {/* ── Photos (optional) ─────────────────────────────────────────── */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Photo of the spot (optional)</Text>
-            <Text style={styles.sectionSubtitle}>
-              Adding a photo lets AI analyze the actual light conditions
-            </Text>
-
-            {spotPhotoUri ? (
-              <View style={styles.spotPhotoWrap}>
-                <Image
-                  source={{ uri: spotPhotoUri }}
-                  style={styles.spotPhoto}
-                  resizeMode="cover"
-                />
-                <TouchableOpacity
-                  style={styles.removePhotoButton}
-                  onPress={() => setSpotPhotoUri(null)}
-                  accessibilityLabel="Remove photo"
-                >
-                  <Text style={styles.removePhotoText}>✕ Remove</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <View style={styles.photoButtonRow}>
-                <TouchableOpacity
-                  style={styles.photoButton}
-                  onPress={() => handlePickPhoto("camera")}
-                  accessibilityLabel="Take a photo of the spot"
-                  accessibilityRole="button"
-                >
-                  <Camera size={20} color={COLORS.primary} />
-                  <Text style={styles.photoButtonText}>Camera</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.photoButton}
-                  onPress={() => handlePickPhoto("gallery")}
-                  accessibilityLabel="Choose photo from library"
-                  accessibilityRole="button"
-                >
-                  <ImageIcon size={20} color={COLORS.primary} />
-                  <Text style={styles.photoButtonText}>Library</Text>
-                </TouchableOpacity>
-              </View>
-            )}
+            <Text style={styles.sectionTitle}>Photos (optional)</Text>
+            <Text style={styles.sectionSubtitle}>Add photos for better assessment — tap any slot to add</Text>
+            <View style={styles.slotGrid}>
+              {PHOTO_SLOTS.map((slot) => {
+                const uri = slotUris[slot.key] ?? null;
+                return (
+                  <TouchableOpacity
+                    key={slot.key}
+                    style={[styles.slot, uri && styles.slotFilled]}
+                    onPress={() => handlePickPhoto(slot.key)}
+                    activeOpacity={0.8}
+                    accessibilityLabel={`Add ${slot.label} photo`}
+                    accessibilityRole="button"
+                  >
+                    {uri ? (
+                      <>
+                        <Image source={{ uri }} style={styles.slotImage} resizeMode="cover" />
+                        <View style={styles.slotOverlay}>
+                          <Text style={styles.slotOverlayEmoji}>{slot.emoji}</Text>
+                          <Text style={styles.slotOverlayLabel}>{slot.label}</Text>
+                        </View>
+                        <View style={styles.slotChangeBtn}>
+                          <Camera size={12} color="#fff" />
+                        </View>
+                      </>
+                    ) : (
+                      <>
+                        <Text style={styles.slotEmoji}>{slot.emoji}</Text>
+                        <Text style={styles.slotLabel}>{slot.label}</Text>
+                        <Text style={styles.slotHint}>{slot.hint}</Text>
+                        <View style={styles.slotAddIcon}>
+                          <Plus size={16} color={COLORS.primary} />
+                        </View>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           </View>
         </ScrollView>
 
@@ -692,7 +727,12 @@ export default function PlacementScreen() {
             accessibilityRole="button"
             activeOpacity={0.85}
           >
-            <Text style={styles.analyzeButtonText}>Analyze Placement 📍</Text>
+            <Text style={styles.analyzeButtonText}>
+              {(() => {
+                const n = PHOTO_SLOTS.filter((s) => slotUris[s.key]).length;
+                return n > 0 ? `Analyze Placement (${n} photo${n > 1 ? "s" : ""})` : "Analyze Placement";
+              })()}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -708,9 +748,9 @@ export default function PlacementScreen() {
       <View style={[styles.screen, styles.analyzingScreen]}>
         <Stack.Screen options={{ headerShown: false }} />
 
-        {spotPhotoUri && (
+        {primaryUri && (
           <Image
-            source={{ uri: spotPhotoUri }}
+            source={{ uri: primaryUri }}
             style={StyleSheet.absoluteFill}
             resizeMode="cover"
           />
@@ -1034,51 +1074,38 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
 
-  // ── Spot photo ─────────────────────────────────────────────────────────────
-  photoButtonRow: {
-    flexDirection: "row",
-    gap: 10,
+  // ── Photo slots ────────────────────────────────────────────────────────────
+  slotGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  slot: {
+    width: "47.5%", aspectRatio: 1,
+    backgroundColor: "#fff", borderRadius: 16,
+    alignItems: "center", justifyContent: "center",
+    borderWidth: 2, borderColor: "#E5E7EB", borderStyle: "dashed",
+    padding: 10, gap: 3, overflow: "hidden",
+    shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 3, elevation: 1,
   },
-  photoButton: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    backgroundColor: "#fff",
-    borderRadius: 14,
-    paddingVertical: 14,
-    borderWidth: 1.5,
-    borderColor: COLORS.secondary,
+  slotFilled: { borderStyle: "solid", borderColor: COLORS.primary, padding: 0 },
+  slotImage: { width: "100%", height: "100%", borderRadius: 14 },
+  slotOverlay: {
+    position: "absolute", bottom: 0, left: 0, right: 0,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    paddingVertical: 7, paddingHorizontal: 8,
+    borderBottomLeftRadius: 14, borderBottomRightRadius: 14,
+    flexDirection: "row", alignItems: "center", gap: 4,
   },
-  photoButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: COLORS.primary,
+  slotOverlayEmoji: { fontSize: 12 },
+  slotOverlayLabel: { fontSize: 11, fontWeight: "700", color: "#fff" },
+  slotChangeBtn: {
+    position: "absolute", top: 7, right: 7,
+    width: 24, height: 24, borderRadius: 12,
+    backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center",
   },
-  spotPhotoWrap: {
-    borderRadius: 16,
-    overflow: "hidden",
-    position: "relative",
-  },
-  spotPhoto: {
-    width: "100%",
-    height: 160,
-    borderRadius: 16,
-  },
-  removePhotoButton: {
-    position: "absolute",
-    top: 8,
-    right: 8,
-    backgroundColor: "rgba(0,0,0,0.55)",
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
-  removePhotoText: {
-    color: "#fff",
-    fontSize: 12,
-    fontWeight: "600",
+  slotEmoji: { fontSize: 24, marginBottom: 1 },
+  slotLabel: { fontSize: 12, fontWeight: "700", color: COLORS.textPrimary, textAlign: "center" },
+  slotHint: { fontSize: 10, color: COLORS.textSecondary, textAlign: "center", lineHeight: 14 },
+  slotAddIcon: {
+    width: 28, height: 28, borderRadius: 14,
+    backgroundColor: COLORS.lightgreen, alignItems: "center", justifyContent: "center", marginTop: 3,
   },
 
   // ── Bottom bar ─────────────────────────────────────────────────────────────

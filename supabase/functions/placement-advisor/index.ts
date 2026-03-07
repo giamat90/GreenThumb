@@ -5,6 +5,11 @@ import { corsHeaders } from "./cors.ts";
 
 // ─── Request types ────────────────────────────────────────────────────────────
 
+interface PhotoInput {
+  base64: string; // base64 encoded JPEG
+  part: string;   // "Window / Light Source" | "Full Room View" | "Placement Spot" | "Current Plant Location"
+}
+
 interface PlacementRequestBody {
   plantName: string;
   species: string;
@@ -12,7 +17,7 @@ interface PlacementRequestBody {
   windowDirection: "north" | "south" | "east" | "west" | "none";
   roomType: string;
   lightLevel: "bright direct" | "bright indirect" | "medium" | "low";
-  photoBase64?: string; // optional base64 JPEG of the spot
+  photos?: PhotoInput[]; // optional — analysis works from form data alone
 }
 
 // ─── Response types ───────────────────────────────────────────────────────────
@@ -104,6 +109,19 @@ Deno.serve(async (req: Request): Promise<Response> => {
       none: "no window nearby (artificial light only)",
     };
 
+    const photos = body.photos ?? [];
+    const hasPhotos = photos.length > 0;
+    const partLabels = photos.map((p) => p.part).join(", ");
+
+    const photoLine = hasPhotos
+      ? `\nPHOTOS PROVIDED (${photos.length}): ${partLabels}
+Cross-reference the visual evidence with the form data above:
+- Window / Light Source: assess actual window size, sheer curtains, obstructions → real light intensity vs. reported level
+- Full Room View: judge room depth, ceiling height, reflective surfaces → how far light penetrates
+- Placement Spot: check shadows, proximity to drafts, heaters, or AC vents → temperature and light consistency
+- Current Plant Location: compare current vs. proposed spot to identify whether a move will be an improvement`
+      : "";
+
     const textPrompt = `You are an expert botanist and indoor plant placement specialist.
 
 PLANT INFORMATION:
@@ -114,7 +132,8 @@ ${careLines}
 CURRENT PLACEMENT:
 - Room: ${body.roomType}
 - Window: ${windowDesc[body.windowDirection] ?? body.windowDirection}
-- Observed light level: ${body.lightLevel}${body.photoBase64 ? "\n- A photo of the spot has been provided — analyze the visible light conditions and surroundings." : ""}
+- Observed light level: ${body.lightLevel}
+${photoLine}
 
 Evaluate whether this is a good spot for the plant across three factors: light, humidity, and temperature.
 
@@ -131,19 +150,23 @@ Respond ONLY with this exact JSON structure, no other text:
 
 Score: 85-100 = good, 60-84 = warning, 0-59 = poor. The overall field must match the score band.`;
 
-    // Build message content, optionally with the spot photo for vision analysis
+    // Build message content — labeled image blocks first, then the text prompt
     const userContent: AnthropicContentBlock[] = [];
 
-    if (body.photoBase64) {
+    for (const photo of photos) {
+      userContent.push({ type: "text", text: `[Photo: ${photo.part}]` });
       userContent.push({
         type: "image",
-        source: { type: "base64", media_type: "image/jpeg", data: body.photoBase64 },
+        source: { type: "base64", media_type: "image/jpeg", data: photo.base64 },
       });
     }
 
     userContent.push({ type: "text", text: textPrompt });
 
-    console.log(`Analyzing placement for: ${body.plantName} in ${body.roomType} (${body.windowDirection} window)`);
+    console.log(
+      `Analyzing placement for: ${body.plantName} in ${body.roomType} (${body.windowDirection} window)` +
+      (hasPhotos ? `, ${photos.length} photo(s): ${partLabels}` : ", no photos")
+    );
 
     const anthropicResponse = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -155,7 +178,7 @@ Score: 85-100 = good, 60-84 = warning, 0-59 = poor. The overall field must match
       body: JSON.stringify({
         model: "claude-opus-4-5",
         max_tokens: 800,
-        system: "You are an expert botanist and indoor plant placement specialist. Always respond in valid JSON format only.",
+        system: "You are an expert botanist and indoor plant placement specialist. When photos are provided, cross-reference visual evidence with the form data for the most accurate placement assessment. Always respond in valid JSON format only.",
         messages: [{ role: "user", content: userContent }],
       }),
     });
@@ -172,7 +195,6 @@ Score: 85-100 = good, 60-84 = warning, 0-59 = poor. The overall field must match
     const claudeData = (await anthropicResponse.json()) as AnthropicResponse;
     const rawText = claudeData.content[0]?.text ?? "";
 
-    // Strip any markdown code fences that may wrap the JSON
     const jsonText = rawText
       .replace(/^```(?:json)?\s*/i, "")
       .replace(/\s*```\s*$/i, "")
