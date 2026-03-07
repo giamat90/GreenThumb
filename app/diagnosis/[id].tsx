@@ -115,13 +115,10 @@ function ScanLine() {
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function DiagnosisScreen() {
-  const params = useLocalSearchParams<{
+  const { id: plantId, existingDiagnosis } = useLocalSearchParams<{
     id: string;
-    existingResult?: string;
-    severity?: string;
-    createdAt?: string;
+    existingDiagnosis?: string;
   }>();
-  const plantId = params.id;
 
   const router = useRouter();
   const navigation = useNavigation();
@@ -131,18 +128,6 @@ export default function DiagnosisScreen() {
   const { profile, subscription } = useUserStore();
   const isPro = subscription === "pro";
   const plant = plants.find((p) => p.id === plantId) ?? null;
-
-  // Parse existing diagnosis data passed from the history list so we can skip
-  // directly to the results view without re-running the API call.
-  let initialDiagnosis: DiagnosisResult | null = null;
-  try {
-    if (params.existingResult) {
-      initialDiagnosis = JSON.parse(params.existingResult) as DiagnosisResult;
-    }
-  } catch {
-    initialDiagnosis = null;
-  }
-  const isViewingExisting = initialDiagnosis !== null;
 
   // Gate: redirect free users to paywall every time this screen is focused.
   // useFocusEffect + a short delay ensures the Zustand store is fully hydrated
@@ -159,15 +144,33 @@ export default function DiagnosisScreen() {
     }, [isPro]) // eslint-disable-line react-hooks/exhaustive-deps
   );
 
-  const [screenState, setScreenState] = useState<ScreenState>(
-    isViewingExisting ? "results" : "camera"
-  );
+  const [screenState, setScreenState] = useState<ScreenState>("camera");
   const [capturedUri, setCapturedUri] = useState<string | null>(null);
-  const [diagnosis, setDiagnosis] = useState<DiagnosisResult | null>(initialDiagnosis);
+  const [diagnosis, setDiagnosis] = useState<DiagnosisResult | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isViewingExisting, setIsViewingExisting] = useState(false);
 
   const { hasPermission, requestPermission } = useCamera();
   const cameraRef = useRef<CameraView | null>(null);
+
+  // ── Load existing diagnosis on mount ──────────────────────────────────────
+  // useLocalSearchParams params may not be populated on the very first render,
+  // so we read them in a mount effect rather than using them as useState
+  // initial values — this guarantees we see the fully-resolved params.
+
+  useEffect(() => {
+    if (!existingDiagnosis) return;
+    try {
+      const record = JSON.parse(existingDiagnosis as string);
+      // The Diagnosis DB record stores the DiagnosisResult in its `result` field
+      const result = (record.result ?? record) as DiagnosisResult;
+      setDiagnosis(result);
+      setScreenState("results");
+      setIsViewingExisting(true);
+    } catch {
+      // Malformed param — fall back to the normal camera flow
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Camera permission ─────────────────────────────────────────────────────
 

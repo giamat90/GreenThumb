@@ -492,9 +492,7 @@ function PlantDetailScreen() {
                       pathname: "/diagnosis/[id]",
                       params: {
                         id: plant.id,
-                        existingResult: JSON.stringify(d.result),
-                        severity: d.severity,
-                        createdAt: d.created_at,
+                        existingDiagnosis: JSON.stringify(d),
                       },
                     })
                   }
