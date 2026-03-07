@@ -407,7 +407,7 @@ export default function DiagnosisScreen() {
         <View style={styles.analyzingContent}>
           <ActivityIndicator color={COLORS.secondary} size="large" />
           <Text style={styles.analyzingTitle}>Analyzing plant health...</Text>
-          <Text style={styles.analyzingSubtitle}>Claude AI is examining your plant</Text>
+          <Text style={styles.analyzingSubtitle}>AI is examining your plant</Text>
         </View>
       </View>
     );
