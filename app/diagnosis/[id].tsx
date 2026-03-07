@@ -146,9 +146,10 @@ export default function DiagnosisScreen() {
   const plant = plants.find((p) => p.id === plantId) ?? null;
 
   // Gate: redirect free users to paywall every time this screen is focused.
+  // __DEV__ bypass lets us test diagnosis without a Pro subscription during development.
   useFocusEffect(
     useCallback(() => {
-      if (existingDiagnosis) return;
+      if (__DEV__ || existingDiagnosis) return;
       const timer = setTimeout(() => {
         if (!isPro) {
           router.replace("/paywall");
@@ -326,7 +327,7 @@ export default function DiagnosisScreen() {
 
   // ── Guard: subscription not yet confirmed ──────────────────────────────────
 
-  if (!isPro && !existingDiagnosis) {
+  if (!__DEV__ && !isPro && !existingDiagnosis) {
     return (
       <View style={{ flex: 1, backgroundColor: COLORS.cream, justifyContent: "center", alignItems: "center" }}>
         <ActivityIndicator color={COLORS.primary} />
