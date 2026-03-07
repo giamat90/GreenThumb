@@ -6,10 +6,15 @@ import { corsHeaders } from "./cors.ts";
 
 // ─── Request / response types ─────────────────────────────────────────────────
 
+interface PhotoInput {
+  base64: string; // base64 encoded JPEG
+  part: string;   // e.g. "Leaves", "Overall Plant", "Stem & Base", "Soil"
+}
+
 interface DiagnoseRequestBody {
-  image: string;       // base64 encoded photo
-  plantId: string;     // uuid — used to save the diagnosis row
-  userId: string;      // uuid
+  photos: PhotoInput[]; // array of photos (at least 1 required — Leaves)
+  plantId: string;      // uuid
+  userId: string;       // uuid
   plantName: string;
   species: string;
 }
@@ -75,9 +80,16 @@ Deno.serve(async (req: Request): Promise<Response> => {
     // Parse and validate request body
     const body = (await req.json()) as Partial<DiagnoseRequestBody>;
 
-    if (!body.image || !body.plantId || !body.userId || !body.plantName) {
+    if (
+      !body.photos ||
+      !Array.isArray(body.photos) ||
+      body.photos.length === 0 ||
+      !body.plantId ||
+      !body.userId ||
+      !body.plantName
+    ) {
       return new Response(
-        JSON.stringify({ error: "Missing required fields: image, plantId, userId, plantName" }),
+        JSON.stringify({ error: "Missing required fields: photos (array), plantId, userId, plantName" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -92,28 +104,40 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
 
     const speciesLabel = body.species?.trim() || "unknown species";
+    const photoCount = body.photos.length;
+    const partLabels = body.photos.map((p) => p.part).join(", ");
 
-    // Build the vision message with the plant photo
-    const userContent: AnthropicContentBlock[] = [
-      {
+    console.log(`Calling Claude for plant: ${body.plantName} (${speciesLabel}), photos: ${photoCount} [${partLabels}]`);
+
+    // Build the vision message — one labeled text block + image block per photo
+    const userContent: AnthropicContentBlock[] = [];
+
+    for (const photo of body.photos) {
+      userContent.push({
+        type: "text",
+        text: `[Photo: ${photo.part}]`,
+      });
+      userContent.push({
         type: "image",
         source: {
           type: "base64",
-          // The client always sends JPEG-compressed images
           media_type: "image/jpeg",
-          data: body.image,
+          data: photo.base64,
         },
-      },
-      {
-        type: "text",
-        text: `Analyze this photo of ${body.plantName} (${speciesLabel}).
-Identify any diseases, pests, deficiencies, or health issues.
+      });
+    }
+
+    userContent.push({
+      type: "text",
+      text: `You have been given ${photoCount} photo(s) of ${body.plantName} (${speciesLabel}): ${partLabels}.
+Cross-reference visual symptoms across all provided views to identify diseases, pests, nutrient deficiencies, or other health issues.
+Examples of cross-referencing: yellowing leaves + dry soil = likely underwatering; brown leaf edges + wet soil = likely overwatering; spots on leaves + webbing = spider mites; pale new growth + dark older leaves = iron deficiency.
 Respond ONLY with this exact JSON structure, no other text:
 {
   "severity": "healthy" | "warning" | "critical",
   "condition": "brief condition name or Healthy",
   "confidence": 0.0-1.0,
-  "description": "detailed explanation of what you see",
+  "description": "detailed explanation of what you see across all photos",
   "causes": ["cause1", "cause2"],
   "treatments": [
     {
@@ -125,10 +149,7 @@ Respond ONLY with this exact JSON structure, no other text:
   "prevention": ["prevention tip 1", "prevention tip 2"],
   "healthScore": 0-100
 }`,
-      },
-    ];
-
-    console.log(`Calling Claude for plant: ${body.plantName} (${speciesLabel})`);
+    });
 
     const anthropicResponse = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -141,7 +162,7 @@ Respond ONLY with this exact JSON structure, no other text:
         model: "claude-opus-4-5",
         max_tokens: 1024,
         system:
-          "You are an expert botanist and plant pathologist. Analyze plant images for diseases, pests, nutrient deficiencies, and other health issues. Always respond in valid JSON format only.",
+          "You are an expert botanist and plant pathologist. Analyze plant images for diseases, pests, nutrient deficiencies, and other health issues. When multiple photos from different angles are provided, cross-reference symptoms across all views for a more accurate diagnosis. Always respond in valid JSON format only.",
         messages: [{ role: "user", content: userContent }],
       }),
     });
@@ -183,7 +204,6 @@ Respond ONLY with this exact JSON structure, no other text:
     }
 
     // ── Persist the diagnosis to Supabase ─────────────────────────────────────
-    // We use the auto-injected service role key so we can bypass RLS for the insert.
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
@@ -201,13 +221,10 @@ Respond ONLY with this exact JSON structure, no other text:
           user_id: body.userId,
           result: diagnosis,
           severity: diagnosis.severity,
-          // photo_url is omitted here — the client stores the photo locally
-          // and passes back the URL after upload if needed. For MVP we skip it.
         }),
       });
 
       if (!insertResponse.ok) {
-        // Non-fatal — log but still return the diagnosis to the client
         console.error("Failed to save diagnosis:", await insertResponse.text());
       }
     } else {

@@ -16,15 +16,14 @@ import {
   Dimensions,
   Image,
 } from "react-native";
-import { CameraView } from "expo-camera";
+import * as ImagePicker from "expo-image-picker";
 import { Stack, useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import { useNavigation } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ArrowLeft, RefreshCw } from "lucide-react-native";
+import { ArrowLeft, Camera, Plus, RefreshCw } from "lucide-react-native";
 import * as FileSystem from "expo-file-system/legacy";
 
 import { COLORS } from "@/constants";
-import { useCamera } from "@/hooks/useCamera";
 import { compressImage } from "@/lib/imageUtils";
 import { supabase } from "@/lib/supabase";
 import { usePlantsStore } from "@/store/plants";
@@ -51,7 +50,24 @@ interface DiagnosisResult {
   healthScore: number;
 }
 
-type ScreenState = "camera" | "analyzing" | "results";
+type ScreenState = "picker" | "analyzing" | "results";
+
+// ─── Photo slots ──────────────────────────────────────────────────────────────
+
+interface PhotoSlot {
+  key: string;
+  emoji: string;
+  label: string;
+  hint: string;
+  required: boolean;
+}
+
+const PHOTO_SLOTS: PhotoSlot[] = [
+  { key: "leaves",  emoji: "🍃", label: "Leaves",       hint: "Show top & bottom of leaves", required: true  },
+  { key: "overall", emoji: "🌿", label: "Overall Plant", hint: "Full plant in frame",          required: false },
+  { key: "stem",    emoji: "🌱", label: "Stem & Base",   hint: "Stem and soil line",           required: false },
+  { key: "soil",    emoji: "🪨", label: "Soil",          hint: "Soil surface texture",         required: false },
+];
 
 // ─── Severity helpers ─────────────────────────────────────────────────────────
 
@@ -78,8 +94,8 @@ const PRIORITY_STYLE: Record<
   { bg: string; text: string; label: string }
 > = {
   immediate: { bg: "#FEE2E2", text: "#991B1B", label: "Immediate" },
-  soon: { bg: "#FEF3C7", text: "#92400E", label: "Soon" },
-  optional: { bg: "#F3F4F6", text: "#6B7280", label: "Optional" },
+  soon:      { bg: "#FEF3C7", text: "#92400E", label: "Soon"      },
+  optional:  { bg: "#F3F4F6", text: "#6B7280", label: "Optional"  },
 };
 
 // ─── Scanning animation ───────────────────────────────────────────────────────
@@ -130,9 +146,6 @@ export default function DiagnosisScreen() {
   const plant = plants.find((p) => p.id === plantId) ?? null;
 
   // Gate: redirect free users to paywall every time this screen is focused.
-  // Skipped when viewing an existing saved diagnosis — the user already paid
-  // for that result and should always be able to access it regardless of the
-  // current subscription state (e.g. RevenueCat test key returning "free").
   useFocusEffect(
     useCallback(() => {
       if (existingDiagnosis) return;
@@ -145,62 +158,88 @@ export default function DiagnosisScreen() {
     }, [isPro, existingDiagnosis]) // eslint-disable-line react-hooks/exhaustive-deps
   );
 
-  const [screenState, setScreenState] = useState<ScreenState>("camera");
-  const [capturedUri, setCapturedUri] = useState<string | null>(null);
+  const [screenState, setScreenState] = useState<ScreenState>("picker");
+  const [slotUris, setSlotUris] = useState<Record<string, string | null>>({});
+  const [primaryUri, setPrimaryUri] = useState<string | null>(null);
   const [diagnosis, setDiagnosis] = useState<DiagnosisResult | null>(null);
+  const [analyzedCount, setAnalyzedCount] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [isViewingExisting, setIsViewingExisting] = useState(false);
 
-  const { hasPermission, requestPermission } = useCamera();
-  const cameraRef = useRef<CameraView | null>(null);
-
   // ── Load existing diagnosis on mount ──────────────────────────────────────
-  // useLocalSearchParams params may not be populated on the very first render,
-  // so we read them in a mount effect rather than using them as useState
-  // initial values — this guarantees we see the fully-resolved params.
 
   useEffect(() => {
     if (!existingDiagnosis) return;
     try {
       const record = JSON.parse(existingDiagnosis as string);
-      // The Diagnosis DB record stores the DiagnosisResult in its `result` field
       const result = (record.result ?? record) as DiagnosisResult;
       setDiagnosis(result);
       setScreenState("results");
       setIsViewingExisting(true);
     } catch {
-      // Malformed param — fall back to the normal camera flow
+      // Malformed param — fall back to picker flow
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Camera permission ─────────────────────────────────────────────────────
+  // ── Pick photo for a slot ─────────────────────────────────────────────────
 
-  useEffect(() => {
-    if (!hasPermission) {
-      requestPermission();
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const handlePickPhoto = useCallback((slotKey: string) => {
+    Alert.alert("Add Photo", "Choose a source", [
+      {
+        text: "Camera",
+        onPress: async () => {
+          const result = await ImagePicker.launchCameraAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            quality: 0.85,
+            allowsEditing: false,
+          });
+          if (!result.canceled && result.assets[0]) {
+            setSlotUris((prev) => ({ ...prev, [slotKey]: result.assets[0].uri }));
+          }
+        },
+      },
+      {
+        text: "Photo Library",
+        onPress: async () => {
+          const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            quality: 0.85,
+            allowsEditing: false,
+          });
+          if (!result.canceled && result.assets[0]) {
+            setSlotUris((prev) => ({ ...prev, [slotKey]: result.assets[0].uri }));
+          }
+        },
+      },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  }, []);
 
-  // ── Capture + analyse ─────────────────────────────────────────────────────
+  // ── Analyze ───────────────────────────────────────────────────────────────
 
-  const handleCapture = useCallback(async () => {
-    if (!cameraRef.current || !plant || !profile) return;
+  const handleAnalyze = useCallback(async () => {
+    if (!plant || !profile) return;
+
+    const filledSlots = PHOTO_SLOTS.filter((s) => slotUris[s.key]);
+    if (filledSlots.length === 0) return;
+
+    // Show the leaves photo (or first filled) as the analyzing background
+    const bgUri = slotUris["leaves"] ?? slotUris[filledSlots[0].key] ?? null;
+    setPrimaryUri(bgUri);
+    setScreenState("analyzing");
 
     try {
-      const photo = await cameraRef.current.takePictureAsync({ quality: 0.7 });
-      if (!photo?.uri) throw new Error("No photo captured");
-
-      setCapturedUri(photo.uri);
-      setScreenState("analyzing");
-
-      // Android's camera URI uses a scheme that FileSystem / manipulateAsync
-      // can't read directly. Copy to the app's cache dir first so the path
-      // has a supported file:// scheme, then compress + get base64.
-      const filename = `diagnosis_${Date.now()}.jpg`;
-      const destUri = `${FileSystem.cacheDirectory}${filename}`;
-      await FileSystem.copyAsync({ from: photo.uri, to: destUri });
-
-      const base64 = await compressImage(destUri);
+      // Process all selected photos in parallel
+      const photos = await Promise.all(
+        filledSlots.map(async (slot) => {
+          const uri = slotUris[slot.key]!;
+          const filename = `diagnosis_${slot.key}_${Date.now()}.jpg`;
+          const destUri = `${FileSystem.cacheDirectory}${filename}`;
+          await FileSystem.copyAsync({ from: uri, to: destUri });
+          const base64 = await compressImage(destUri);
+          return { base64, part: slot.label };
+        })
+      );
 
       const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
       const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
@@ -219,7 +258,7 @@ export default function DiagnosisScreen() {
             "Authorization": `Bearer ${supabaseKey}`,
           },
           body: JSON.stringify({
-            image: base64,
+            photos,
             plantId: plant.id,
             userId: profile.id,
             plantName: plant.name,
@@ -229,14 +268,15 @@ export default function DiagnosisScreen() {
       );
 
       if (!response.ok) {
-        const err = await response.json() as { error?: string };
+        const err = (await response.json()) as { error?: string };
         throw new Error(err.error ?? "Diagnosis failed");
       }
 
-      const result = await response.json() as DiagnosisResult;
+      const result = (await response.json()) as DiagnosisResult;
       setDiagnosis(result);
+      setAnalyzedCount(photos.length);
 
-      // Update the plant's health score in Supabase + local store based on severity
+      // Update plant health score
       const currentHealth = plant.health_score;
       let newHealth = currentHealth;
       if (result.severity === "healthy") {
@@ -247,7 +287,6 @@ export default function DiagnosisScreen() {
         newHealth = Math.max(0, currentHealth - 30);
       }
 
-      // Fire-and-forget the health score update — results are already available
       supabase
         .from("plants")
         .update({ health_score: newHealth })
@@ -263,25 +302,21 @@ export default function DiagnosisScreen() {
         "Diagnosis Failed",
         err instanceof Error ? err.message : "Something went wrong. Please try again."
       );
-      setScreenState("camera");
-      setCapturedUri(null);
+      setScreenState("picker");
     }
-  }, [plant, profile, updatePlant]);
+  }, [plant, profile, slotUris, updatePlant]);
 
   const handleTryAgain = useCallback(() => {
     setDiagnosis(null);
-    setCapturedUri(null);
-    setScreenState("camera");
+    setSlotUris({});
+    setPrimaryUri(null);
+    setAnalyzedCount(0);
+    setScreenState("picker");
   }, []);
-
-  // ── Save diagnosis and go back ─────────────────────────────────────────────
-  // The Edge Function already persisted the row during analysis.
-  // "Save Diagnosis" here just navigates back to plant detail with confirmation.
 
   const handleSave = useCallback(async () => {
     setIsSaving(true);
     try {
-      // Brief delay so the button press feels acknowledged
       await new Promise((r) => setTimeout(r, 300));
       router.back();
     } finally {
@@ -289,8 +324,7 @@ export default function DiagnosisScreen() {
     }
   }, [router]);
 
-  // ── Guard: subscription not yet confirmed (redirect pending) ──────────────
-  // Bypass for existing diagnoses — no need to wait for RevenueCat hydration.
+  // ── Guard: subscription not yet confirmed ──────────────────────────────────
 
   if (!isPro && !existingDiagnosis) {
     return (
@@ -314,72 +348,112 @@ export default function DiagnosisScreen() {
     );
   }
 
-  // ── Camera permission denied ───────────────────────────────────────────────
-
-  if (!hasPermission) {
-    return (
-      <View style={styles.permissionScreen}>
-        <Stack.Screen options={{ headerShown: false }} />
-        <Text style={styles.permissionTitle}>Camera Access Required</Text>
-        <Text style={styles.permissionBody}>
-          GreenThumb needs camera access to photograph your plant's leaves.
-        </Text>
-        <TouchableOpacity style={styles.permissionButton} onPress={requestPermission}>
-          <Text style={styles.permissionButtonText}>Grant Access</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
   // ────────────────────────────────────────────────────────────────────────────
-  // STATE 1 — Camera viewfinder
+  // STATE 1 — Photo picker
   // ────────────────────────────────────────────────────────────────────────────
 
-  if (screenState === "camera") {
+  const leavesReady = !!slotUris["leaves"];
+  const filledCount = PHOTO_SLOTS.filter((s) => slotUris[s.key]).length;
+
+  if (screenState === "picker") {
     return (
-      <View style={styles.screen}>
+      <View style={[styles.screen, { backgroundColor: COLORS.cream }]}>
         <Stack.Screen options={{ headerShown: false }} />
 
-        <CameraView
-          ref={cameraRef}
-          style={StyleSheet.absoluteFill}
-          facing="back"
-        />
-
-        {/* Dark overlay — top bar */}
-        <View style={[styles.overlay, styles.overlayTop, { paddingTop: insets.top + 8 }]}>
+        <ScrollView
+          contentContainerStyle={[
+            styles.pickerContent,
+            { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 120 },
+          ]}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Back button */}
           <TouchableOpacity
-            style={styles.backBtn}
+            style={styles.resultsBack}
             onPress={() => navigation.goBack()}
             accessibilityLabel="Go back"
           >
-            <ArrowLeft size={20} color="#fff" />
+            <ArrowLeft size={20} color={COLORS.textPrimary} />
           </TouchableOpacity>
 
-          <View style={styles.cameraInstructions}>
-            <Text style={styles.cameraTitle}>📸 Photo a leaf clearly</Text>
-            <Text style={styles.cameraSubtitle}>
-              Get close to show any spots, discoloration or damage
+          {/* Header */}
+          <View style={styles.pickerHeader}>
+            <Text style={styles.pickerTitle}>Plant Health Check</Text>
+            <Text style={styles.pickerSubtitle}>
+              Diagnosing: <Text style={{ fontWeight: "700", color: COLORS.primary }}>{plant.name}</Text>
+            </Text>
+            <Text style={styles.pickerHint}>
+              Add photos from different angles. More photos = more accurate diagnosis.
             </Text>
           </View>
-        </View>
 
-        {/* Plant name badge */}
-        <View style={styles.plantNameBadge}>
-          <Text style={styles.plantNameBadgeText}>
-            Diagnosing: {plant.name}
-          </Text>
-        </View>
+          {/* 2x2 slot grid */}
+          <View style={styles.slotGrid}>
+            {PHOTO_SLOTS.map((slot) => {
+              const uri = slotUris[slot.key] ?? null;
+              return (
+                <TouchableOpacity
+                  key={slot.key}
+                  style={[styles.slot, uri && styles.slotFilled]}
+                  onPress={() => handlePickPhoto(slot.key)}
+                  activeOpacity={0.8}
+                  accessibilityLabel={`Add ${slot.label} photo`}
+                  accessibilityRole="button"
+                >
+                  {uri ? (
+                    <>
+                      <Image source={{ uri }} style={styles.slotImage} resizeMode="cover" />
+                      {/* Overlay with label */}
+                      <View style={styles.slotOverlay}>
+                        <Text style={styles.slotOverlayEmoji}>{slot.emoji}</Text>
+                        <Text style={styles.slotOverlayLabel}>{slot.label}</Text>
+                      </View>
+                      {/* Tap to change */}
+                      <View style={styles.slotChangeBtn}>
+                        <Camera size={12} color="#fff" />
+                      </View>
+                    </>
+                  ) : (
+                    <>
+                      <Text style={styles.slotEmoji}>{slot.emoji}</Text>
+                      <Text style={styles.slotLabel}>
+                        {slot.label}
+                        {slot.required ? (
+                          <Text style={styles.slotRequired}> *</Text>
+                        ) : null}
+                      </Text>
+                      <Text style={styles.slotHint}>{slot.hint}</Text>
+                      <View style={styles.slotAddIcon}>
+                        <Plus size={18} color={COLORS.primary} />
+                      </View>
+                    </>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
 
-        {/* Capture button */}
-        <View style={[styles.captureRow, { paddingBottom: insets.bottom + 24 }]}>
+          {!leavesReady && (
+            <Text style={styles.requiredNote}>
+              * Leaves photo is required to start the analysis.
+            </Text>
+          )}
+        </ScrollView>
+
+        {/* Fixed bottom bar */}
+        <View style={[styles.actionBar, { paddingBottom: insets.bottom + 12 }]}>
           <TouchableOpacity
-            style={styles.captureButton}
-            onPress={handleCapture}
-            accessibilityLabel="Take photo for diagnosis"
+            style={[styles.analyzeButton, !leavesReady && styles.analyzeButtonDisabled]}
+            onPress={handleAnalyze}
+            disabled={!leavesReady}
+            accessibilityLabel="Analyze plant health"
             accessibilityRole="button"
           >
-            <View style={styles.captureButtonInner} />
+            <Text style={styles.analyzeButtonText}>
+              {filledCount > 0
+                ? `Analyze Health (${filledCount} photo${filledCount > 1 ? "s" : ""})`
+                : "Analyze Health"}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -395,23 +469,22 @@ export default function DiagnosisScreen() {
       <View style={styles.screen}>
         <Stack.Screen options={{ headerShown: false }} />
 
-        {/* Captured photo as dimmed background */}
-        {capturedUri && (
+        {primaryUri && (
           <Image
-            source={{ uri: capturedUri }}
+            source={{ uri: primaryUri }}
             style={StyleSheet.absoluteFill}
             resizeMode="cover"
           />
         )}
         <View style={[StyleSheet.absoluteFill, styles.analyzingDim]} />
 
-        {/* Scanning line animation */}
         <ScanLine />
 
-        {/* Centered text */}
         <View style={styles.analyzingContent}>
           <ActivityIndicator color={COLORS.secondary} size="large" />
-          <Text style={styles.analyzingTitle}>Analyzing plant health...</Text>
+          <Text style={styles.analyzingTitle}>
+            Analyzing {filledCount} photo{filledCount > 1 ? "s" : ""}...
+          </Text>
           <Text style={styles.analyzingSubtitle}>AI is examining your plant</Text>
         </View>
       </View>
@@ -459,6 +532,11 @@ export default function DiagnosisScreen() {
           <Text style={[styles.confidenceText, { color: severityTextColor }]}>
             {confidencePct}% confidence
           </Text>
+          {!isViewingExisting && analyzedCount > 0 && (
+            <Text style={[styles.photosAnalyzedText, { color: severityTextColor }]}>
+              Photos analyzed: {analyzedCount}
+            </Text>
+          )}
           <Text style={[styles.descriptionText, { color: severityTextColor }]}>
             {diagnosis.description}
           </Text>
@@ -511,7 +589,7 @@ export default function DiagnosisScreen() {
           </View>
         )}
 
-        {/* ── Health score change — only shown for fresh diagnoses ─────── */}
+        {/* ── Health score — only for fresh diagnoses ───────────────────── */}
         {!isViewingExisting && (
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Health Score Impact</Text>
@@ -534,7 +612,6 @@ export default function DiagnosisScreen() {
       {/* ── Fixed action bar ──────────────────────────────────────────── */}
       <View style={[styles.actionBar, { paddingBottom: insets.bottom + 12 }]}>
         {isViewingExisting ? (
-          // Viewing a past diagnosis — just allow going back
           <TouchableOpacity
             style={styles.saveButton}
             onPress={() => navigation.goBack()}
@@ -548,7 +625,7 @@ export default function DiagnosisScreen() {
             <TouchableOpacity
               style={styles.tryAgainButton}
               onPress={handleTryAgain}
-              accessibilityLabel="Try again with a new photo"
+              accessibilityLabel="Try again with new photos"
               accessibilityRole="button"
             >
               <RefreshCw size={18} color={COLORS.primary} />
@@ -565,7 +642,7 @@ export default function DiagnosisScreen() {
               {isSaving ? (
                 <ActivityIndicator color="#fff" size="small" />
               ) : (
-                <Text style={styles.saveButtonText}>Save Diagnosis ✓</Text>
+                <Text style={styles.saveButtonText}>Save Diagnosis</Text>
               )}
             </TouchableOpacity>
           </>
@@ -583,7 +660,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#000",
   },
 
-  // ── Not found / permission ─────────────────────────────────────────────────
+  // ── Not found ──────────────────────────────────────────────────────────────
   notFound: {
     flex: 1,
     alignItems: "center",
@@ -600,111 +677,147 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     fontWeight: "600",
   },
-  permissionScreen: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: COLORS.cream,
-    paddingHorizontal: 32,
+
+  // ── Picker ─────────────────────────────────────────────────────────────────
+  pickerContent: {
+    paddingHorizontal: 16,
   },
-  permissionTitle: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: COLORS.textPrimary,
-    marginBottom: 12,
-    textAlign: "center",
+  pickerHeader: {
+    marginBottom: 20,
+    gap: 6,
   },
-  permissionBody: {
+  pickerTitle: {
+    fontSize: 26,
+    fontWeight: "800",
+    color: COLORS.primary,
+    letterSpacing: -0.5,
+  },
+  pickerSubtitle: {
     fontSize: 15,
     color: COLORS.textSecondary,
-    textAlign: "center",
-    lineHeight: 22,
-    marginBottom: 28,
   },
-  permissionButton: {
-    backgroundColor: COLORS.primary,
-    borderRadius: 16,
-    paddingVertical: 14,
-    paddingHorizontal: 32,
+  pickerHint: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    lineHeight: 19,
+    marginTop: 2,
   },
-  permissionButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "700",
+  slotGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
   },
-
-  // ── Camera ─────────────────────────────────────────────────────────────────
-  overlay: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-  },
-  overlayTop: {
-    top: 0,
-    backgroundColor: "rgba(0,0,0,0.55)",
-    paddingHorizontal: 16,
-    paddingBottom: 20,
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
+  slot: {
+    width: "47.5%",
+    aspectRatio: 1,
+    backgroundColor: "#fff",
     borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.2)",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 16,
+    borderWidth: 2,
+    borderColor: "#E5E7EB",
+    borderStyle: "dashed",
+    padding: 12,
+    gap: 4,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 1,
   },
-  cameraInstructions: {
-    alignItems: "center",
+  slotFilled: {
+    borderStyle: "solid",
+    borderColor: COLORS.primary,
+    padding: 0,
   },
-  cameraTitle: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: "#fff",
-    textAlign: "center",
+  slotImage: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 18,
   },
-  cameraSubtitle: {
-    fontSize: 14,
-    color: "rgba(255,255,255,0.8)",
-    textAlign: "center",
-    marginTop: 6,
-    lineHeight: 20,
-  },
-  plantNameBadge: {
-    position: "absolute",
-    bottom: 130,
-    alignSelf: "center",
-    backgroundColor: "rgba(0,0,0,0.6)",
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  plantNameBadgeText: {
-    color: "#fff",
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  captureRow: {
+  slotOverlay: {
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderBottomLeftRadius: 18,
+    borderBottomRightRadius: 18,
+    flexDirection: "row",
     alignItems: "center",
+    gap: 4,
   },
-  captureButton: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
-    borderWidth: 4,
-    borderColor: "#fff",
+  slotOverlayEmoji: {
+    fontSize: 13,
+  },
+  slotOverlayLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#fff",
+  },
+  slotChangeBtn: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: "rgba(0,0,0,0.5)",
     alignItems: "center",
     justifyContent: "center",
   },
-  captureButtonInner: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    backgroundColor: "#fff",
+  slotEmoji: {
+    fontSize: 28,
+    marginBottom: 2,
+  },
+  slotLabel: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: COLORS.textPrimary,
+    textAlign: "center",
+  },
+  slotRequired: {
+    color: COLORS.danger,
+  },
+  slotHint: {
+    fontSize: 11,
+    color: COLORS.textSecondary,
+    textAlign: "center",
+    lineHeight: 15,
+  },
+  slotAddIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: COLORS.lightgreen,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 4,
+  },
+  requiredNote: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    marginTop: 12,
+    textAlign: "center",
+  },
+  analyzeButton: {
+    flex: 1,
+    backgroundColor: COLORS.primary,
+    borderRadius: 16,
+    paddingVertical: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  analyzeButtonDisabled: {
+    backgroundColor: "#A3A3A3",
+  },
+  analyzeButtonText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#fff",
   },
 
   // ── Analyzing ──────────────────────────────────────────────────────────────
@@ -792,6 +905,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     opacity: 0.75,
+  },
+  photosAnalyzedText: {
+    fontSize: 12,
+    fontWeight: "600",
+    opacity: 0.65,
   },
   descriptionText: {
     fontSize: 14,
