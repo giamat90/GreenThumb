@@ -20,6 +20,7 @@ import {
   Leaf,
   Calendar,
   FlaskConical,
+  MapPin,
   Trash2,
 } from "lucide-react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -522,14 +523,30 @@ function PlantDetailScreen() {
           { paddingBottom: insets.bottom + 12 },
         ]}
       >
-        <TouchableOpacity
-          style={styles.actionButtonSecondary}
-          activeOpacity={0.8}
-          onPress={() => router.push(`/diagnosis/${plant.id}`)}
-        >
-          <FlaskConical size={18} color={COLORS.primary} />
-          <Text style={styles.actionButtonSecondaryText}>Diagnose Health 🔬</Text>
-        </TouchableOpacity>
+        {/* Secondary actions: Diagnose and Check Placement side-by-side */}
+        <View style={styles.actionButtonRow}>
+          <TouchableOpacity
+            style={styles.actionButtonSecondary}
+            activeOpacity={0.8}
+            onPress={() => router.push(`/diagnosis/${plant.id}`)}
+            accessibilityLabel="Diagnose plant health"
+            accessibilityRole="button"
+          >
+            <FlaskConical size={16} color={COLORS.primary} />
+            <Text style={styles.actionButtonSecondaryText}>Diagnose 🔬</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionButtonSecondary}
+            activeOpacity={0.8}
+            onPress={() => router.push({ pathname: "/placement/[id]", params: { id: plant.id } })}
+            accessibilityLabel="Check plant placement"
+            accessibilityRole="button"
+          >
+            <MapPin size={16} color={COLORS.primary} />
+            <Text style={styles.actionButtonSecondaryText}>Placement 📍</Text>
+          </TouchableOpacity>
+        </View>
 
         <TouchableOpacity
           style={styles.actionButtonPrimary}
@@ -786,15 +803,20 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#fff",
   },
+  actionButtonRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
   actionButtonSecondary: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 2,
     borderColor: COLORS.primary,
     borderRadius: 16,
-    paddingVertical: 14,
-    gap: 8,
+    paddingVertical: 13,
+    gap: 6,
   },
   actionButtonSecondaryText: {
     fontSize: 15,

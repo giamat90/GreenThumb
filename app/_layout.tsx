@@ -258,6 +258,7 @@ export default function RootLayout() {
       <Stack.Screen name="(auth)" options={{ headerShown: false }} />
       <Stack.Screen name="plant/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="diagnosis/[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="placement/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="paywall" options={{ headerShown: false }} />
     </Stack>
   );
