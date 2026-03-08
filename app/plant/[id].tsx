@@ -507,7 +507,7 @@ function PlantDetailScreen() {
         style={styles.scroll}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingBottom: insets.bottom + 220 },
+          { paddingBottom: insets.bottom + 280 },
         ]}
         showsVerticalScrollIndicator={false}
       >
@@ -1014,7 +1014,7 @@ function PlantDetailScreen() {
               accessibilityRole="button"
             >
               <Scissors size={16} color={COLORS.primary} />
-              <Text style={styles.actionButtonSecondaryText}>Pruning ✂️</Text>
+              <Text style={styles.actionButtonSecondaryText}>Pruning</Text>
             </TouchableOpacity>
           </View>
         </View>

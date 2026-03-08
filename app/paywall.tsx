@@ -39,7 +39,10 @@ const FEATURES: FeatureRow[] = [
   { name: "Watering reminders", free: true, pro: true },
   { name: "Weather-aware scheduling", free: false, pro: true },
   { name: "AI disease diagnosis", free: false, pro: true },
-  { name: "Diagnosis history", free: false, pro: true },
+  { name: "Placement advisor", free: false, pro: true },
+  { name: "Repotting advisor", free: false, pro: true },
+  { name: "Pruning advisor", free: false, pro: true },
+  { name: "Growth tracking", free: false, pro: true },
   { name: "Priority support", free: false, pro: true },
 ];
 
