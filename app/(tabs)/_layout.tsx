@@ -1,5 +1,5 @@
 import { Tabs, useRouter } from "expo-router";
-import { Home, Leaf, Camera, CalendarDays, User } from "lucide-react-native";
+import { Home, Leaf, Camera, CalendarDays, User, Users } from "lucide-react-native";
 import { TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { COLORS } from "@/constants";
@@ -116,6 +116,14 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => (
             <CalendarDays size={size} color={color} />
           ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="community"
+        options={{
+          title: "Community",
+          tabBarIcon: ({ color, size }) => <Users size={size} color={color} />,
         }}
       />
 

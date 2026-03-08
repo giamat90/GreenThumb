@@ -11,7 +11,7 @@ import {
   Linking,
   Platform,
 } from "react-native";
-import { LogOut, MapPin, Info, Shield, FileText, Crown } from "lucide-react-native";
+import { LogOut, MapPin, Info, Shield, FileText, Crown, Users, Camera } from "lucide-react-native";
 import Constants from "expo-constants";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
@@ -196,6 +196,45 @@ export default function ProfileScreen() {
           <Text style={styles.upgradeArrow}>›</Text>
         </TouchableOpacity>
       )}
+
+      {/* ── My Garden (Community) ─────────────────────────────────────────── */}
+      <Text style={styles.sectionTitle}>{t("community.myGarden")}</Text>
+      <View style={styles.settingsCard}>
+        <TouchableOpacity
+          style={styles.settingRow}
+          onPress={() => router.push({ pathname: "/community/profile/[id]", params: { id: profile?.id ?? "" } })}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+        >
+          <View style={styles.settingRowLeft}>
+            <View style={styles.settingIconWrap}>
+              <Users size={18} color={COLORS.primary} />
+            </View>
+            <Text style={styles.settingLabel}>{t("community.viewMyProfile")}</Text>
+          </View>
+          <Text style={styles.settingChevron}>›</Text>
+        </TouchableOpacity>
+
+        <View style={styles.rowDivider} />
+
+        <TouchableOpacity
+          style={styles.settingRow}
+          onPress={() => {
+            if (!isPro) { router.push("/paywall"); return; }
+            router.push("/community/new-post");
+          }}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+        >
+          <View style={styles.settingRowLeft}>
+            <View style={styles.settingIconWrap}>
+              <Camera size={18} color={COLORS.primary} />
+            </View>
+            <Text style={styles.settingLabel}>{t("community.shareAPost")}</Text>
+          </View>
+          <Text style={styles.settingChevron}>›</Text>
+        </TouchableOpacity>
+      </View>
 
       {/* ── Notification settings ─────────────────────────────────────────── */}
       <NotificationSettings />

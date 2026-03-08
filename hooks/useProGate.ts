@@ -8,7 +8,8 @@ export type ProFeature =
   | "unlimited_identification"
   | "weather_scheduling"
   | "disease_diagnosis"
-  | "diagnosis_history";
+  | "diagnosis_history"
+  | "create_post";
 
 export interface ProGateResult {
   isPro: boolean;
@@ -55,6 +56,9 @@ export function useProGate(): ProGateResult {
       case "diagnosis_history":
         // These features are Pro-only
         return false;
+
+      case "create_post":
+        return false; // Pro only
 
       default:
         return false;

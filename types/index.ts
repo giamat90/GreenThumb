@@ -151,3 +151,40 @@ export interface PlacementAnalysis {
   light_level: string | null;
   created_at: string;
 }
+
+export interface CommunityPost {
+  id: string;
+  user_id: string;
+  plant_id: string | null;
+  photo_url: string;
+  caption: string | null;
+  likes_count: number;
+  comments_count: number;
+  is_public: boolean;
+  created_at: string;
+  // joined fields
+  username?: string;
+  avatar_url?: string | null;
+  plant_name?: string | null;
+  is_liked?: boolean;
+}
+
+export interface PostComment {
+  id: string;
+  user_id: string;
+  post_id: string;
+  content: string;
+  created_at: string;
+  username?: string;
+}
+
+export interface UserProfile {
+  id: string;
+  username: string | null;
+  avatar_url: string | null;
+  bio: string | null;
+  posts_count: number;
+  followers_count: number;
+  following_count: number;
+  created_at: string;
+}
