@@ -29,6 +29,7 @@ import { COLORS } from "@/constants";
 import { compressImage } from "@/lib/imageUtils";
 import { supabase } from "@/lib/supabase";
 import { deviceLanguage } from "@/lib/i18n";
+import { scheduleFollowUpDiagnosisNotification } from "@/lib/notifications";
 import { usePlantsStore } from "@/store/plants";
 import { useUserStore } from "@/store/user";
 
@@ -137,9 +138,11 @@ function ScanLine() {
 
 export default function DiagnosisScreen() {
   const { t } = useTranslation();
-  const { id: plantId, existingDiagnosis } = useLocalSearchParams<{
+  const { id: plantId, existingDiagnosis, isFollowUp, previousCondition } = useLocalSearchParams<{
     id: string;
     existingDiagnosis?: string;
+    isFollowUp?: string;
+    previousCondition?: string;
   }>();
 
   const router = useRouter();
@@ -182,6 +185,13 @@ export default function DiagnosisScreen() {
   const [isViewingExisting, setIsViewingExisting] = useState(false);
   const [actionBarHeight, setActionBarHeight] = useState(0);
 
+  // Closed-loop care state
+  const [wateringAdjusted, setWateringAdjusted] = useState(false);
+  const [followUpDate, setFollowUpDate] = useState<Date | null>(null);
+  const [followUpScheduled, setFollowUpScheduled] = useState(false);
+  const [wateringAdjustmentDone, setWateringAdjustmentDone] = useState(false);
+  const [suggestedWateringDays, setSuggestedWateringDays] = useState<number>(5);
+
   // ── Load existing diagnosis on mount ──────────────────────────────────────
 
   useEffect(() => {
@@ -196,6 +206,35 @@ export default function DiagnosisScreen() {
       // Malformed param — fall back to picker flow
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Compute follow-up date and suggested watering when diagnosis is ready ──
+
+  useEffect(() => {
+    if (diagnosis && !isViewingExisting) {
+      // Compute follow-up date based on severity
+      const days = diagnosis.severity === "critical" ? 3 : diagnosis.severity === "warning" ? 7 : 14;
+      const date = new Date();
+      date.setDate(date.getDate() + days);
+      setFollowUpDate(date);
+
+      // Compute suggested watering days
+      const currentDays =
+        plant?.care_profile?.watering === "frequent" ? 2 :
+        plant?.care_profile?.watering === "minimum" ? 10 : 5;
+
+      const conditionText = (diagnosis.condition + " " + diagnosis.description).toLowerCase();
+      const isUnderwatering = ["underwatering", "under-watering", "too dry", "drought", "thirsty", "wilting", "dehydrat"].some(k => conditionText.includes(k));
+      const isOverwatering = ["overwatering", "over-watering", "root rot", "waterlogged", "soggy", "too wet", "excess water"].some(k => conditionText.includes(k));
+
+      if (isUnderwatering) {
+        setSuggestedWateringDays(Math.max(1, currentDays - 2));
+      } else if (isOverwatering) {
+        setSuggestedWateringDays(currentDays + 3);
+      } else {
+        setSuggestedWateringDays(currentDays);
+      }
+    }
+  }, [diagnosis, isViewingExisting]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Pick photo for a slot ─────────────────────────────────────────────────
 
@@ -328,18 +367,68 @@ export default function DiagnosisScreen() {
     setSlotUris({});
     setPrimaryUri(null);
     setAnalyzedCount(0);
+    setWateringAdjusted(false);
+    setWateringAdjustmentDone(false);
+    setFollowUpDate(null);
+    setFollowUpScheduled(false);
     setScreenState("picker");
   }, []);
 
   const handleSave = useCallback(async () => {
+    if (!plant || !profile || !diagnosis) return;
     setIsSaving(true);
     try {
-      await new Promise((r) => setTimeout(r, 300));
+      await supabase.from("diagnoses").insert({
+        plant_id: plant.id,
+        user_id: profile.id,
+        result: diagnosis as unknown as Record<string, unknown>,
+        severity: diagnosis.severity,
+        follow_up_date: followUpDate ? followUpDate.toISOString() : null,
+        watering_adjusted: wateringAdjusted,
+        watering_adjustment_days: wateringAdjusted ? suggestedWateringDays : null,
+      });
       router.back();
+    } catch (err) {
+      Alert.alert(t("common.error"), err instanceof Error ? err.message : t("common.somethingWentWrong"));
     } finally {
       setIsSaving(false);
     }
-  }, [router]);
+  }, [plant, profile, diagnosis, followUpDate, wateringAdjusted, suggestedWateringDays, router, t]);
+
+  // ── Watering adjustment handler ────────────────────────────────────────────
+
+  const handleApplyWateringAdjustment = useCallback(async (detectedType: "underwatering" | "overwatering") => {
+    if (!plant) return;
+    const currentDays =
+      plant.care_profile?.watering === "frequent" ? 2 :
+      plant.care_profile?.watering === "minimum" ? 10 : 5;
+    const suggested = detectedType === "underwatering" ? Math.max(1, currentDays - 2) : currentDays + 3;
+
+    try {
+      await supabase.from("plants").update({
+        care_profile: { ...plant.care_profile, watering_interval_days: suggested },
+      }).eq("id", plant.id);
+      updatePlant(plant.id, { care_profile: { ...plant.care_profile, watering_interval_days: suggested } });
+      setWateringAdjusted(true);
+      setWateringAdjustmentDone(true);
+    } catch (err) {
+      console.warn("diagnosis: failed to update watering interval", err);
+      setWateringAdjusted(true);
+      setWateringAdjustmentDone(true);
+    }
+  }, [plant, updatePlant]);
+
+  // ── Follow-up scheduling handler ──────────────────────────────────────────
+
+  const handleScheduleFollowUp = useCallback(async () => {
+    if (!plant || !diagnosis || !followUpDate) return;
+    try {
+      await scheduleFollowUpDiagnosisNotification(plant.id, plant.name, diagnosis.condition, followUpDate);
+    } catch (err) {
+      console.warn("diagnosis: failed to schedule follow-up notification", err);
+    }
+    setFollowUpScheduled(true);
+  }, [plant, diagnosis, followUpDate]);
 
   // ── Guard: subscription not yet confirmed ──────────────────────────────────
 
@@ -519,6 +608,30 @@ export default function DiagnosisScreen() {
   const severityEmoji = SEVERITY_EMOJI[diagnosis.severity];
   const confidencePct = Math.round(diagnosis.confidence * 100);
 
+  // Compute watering detection for action cards
+  const conditionText = (diagnosis.condition + " " + diagnosis.description).toLowerCase();
+  const isUnderwatering = ["underwatering", "under-watering", "too dry", "drought", "thirsty", "wilting", "dehydrat"].some(k => conditionText.includes(k));
+  const isOverwatering = ["overwatering", "over-watering", "root rot", "waterlogged", "soggy", "too wet", "excess water"].some(k => conditionText.includes(k));
+  const detectedWateringIssue: "underwatering" | "overwatering" | null =
+    isUnderwatering ? "underwatering" : isOverwatering ? "overwatering" : null;
+  const currentWateringDays =
+    plant.care_profile?.watering === "frequent" ? 2 :
+    plant.care_profile?.watering === "minimum" ? 10 : 5;
+
+  // Recovery banner logic (follow-up flow)
+  const isFollowUpFlow = isFollowUp === "true";
+  let recoveryStatusText = t("diagnosis.noSignificantChange");
+  let recoveryStatusColor = COLORS.textSecondary;
+  if (isFollowUpFlow) {
+    if (diagnosis.severity === "healthy") {
+      recoveryStatusText = t("diagnosis.conditionImproved");
+      recoveryStatusColor = COLORS.success ?? COLORS.primary;
+    } else if (diagnosis.severity === "critical") {
+      recoveryStatusText = t("diagnosis.conditionWorsened");
+      recoveryStatusColor = COLORS.danger ?? "#991B1B";
+    }
+  }
+
   return (
     <View style={styles.screen}>
       <Stack.Screen options={{ headerShown: false }} />
@@ -539,6 +652,19 @@ export default function DiagnosisScreen() {
         >
           <ArrowLeft size={20} color={COLORS.textPrimary} />
         </TouchableOpacity>
+
+        {/* ── Recovery banner (follow-up flow only) ─────────────────────── */}
+        {isFollowUpFlow && previousCondition && (
+          <View style={styles.recoveryBanner}>
+            <Text style={styles.recoveryTitle}>{t("diagnosis.recoveryProgress")}</Text>
+            <Text style={styles.recoverySubtitle}>
+              {t("diagnosis.followUpCheckFor", { condition: previousCondition })}
+            </Text>
+            <Text style={[styles.recoveryStatus, { color: recoveryStatusColor }]}>
+              {recoveryStatusText}
+            </Text>
+          </View>
+        )}
 
         {/* ── Header card ───────────────────────────────────────────────── */}
         <View style={[styles.card, styles.headerCard, { backgroundColor: severityBg }]}>
@@ -624,6 +750,74 @@ export default function DiagnosisScreen() {
               </Text>
             </View>
             <Text style={styles.healthScoreLabel}>{t("diagnosis.updatedHealthScore", { name: plant.name })}</Text>
+          </View>
+        )}
+
+        {/* ── Watering Adjustment card — fresh diagnoses only ───────────── */}
+        {!isViewingExisting && detectedWateringIssue && (
+          <View style={styles.actionCard}>
+            <Text style={styles.actionCardTitle}>{t("diagnosis.wateringAdjustment")}</Text>
+            <Text style={styles.actionCardText}>
+              {detectedWateringIssue === "underwatering"
+                ? t("diagnosis.underwateringDetected")
+                : t("diagnosis.overwateringDetected")}
+            </Text>
+            <Text style={styles.actionCardText}>
+              {t("diagnosis.currentInterval", { days: currentWateringDays })}
+            </Text>
+            <Text style={styles.actionCardText}>
+              {t("diagnosis.suggestedInterval", { days: suggestedWateringDays })}
+            </Text>
+            {wateringAdjustmentDone ? (
+              <Text style={styles.actionCardSuccess}>{"✅ " + t("diagnosis.wateringUpdated")}</Text>
+            ) : (
+              <View style={styles.actionCardButtons}>
+                <TouchableOpacity
+                  style={styles.actionCardBtnSecondary}
+                  onPress={() => setWateringAdjustmentDone(true)}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.actionCardBtnTextSecondary}>{t("diagnosis.keepCurrent")}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.actionCardBtnPrimary}
+                  onPress={() => handleApplyWateringAdjustment(detectedWateringIssue)}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.actionCardBtnTextPrimary}>{t("diagnosis.applyAdjustment")}</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* ── Follow-Up Diagnosis card — fresh diagnoses only ──────────── */}
+        {!isViewingExisting && followUpDate && (
+          <View style={styles.actionCard}>
+            <Text style={styles.actionCardTitle}>{t("diagnosis.followUpDiagnosis")}</Text>
+            <Text style={styles.actionCardText}>
+              {followUpDate.toLocaleDateString()}
+            </Text>
+            {followUpScheduled ? (
+              <Text style={styles.actionCardSuccess}>{"✅ " + t("diagnosis.followUpScheduled")}</Text>
+            ) : (
+              <View style={styles.actionCardButtons}>
+                <TouchableOpacity
+                  style={styles.actionCardBtnSecondary}
+                  onPress={() => setFollowUpScheduled(true)}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.actionCardBtnTextSecondary}>{t("diagnosis.skip")}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.actionCardBtnPrimary}
+                  onPress={handleScheduleFollowUp}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.actionCardBtnTextPrimary}>{t("diagnosis.scheduleFollowUp")}</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         )}
       </ScrollView>
@@ -1063,5 +1257,87 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     color: "#fff",
+  },
+
+  // ── Action cards (closed-loop care) ────────────────────────────────────────
+  actionCard: {
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+    gap: 10,
+  },
+  actionCardTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: COLORS.textPrimary,
+  },
+  actionCardText: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    lineHeight: 20,
+  },
+  actionCardButtons: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 4,
+  },
+  actionCardBtnSecondary: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: COLORS.primary,
+    alignItems: "center",
+  },
+  actionCardBtnPrimary: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: COLORS.primary,
+    alignItems: "center",
+  },
+  actionCardBtnTextSecondary: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: COLORS.primary,
+  },
+  actionCardBtnTextPrimary: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#fff",
+  },
+  actionCardSuccess: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: COLORS.success,
+    textAlign: "center",
+    paddingVertical: 8,
+  },
+
+  // ── Recovery banner ────────────────────────────────────────────────────────
+  recoveryBanner: {
+    backgroundColor: "#EFF6FF",
+    borderRadius: 20,
+    padding: 16,
+    gap: 6,
+  },
+  recoveryTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#1E40AF",
+  },
+  recoverySubtitle: {
+    fontSize: 13,
+    color: "#3B82F6",
+  },
+  recoveryStatus: {
+    fontSize: 15,
+    fontWeight: "700",
+    marginTop: 4,
   },
 });

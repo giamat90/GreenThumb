@@ -215,9 +215,15 @@ export default function RootLayout() {
         const data = response.notification.request.content.data as {
           plantId?: string;
           type?: string;
+          condition?: string;
         };
         if (data?.type === "watering" && data.plantId) {
           router.push(`/plant/${data.plantId}`);
+        } else if (data?.type === "followup_diagnosis" && data.plantId) {
+          router.push({
+            pathname: "/diagnosis/[id]",
+            params: { id: data.plantId, isFollowUp: "true", previousCondition: data.condition ?? "" },
+          });
         }
       });
 
@@ -262,6 +268,7 @@ export default function RootLayout() {
       <Stack.Screen name="placement/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="repotting/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="growth/[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="pruning/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="paywall" options={{ headerShown: false }} />
     </Stack>
   );

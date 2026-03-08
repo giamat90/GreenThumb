@@ -139,6 +139,16 @@ GreenThumb uses **i18next + react-i18next** with `expo-localization` for device 
 
 **Never use hardcoded pixel values for layout spacing.** Always use dynamic measurement (`onLayout`), relative values, or safe area insets. This applies especially to sticky bottom bars overlapping scroll content — measure the bar's rendered height via `onLayout` and use that value for the ScrollView's `paddingBottom`.
 
+## Diagnosis Closed-Loop Care Rules
+
+After any diagnosis completes (fresh result, not viewing existing), always offer:
+1. **Watering adjustment** — detect underwatering/overwatering keywords in condition+description, suggest interval change, apply via `care_profile.watering_interval_days`
+2. **Follow-up scheduling** — suggest a follow-up date (3/7/14 days based on severity), schedule a push notification via `scheduleFollowUpDiagnosisNotification()`
+
+`handleSave` in `diagnosis/[id].tsx` must persist to Supabase `diagnoses` table including `follow_up_date`, `watering_adjusted`, `watering_adjustment_days`.
+
+When a follow-up notification is tapped, navigate to `/diagnosis/[id]` with params `isFollowUp=true` and `previousCondition=<condition>` to show the recovery comparison banner.
+
 ## RevenueCat Notes
 - RevenueCat is **only initialised in `__DEV__` builds**. Preview/production builds skip it entirely to avoid fatal crashes from Test Store keys.
 - In non-dev builds: `checkSubscriptionStatus` → `'free'`, `getOfferings` → `null`, `purchasePackage` → shows "Coming Soon" alert, `restorePurchases` → `false`.

@@ -230,6 +230,48 @@ export async function sendImmediateNotification(
   }
 }
 
+const FOLLOWUP_NOTIFICATION_IDS_KEY = "followup_notification_ids";
+
+/**
+ * Schedules a follow-up diagnosis notification for a plant.
+ * Returns the Expo notification identifier.
+ */
+export async function scheduleFollowUpDiagnosisNotification(
+  plantId: string,
+  plantName: string,
+  condition: string,
+  followUpDate: Date
+): Promise<string | null> {
+  const now = new Date();
+  if (followUpDate <= now) return null;
+
+  try {
+    const identifier = await Notifications.scheduleNotificationAsync({
+      content: {
+        title: `Time to check on ${plantName} 🌿`,
+        body: `Follow-up for: ${condition}. How is it recovering?`,
+        data: { plantId, type: "followup_diagnosis", condition },
+        sound: "default",
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: followUpDate,
+      },
+    });
+
+    // Persist notification ID for this plant
+    const raw = await AsyncStorage.getItem(FOLLOWUP_NOTIFICATION_IDS_KEY);
+    const idMap: NotificationIdMap = raw ? (JSON.parse(raw) as NotificationIdMap) : {};
+    idMap[plantId] = identifier;
+    await AsyncStorage.setItem(FOLLOWUP_NOTIFICATION_IDS_KEY, JSON.stringify(idMap));
+
+    return identifier;
+  } catch (err) {
+    console.warn(`notifications: failed to schedule follow-up for ${plantName}`, err);
+    return null;
+  }
+}
+
 /**
  * Re-schedules the notification for a single plant after it has been watered.
  * Cancels the old notification and creates a new one for the updated next_watering.

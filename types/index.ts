@@ -61,6 +61,10 @@ export interface Diagnosis {
   result: Record<string, unknown> | null;
   severity: DiagnosisSeverity;
   created_at: string;
+  follow_up_date: string | null;
+  follow_up_diagnosis_id: string | null;
+  watering_adjusted: boolean | null;
+  watering_adjustment_days: number | null;
 }
 
 export interface CareEvent {
