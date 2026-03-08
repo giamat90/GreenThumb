@@ -297,6 +297,7 @@ export default function PlacementScreen() {
   const [compassAvailable, setCompassAvailable] = useState<boolean | null>(null);
   const [showCompassModal, setShowCompassModal] = useState(false);
   const [compassDetected, setCompassDetected] = useState<Exclude<WindowDirection, "none"> | null>(null);
+  const [actionBarHeight, setActionBarHeight] = useState(0);
   const compassRotation = useRef(new Animated.Value(0)).current;
   const compassAnimRef = useRef<Animated.CompositeAnimation | null>(null);
 
@@ -518,7 +519,7 @@ export default function PlacementScreen() {
           style={styles.scroll}
           contentContainerStyle={[
             styles.formContent,
-            { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 100 },
+            { paddingTop: insets.top + 16, paddingBottom: actionBarHeight + 16 },
           ]}
           showsVerticalScrollIndicator={false}
         >
@@ -719,7 +720,7 @@ export default function PlacementScreen() {
         </Modal>
 
         {/* ── Analyze button ─────────────────────────────────────────────── */}
-        <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 12 }]}>
+        <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 12 }]} onLayout={(e) => setActionBarHeight(e.nativeEvent.layout.height)}>
           <TouchableOpacity
             style={styles.analyzeButton}
             onPress={handleAnalyze}
@@ -787,7 +788,7 @@ export default function PlacementScreen() {
         style={styles.scroll}
         contentContainerStyle={[
           styles.resultsContent,
-          { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 100 },
+          { paddingTop: insets.top + 16, paddingBottom: actionBarHeight + 16 },
         ]}
         showsVerticalScrollIndicator={false}
       >
@@ -852,7 +853,7 @@ export default function PlacementScreen() {
       </ScrollView>
 
       {/* ── Fixed action bar ──────────────────────────────────────────── */}
-      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 12 }]}>
+      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 12 }]} onLayout={(e) => setActionBarHeight(e.nativeEvent.layout.height)}>
         <TouchableOpacity
           style={styles.retakeButton}
           onPress={handleRetake}

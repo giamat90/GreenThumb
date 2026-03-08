@@ -189,6 +189,7 @@ function PlantDetailScreen() {
   const [pruningLoading, setPruningLoading] = useState(true);
   const [growthPreview, setGrowthPreview] = useState<GrowthLog[]>([]);
   const [growthLoading, setGrowthLoading] = useState(true);
+  const [actionBarHeight, setActionBarHeight] = useState(0);
 
   // Fetch last 5 watering events — useFocusEffect ties the lifecycle to
   // screen focus so the isActive flag is set to false before navigation
@@ -507,7 +508,7 @@ function PlantDetailScreen() {
         style={styles.scroll}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingBottom: insets.bottom + 280 },
+          { paddingBottom: actionBarHeight + 16 },
         ]}
         showsVerticalScrollIndicator={false}
       >
@@ -954,6 +955,7 @@ function PlantDetailScreen() {
           styles.actionBar,
           { paddingBottom: insets.bottom + 12 },
         ]}
+        onLayout={(e) => setActionBarHeight(e.nativeEvent.layout.height)}
       >
         {/* Secondary actions: 2×2 grid */}
         <View style={styles.actionButtonGrid}>

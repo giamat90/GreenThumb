@@ -117,6 +117,7 @@ export default function GrowthScreen() {
   const [addHeight, setAddHeight] = useState("");
   const [addNotes, setAddNotes] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [actionBarHeight, setActionBarHeight] = useState(0);
 
   // ── Fetch logs ───────────────────────────────────────────────────────────────
   const fetchLogs = useCallback(async () => {
@@ -283,7 +284,7 @@ export default function GrowthScreen() {
           style={styles.scroll}
           contentContainerStyle={[
             styles.addContent,
-            { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 100 },
+            { paddingTop: insets.top + 16, paddingBottom: actionBarHeight + 16 },
           ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
@@ -351,7 +352,7 @@ export default function GrowthScreen() {
         </ScrollView>
 
         {/* Bottom bar */}
-        <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 12 }]}>
+        <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 12 }]} onLayout={(e) => setActionBarHeight(e.nativeEvent.layout.height)}>
           <TouchableOpacity style={styles.cancelButton} onPress={handleCancelAdd}>
             <Text style={styles.cancelButtonText}>Cancel</Text>
           </TouchableOpacity>

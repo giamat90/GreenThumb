@@ -166,6 +166,7 @@ export default function DiagnosisScreen() {
   const [analyzedCount, setAnalyzedCount] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [isViewingExisting, setIsViewingExisting] = useState(false);
+  const [actionBarHeight, setActionBarHeight] = useState(0);
 
   // ── Load existing diagnosis on mount ──────────────────────────────────────
 
@@ -364,7 +365,7 @@ export default function DiagnosisScreen() {
         <ScrollView
           contentContainerStyle={[
             styles.pickerContent,
-            { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 120 },
+            { paddingTop: insets.top + 16, paddingBottom: actionBarHeight + 16 },
           ]}
           showsVerticalScrollIndicator={false}
         >
@@ -442,7 +443,7 @@ export default function DiagnosisScreen() {
         </ScrollView>
 
         {/* Fixed bottom bar */}
-        <View style={[styles.actionBar, { paddingBottom: insets.bottom + 12 }]}>
+        <View style={[styles.actionBar, { paddingBottom: insets.bottom + 12 }]} onLayout={(e) => setActionBarHeight(e.nativeEvent.layout.height)}>
           <TouchableOpacity
             style={[styles.analyzeButton, !leavesReady && styles.analyzeButtonDisabled]}
             onPress={handleAnalyze}
@@ -511,7 +512,7 @@ export default function DiagnosisScreen() {
         style={styles.resultsScroll}
         contentContainerStyle={[
           styles.resultsContent,
-          { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 120 },
+          { paddingTop: insets.top + 16, paddingBottom: actionBarHeight + 16 },
         ]}
         showsVerticalScrollIndicator={false}
       >
@@ -611,7 +612,7 @@ export default function DiagnosisScreen() {
       </ScrollView>
 
       {/* ── Fixed action bar ──────────────────────────────────────────── */}
-      <View style={[styles.actionBar, { paddingBottom: insets.bottom + 12 }]}>
+      <View style={[styles.actionBar, { paddingBottom: insets.bottom + 12 }]} onLayout={(e) => setActionBarHeight(e.nativeEvent.layout.height)}>
         {isViewingExisting ? (
           <TouchableOpacity
             style={styles.saveButton}

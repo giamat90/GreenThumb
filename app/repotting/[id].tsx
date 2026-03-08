@@ -164,6 +164,7 @@ export default function RepottingScreen() {
   const [primaryUri, setPrimaryUri] = useState<string | null>(null);
   const [result, setResult] = useState<RepottingResult | null>(null);
   const [isViewingExisting, setIsViewingExisting] = useState(false);
+  const [actionBarHeight, setActionBarHeight] = useState(0);
 
   // Jump straight to results when viewing an existing analysis from history
   useEffect(() => {
@@ -357,7 +358,7 @@ export default function RepottingScreen() {
           style={styles.scroll}
           contentContainerStyle={[
             styles.formContent,
-            { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 100 },
+            { paddingTop: insets.top + 16, paddingBottom: actionBarHeight + 16 },
           ]}
           showsVerticalScrollIndicator={false}
         >
@@ -482,7 +483,7 @@ export default function RepottingScreen() {
         </ScrollView>
 
         {/* Analyze button */}
-        <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 12 }]}>
+        <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 12 }]} onLayout={(e) => setActionBarHeight(e.nativeEvent.layout.height)}>
           <TouchableOpacity style={styles.analyzeButton} onPress={handleAnalyze} activeOpacity={0.85}>
             <Text style={styles.analyzeButtonText}>
               {(() => {
@@ -536,7 +537,7 @@ export default function RepottingScreen() {
         style={styles.scroll}
         contentContainerStyle={[
           styles.resultsContent,
-          { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 100 },
+          { paddingTop: insets.top + 16, paddingBottom: actionBarHeight + 16 },
         ]}
         showsVerticalScrollIndicator={false}
       >
@@ -623,7 +624,7 @@ export default function RepottingScreen() {
       </ScrollView>
 
       {/* ── Action bar ───────────────────────────────────────────────────── */}
-      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 12 }]}>
+      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 12 }]} onLayout={(e) => setActionBarHeight(e.nativeEvent.layout.height)}>
         <TouchableOpacity style={styles.retakeButton} onPress={handleRetake} accessibilityRole="button">
           <RefreshCw size={18} color={COLORS.primary} />
           <Text style={styles.retakeButtonText}>
