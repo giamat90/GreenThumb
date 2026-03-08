@@ -28,9 +28,12 @@ import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system/legacy";
 import { Magnetometer } from "expo-sensors";
 
+import { useTranslation } from "react-i18next";
+
 import { COLORS } from "@/constants";
 import { supabase } from "@/lib/supabase";
 import { compressImage } from "@/lib/imageUtils";
+import { deviceLanguage } from "@/lib/i18n";
 import { usePlantsStore } from "@/store/plants";
 import { useUserStore } from "@/store/user";
 
@@ -246,6 +249,7 @@ function headingToDirection(heading: number): Exclude<WindowDirection, "none"> {
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function PlacementScreen() {
+  const { t } = useTranslation();
   const { id: plantId, existingAnalysis } = useLocalSearchParams<{ id: string; existingAnalysis?: string }>();
   const navigation = useNavigation();
   const router = useRouter();
@@ -435,6 +439,7 @@ export default function PlacementScreen() {
             roomType,
             lightLevel,
             photos: photos.length > 0 ? photos : undefined,
+            language: deviceLanguage(),
           }),
         }
       );
@@ -470,8 +475,8 @@ export default function PlacementScreen() {
       setScreenState("results");
     } catch (err) {
       Alert.alert(
-        "Analysis Failed",
-        err instanceof Error ? err.message : "Something went wrong. Please try again."
+        t("common.error"),
+        err instanceof Error ? err.message : t("common.somethingWentWrong")
       );
       setScreenState("form");
     }
@@ -498,9 +503,9 @@ export default function PlacementScreen() {
     return (
       <View style={styles.notFound}>
         <Stack.Screen options={{ headerShown: false }} />
-        <Text style={styles.notFoundText}>Plant not found.</Text>
+        <Text style={styles.notFoundText}>{t("plantDetail.plantNotFound")}</Text>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backLink}>← Go back</Text>
+          <Text style={styles.backLink}>{t("plantDetail.goBack")}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -532,7 +537,7 @@ export default function PlacementScreen() {
             >
               <ArrowLeft size={20} color={COLORS.textPrimary} />
             </TouchableOpacity>
-            <Text style={styles.formTitle}>Check Placement</Text>
+            <Text style={styles.formTitle}>{t("placement.title")}</Text>
           </View>
 
           {/* Plant preview */}
@@ -559,7 +564,7 @@ export default function PlacementScreen() {
           {/* ── Window direction ─────────────────────────────────────────── */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Nearest window direction</Text>
+              <Text style={styles.sectionTitle}>{t("placement.windowDirection")}</Text>
               {compassAvailable && (
                 <TouchableOpacity
                   style={styles.detectButton}
@@ -585,14 +590,14 @@ export default function PlacementScreen() {
             </View>
             {compassDetected && (
               <Text style={styles.detectedConfirm}>
-                Detected: {compassDetected.charAt(0).toUpperCase() + compassDetected.slice(1)} ✅
+                {t("placement.compassDetected", { direction: compassDetected.charAt(0).toUpperCase() + compassDetected.slice(1) })}
               </Text>
             )}
           </View>
 
           {/* ── Room type ────────────────────────────────────────────────── */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Room type</Text>
+            <Text style={styles.sectionTitle}>{t("placement.roomType")}</Text>
             <View style={styles.pillGrid}>
               {ROOM_OPTIONS.map((opt) => (
                 <PillOption
@@ -608,7 +613,7 @@ export default function PlacementScreen() {
 
           {/* ── Light level ──────────────────────────────────────────────── */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Light level in this spot</Text>
+            <Text style={styles.sectionTitle}>{t("placement.lightLevel")}</Text>
             {LIGHT_OPTIONS.map((opt) => (
               <TouchableOpacity
                 key={opt.value}
@@ -643,8 +648,8 @@ export default function PlacementScreen() {
 
           {/* ── Photos (optional) ─────────────────────────────────────────── */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Photos (optional)</Text>
-            <Text style={styles.sectionSubtitle}>Add photos for better assessment — tap any slot to add</Text>
+            <Text style={styles.sectionTitle}>{t("repotting.photosOptional")}</Text>
+            <Text style={styles.sectionSubtitle}>{t("repotting.photosSubtitle")}</Text>
             <View style={styles.slotGrid}>
               {PHOTO_SLOTS.map((slot) => {
                 const uri = slotUris[slot.key] ?? null;
@@ -711,9 +716,9 @@ export default function PlacementScreen() {
               >
                 ↑
               </Animated.Text>
-              <Text style={styles.compassTitle}>Point your phone at the window</Text>
+              <Text style={styles.compassTitle}>{t("placement.compassTitle")}</Text>
               <Text style={styles.compassSubtitle}>
-                Hold steady for 3 seconds while facing the window
+                {t("placement.compassHint")}
               </Text>
             </View>
           </View>
@@ -731,7 +736,7 @@ export default function PlacementScreen() {
             <Text style={styles.analyzeButtonText}>
               {(() => {
                 const n = PHOTO_SLOTS.filter((s) => slotUris[s.key]).length;
-                return n > 0 ? `Analyze Placement (${n} photo${n > 1 ? "s" : ""})` : "Analyze Placement";
+                return n > 0 ? `${t("placement.analyzePlacement")} (${n})` : t("placement.analyzePlacement");
               })()}
             </Text>
           </TouchableOpacity>
@@ -762,9 +767,9 @@ export default function PlacementScreen() {
 
         <View style={styles.analyzingContent}>
           <ActivityIndicator color={COLORS.secondary} size="large" />
-          <Text style={styles.analyzingTitle}>Analyzing placement conditions...</Text>
+          <Text style={styles.analyzingTitle}>{t("placement.analyzing")}</Text>
           <Text style={styles.analyzingSubtitle}>
-            Checking light, humidity, and temperature
+            {t("placement.light")}, {t("placement.humidity")}, {t("placement.temperature")}
           </Text>
         </View>
       </View>
@@ -779,6 +784,9 @@ export default function PlacementScreen() {
 
   const overallBg = OVERALL_BG[result.overall];
   const overallTextColor = OVERALL_TEXT[result.overall];
+  const overallLabel = result.overall === "good" ? t("placement.good")
+    : result.overall === "warning" ? t("placement.warning")
+    : t("placement.poor");
 
   return (
     <View style={styles.screen}>
@@ -812,7 +820,7 @@ export default function PlacementScreen() {
             </View>
             <View style={styles.overallText}>
               <Text style={[styles.overallVerdict, { color: overallTextColor }]}>
-                {OVERALL_LABEL[result.overall]}
+                {overallLabel}
               </Text>
               <Text style={[styles.overallSummary, { color: overallTextColor }]}>
                 {result.summary}
@@ -823,17 +831,17 @@ export default function PlacementScreen() {
 
         {/* ── Factor cards ──────────────────────────────────────────────── */}
         <FactorCard
-          label="Light"
+          label={t("placement.light")}
           icon={<Sun size={18} color={OVERALL_TEXT[result.light.status]} />}
           factor={result.light}
         />
         <FactorCard
-          label="Humidity"
+          label={t("placement.humidity")}
           icon={<Droplets size={18} color={OVERALL_TEXT[result.humidity.status]} />}
           factor={result.humidity}
         />
         <FactorCard
-          label="Temperature"
+          label={t("placement.temperature")}
           icon={<Thermometer size={18} color={OVERALL_TEXT[result.temperature.status]} />}
           factor={result.temperature}
         />
@@ -841,7 +849,7 @@ export default function PlacementScreen() {
         {/* ── Tips ─────────────────────────────────────────────────────── */}
         {result.tips.length > 0 && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Tips to improve this spot</Text>
+            <Text style={styles.cardTitle}>{t("placement.tips")}</Text>
             {result.tips.map((tip, i) => (
               <View key={i} style={styles.tipRow}>
                 <Text style={styles.tipBullet}>💡</Text>
@@ -857,22 +865,22 @@ export default function PlacementScreen() {
         <TouchableOpacity
           style={styles.retakeButton}
           onPress={handleRetake}
-          accessibilityLabel={isViewingExisting ? "Run a new analysis" : "Change conditions and re-analyze"}
+          accessibilityLabel={isViewingExisting ? t("placement.newAnalysis") : t("placement.checkAgain")}
           accessibilityRole="button"
         >
           <RefreshCw size={18} color={COLORS.primary} />
           <Text style={styles.retakeButtonText}>
-            {isViewingExisting ? "New Analysis" : "Change conditions"}
+            {isViewingExisting ? t("placement.newAnalysis") : t("placement.checkAgain")}
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.doneButton}
           onPress={() => navigation.goBack()}
-          accessibilityLabel="Done, go back"
+          accessibilityLabel={t("common.done")}
           accessibilityRole="button"
         >
-          <Text style={styles.doneButtonText}>Done ✓</Text>
+          <Text style={styles.doneButtonText}>{t("common.done")} ✓</Text>
         </TouchableOpacity>
       </View>
     </View>

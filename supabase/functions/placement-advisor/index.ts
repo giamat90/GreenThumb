@@ -18,6 +18,7 @@ interface PlacementRequestBody {
   roomType: string;
   lightLevel: "bright direct" | "bright indirect" | "medium" | "low";
   photos?: PhotoInput[]; // optional — analysis works from form data alone
+  language?: string;     // BCP-47 language code, e.g. "en", "it", "es"
 }
 
 // ─── Response types ───────────────────────────────────────────────────────────
@@ -178,7 +179,8 @@ Score: 85-100 = good, 60-84 = warning, 0-59 = poor. The overall field must match
       body: JSON.stringify({
         model: "claude-opus-4-5",
         max_tokens: 800,
-        system: "You are an expert botanist and indoor plant placement specialist. When photos are provided, cross-reference visual evidence with the form data for the most accurate placement assessment. Always respond in valid JSON format only.",
+        system: "You are an expert botanist and indoor plant placement specialist. When photos are provided, cross-reference visual evidence with the form data for the most accurate placement assessment. Always respond in valid JSON format only." +
+          (body.language && body.language !== "en" ? `\n\nIMPORTANT: Write all text values in your JSON response (advice, tips, warnings) in ${body.language} language.` : ""),
         messages: [{ role: "user", content: userContent }],
       }),
     });

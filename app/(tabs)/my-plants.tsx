@@ -14,6 +14,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { SlidersHorizontal, Droplets, Heart, Leaf, X, Check } from "lucide-react-native";
+import { useTranslation } from "react-i18next";
 
 import { COLORS } from "@/constants";
 import { usePlants } from "@/hooks/usePlants";
@@ -112,21 +113,6 @@ function StatPill({
 type SortOption = "name_asc" | "name_desc" | "needs_water" | "health_asc" | "recently_added";
 type FilterOption = "all" | "needs_water" | "healthy" | "needs_attention";
 
-const SORT_LABELS: Record<SortOption, string> = {
-  name_asc: "Name (A–Z)",
-  name_desc: "Name (Z–A)",
-  needs_water: "Needs water first",
-  health_asc: "Health score (lowest first)",
-  recently_added: "Recently added",
-};
-
-const FILTER_LABELS: Record<FilterOption, string> = {
-  all: "All plants",
-  needs_water: "Needs water today",
-  healthy: "Healthy only (health > 80)",
-  needs_attention: "Needs attention (health ≤ 80)",
-};
-
 const DEFAULT_SORT: SortOption = "name_asc";
 const DEFAULT_FILTER: FilterOption = "all";
 
@@ -135,6 +121,7 @@ const DEFAULT_FILTER: FilterOption = "all";
 const BANNER_DISMISS_KEY = `weather_banner_dismissed_${new Date().toISOString().slice(0, 10)}`;
 
 export default function MyPlantsScreen() {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { profile } = useUserStore();
@@ -145,6 +132,21 @@ export default function MyPlantsScreen() {
   const [filterSheetVisible, setFilterSheetVisible] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>(DEFAULT_SORT);
   const [filterBy, setFilterBy] = useState<FilterOption>(DEFAULT_FILTER);
+
+  const SORT_LABELS: Record<SortOption, string> = {
+    name_asc: t("myPlants.nameAZ"),
+    name_desc: t("myPlants.nameZA"),
+    needs_water: t("myPlants.needsWaterFirst"),
+    health_asc: t("myPlants.healthScore"),
+    recently_added: t("myPlants.recentlyAdded"),
+  };
+
+  const FILTER_LABELS: Record<FilterOption, string> = {
+    all: t("myPlants.allPlants"),
+    needs_water: t("myPlants.needsWaterToday"),
+    healthy: t("myPlants.healthyOnly"),
+    needs_attention: t("myPlants.needsAttention"),
+  };
 
   const isFiltered = sortBy !== DEFAULT_SORT || filterBy !== DEFAULT_FILTER;
 
@@ -212,12 +214,12 @@ export default function MyPlantsScreen() {
   const handleWaterPress = useCallback(
     (plant: PlantWithStatus) => {
       Alert.alert(
-        "Water Plant",
-        `Mark ${plant.name} as watered?`,
+        t("myPlants.waterPlant"),
+        t("myPlants.markAsWatered", { name: plant.name }),
         [
-          { text: "Cancel", style: "cancel" },
+          { text: t("common.cancel"), style: "cancel" },
           {
-            text: "Yes, watered! 💧",
+            text: t("myPlants.yesWatered"),
             onPress: async () => {
               if (!profile) return;
               try {
@@ -262,13 +264,13 @@ export default function MyPlantsScreen() {
                   day: "numeric",
                 });
                 Alert.alert(
-                  "✅ Watered!",
-                  `Next reminder set for ${nextDate}.`
+                  t("plantDetail.wateredSuccess"),
+                  t("plantDetail.nextReminderSet", { date: nextDate })
                 );
               } catch (err) {
                 Alert.alert(
-                  "Error",
-                  err instanceof Error ? err.message : "Failed to record watering."
+                  t("common.error"),
+                  err instanceof Error ? err.message : t("plantDetail.failedToWater")
                 );
               }
             },
@@ -276,7 +278,7 @@ export default function MyPlantsScreen() {
         ]
       );
     },
-    [profile, updatePlant]
+    [profile, updatePlant, t]
   );
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -299,9 +301,9 @@ export default function MyPlantsScreen() {
       {/* Header */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.headerTitle}>My Plants</Text>
+          <Text style={styles.headerTitle}>{t("myPlants.myPlants")}</Text>
           <Text style={styles.headerSubtitle}>
-            {plants.length} {plants.length === 1 ? "plant" : "plants"}
+            {plants.length} {plants.length === 1 ? t("myPlants.plant") : t("myPlants.plants")}
           </Text>
         </View>
         <TouchableOpacity
@@ -332,19 +334,19 @@ export default function MyPlantsScreen() {
           <StatPill
             icon={<Leaf size={14} color={COLORS.primary} />}
             value={plants.length}
-            label="plants"
+            label={t("myPlants.plants")}
           />
           <View style={styles.summaryDivider} />
           <StatPill
             icon={<Droplets size={14} color={COLORS.secondary} />}
             value={needsWaterCount}
-            label="need water"
+            label={t("myPlants.needWater")}
           />
           <View style={styles.summaryDivider} />
           <StatPill
             icon={<Heart size={14} color={COLORS.danger} />}
             value={`${avgHealth}%`}
-            label="avg health"
+            label={t("myPlants.avgHealth")}
           />
         </View>
       )}
@@ -368,9 +370,9 @@ export default function MyPlantsScreen() {
               <EmptyPlants />
             ) : (
               <View style={styles.emptyFilter}>
-                <Text style={styles.emptyFilterText}>No plants match this filter.</Text>
+                <Text style={styles.emptyFilterText}>{t("myPlants.noPlantsMatchFilter")}</Text>
                 <TouchableOpacity onPress={() => { setSortBy(DEFAULT_SORT); setFilterBy(DEFAULT_FILTER); }}>
-                  <Text style={styles.emptyFilterReset}>Clear filters</Text>
+                  <Text style={styles.emptyFilterReset}>{t("myPlants.clearFilters")}</Text>
                 </TouchableOpacity>
               </View>
             )
@@ -378,7 +380,7 @@ export default function MyPlantsScreen() {
           ListFooterComponent={
             displayedPlants.length > 0 ? (
               <View style={styles.listFooter}>
-                <Text style={styles.listFooterText}>Your garden is looking great!</Text>
+                <Text style={styles.listFooterText}>{t("myPlants.gardenLookingGreat")}</Text>
               </View>
             ) : null
           }
@@ -411,14 +413,14 @@ export default function MyPlantsScreen() {
           <View style={styles.sheetHandle} />
 
           <View style={styles.sheetHeader}>
-            <Text style={styles.sheetTitle}>Sort & Filter</Text>
+            <Text style={styles.sheetTitle}>{t("myPlants.sortAndFilter")}</Text>
             <TouchableOpacity onPress={() => setFilterSheetVisible(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
               <X size={20} color={COLORS.textSecondary} />
             </TouchableOpacity>
           </View>
 
           {/* Sort section */}
-          <Text style={styles.sheetSectionLabel}>SORT BY</Text>
+          <Text style={styles.sheetSectionLabel}>{t("myPlants.sortByLabel")}</Text>
           {(Object.keys(SORT_LABELS) as SortOption[]).map((opt) => (
             <TouchableOpacity
               key={opt}
@@ -434,7 +436,7 @@ export default function MyPlantsScreen() {
           ))}
 
           {/* Filter section */}
-          <Text style={[styles.sheetSectionLabel, { marginTop: 16 }]}>FILTER BY STATUS</Text>
+          <Text style={[styles.sheetSectionLabel, { marginTop: 16 }]}>{t("myPlants.filterByStatus")}</Text>
           {(Object.keys(FILTER_LABELS) as FilterOption[]).map((opt) => (
             <TouchableOpacity
               key={opt}
@@ -455,7 +457,7 @@ export default function MyPlantsScreen() {
               style={styles.sheetResetButton}
               onPress={() => { setSortBy(DEFAULT_SORT); setFilterBy(DEFAULT_FILTER); setFilterSheetVisible(false); }}
             >
-              <Text style={styles.sheetResetText}>Reset to defaults</Text>
+              <Text style={styles.sheetResetText}>{t("myPlants.resetDefaults")}</Text>
             </TouchableOpacity>
           )}
         </View>

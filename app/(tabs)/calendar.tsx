@@ -8,6 +8,7 @@ import {
   StyleSheet,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { CalendarDays, Droplets, Leaf } from "lucide-react-native";
 import { COLORS } from "@/constants";
 import { usePlantsStore } from "@/store/plants";
@@ -46,14 +47,6 @@ interface CalendarEntry {
 
 const SECTION_ORDER: Section[] = ["overdue", "today", "tomorrow", "week", "later"];
 
-const SECTION_LABEL: Record<Section, string> = {
-  overdue: "Overdue 🚨",
-  today: "Today",
-  tomorrow: "Tomorrow",
-  week: "This Week",
-  later: "Later",
-};
-
 // ─── Entry row ────────────────────────────────────────────────────────────────
 
 function CareEntry({
@@ -63,6 +56,7 @@ function CareEntry({
   entry: CalendarEntry;
   onPress: () => void;
 }) {
+  const { t } = useTranslation();
   const { plant, days, section, type } = entry;
 
   const dayColor =
@@ -76,18 +70,18 @@ function CareEntry({
 
   const dayLabel =
     days < 0
-      ? `${Math.abs(days)}d overdue`
+      ? t("calendar.daysOverdue", { n: Math.abs(days) })
       : days === 0
-        ? "Today"
+        ? t("calendar.today")
         : days === 1
-          ? "Tomorrow"
-          : `In ${days} days`;
+          ? t("calendar.tomorrow")
+          : t("calendar.inNDays", { n: days });
 
   const icon = type === "fertilizer"
     ? <Leaf size={14} color={dayColor} />
     : <Droplets size={14} color={dayColor} />;
 
-  const actionLabel = type === "fertilizer" ? "Fertilize" : "Water";
+  const actionLabel = type === "fertilizer" ? t("calendar.fertilize") : t("calendar.water");
 
   return (
     <TouchableOpacity style={styles.entry} onPress={onPress} activeOpacity={0.8}>
@@ -139,8 +133,17 @@ function SectionHeader({ title, danger }: { title: string; danger?: boolean }) {
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function CalendarScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const plants = usePlantsStore((s) => s.plants);
+
+  const SECTION_LABEL: Record<Section, string> = {
+    overdue: t("calendar.overdue"),
+    today: t("calendar.today"),
+    tomorrow: t("calendar.tomorrow"),
+    week: t("calendar.thisWeek"),
+    later: t("calendar.later"),
+  };
 
   const sections = useMemo(() => {
     const entries: CalendarEntry[] = [];
@@ -170,7 +173,8 @@ export default function CalendarScreen() {
       title: SECTION_LABEL[s],
       data: grouped.get(s)!,
     }));
-  }, [plants]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [plants, t]);
 
   // Empty state: no plants at all
   if (plants.length === 0) {
@@ -179,10 +183,9 @@ export default function CalendarScreen() {
         <View style={styles.emptyIconBg}>
           <CalendarDays size={36} color={COLORS.primary} />
         </View>
-        <Text style={styles.emptyTitle}>Care Calendar</Text>
+        <Text style={styles.emptyTitle}>{t("calendar.careCalendar")}</Text>
         <Text style={styles.emptySubtitle}>
-          Your watering schedule and care reminders will appear here once
-          you've added some plants.
+          {t("calendar.noPlants")}
         </Text>
       </View>
     );
@@ -193,9 +196,9 @@ export default function CalendarScreen() {
     return (
       <View style={styles.emptyContainer}>
         <Text style={styles.caughtUpEmoji}>🎉</Text>
-        <Text style={styles.emptyTitle}>All caught up!</Text>
+        <Text style={styles.emptyTitle}>{t("calendar.allCaughtUp")}</Text>
         <Text style={styles.emptySubtitle}>
-          No upcoming watering tasks. Enjoy your thriving garden!
+          {t("calendar.noUpcomingTasks")}
         </Text>
       </View>
     );
@@ -203,7 +206,7 @@ export default function CalendarScreen() {
 
   return (
     <View style={styles.screen}>
-      <Text style={styles.heading}>Care Calendar</Text>
+      <Text style={styles.heading}>{t("calendar.careCalendar")}</Text>
       <SectionList
         sections={sections}
         keyExtractor={(item) => `${item.plant.id}-${item.type}`}
@@ -223,7 +226,7 @@ export default function CalendarScreen() {
         )}
         ListFooterComponent={
           <View style={styles.listFooter}>
-            <Text style={styles.listFooterText}>All care tasks shown</Text>
+            <Text style={styles.listFooterText}>{t("calendar.allCareTasksShown")}</Text>
           </View>
         }
       />

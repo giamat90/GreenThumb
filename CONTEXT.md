@@ -100,6 +100,41 @@ All required assets present in `assets/images/`:
 - `splash-icon.png` — splash screen
 - `favicon.png` — web favicon
 
+## i18n Rules
+
+GreenThumb uses **i18next + react-i18next** with `expo-localization` for device language detection.
+
+- **Supported languages**: en, it, es, fr, de, pt, nl, pl, ja, zh
+- **Config**: `lib/i18n.ts` — imports all locales, sets `compatibilityJSON: 'v3'`
+- **Device language**: `deviceLanguage()` exported from `lib/i18n.ts` — use when passing `language` to edge functions
+- **Locale files**: `locales/{lang}.json` — all 10 files must be kept in sync
+
+### Rules for screens
+
+1. **Always** `import { useTranslation } from "react-i18next"` and call `const { t } = useTranslation()` inside the function component.
+2. **Never** call `t()` at module level — it must be called inside a component or hook.
+3. **Module-level constants** that contain UI strings must be moved inside the component, or use a `labelKey` approach (store translation key strings, call `t(key)` at render time).
+4. **Add `t` to `useCallback` dependency arrays** where `t()` is called inside the callback.
+5. **Loop variables** must never shadow `t`. If mapping an array: use a different variable name (e.g. `item`, `entry`, `fType`).
+6. **Class components** (e.g. `ErrorBoundary`) cannot use hooks — skip them or hardcode English only.
+
+### Rules for edge function calls
+
+- Always pass `language: deviceLanguage()` in the fetch body to Anthropic-powered edge functions.
+- Edge function system prompts must include: `(body.language && body.language !== "en" ? \`\n\nIMPORTANT: Write all text values in your JSON response in ${body.language} language.\` : "")`.
+- Plant.id API: pass `language` as a URL query param via `&language=<lang>` (not in the body).
+
+### What to translate
+
+- All user-visible text in JSX: labels, placeholders, alert titles/messages, button text, section headers, empty states.
+- `accessibilityLabel` props are lower priority but should use `t()` where the text matches a button label.
+
+### What NOT to translate
+
+- API values sent to edge functions (e.g. OBSERVED_SIGNS array items, `growthStage` values — these are English prompts for the AI).
+- Technical botanical terms used as both API values and UI labels (e.g. "dormant", "growing") — acceptable to leave in English.
+- Class component hardcoded strings (`ErrorBoundary`).
+
 ## Layout Rules
 
 **Never use hardcoded pixel values for layout spacing.** Always use dynamic measurement (`onLayout`), relative values, or safe area insets. This applies especially to sticky bottom bars overlapping scroll content — measure the bar's rendered height via `onLayout` and use that value for the ScrollView's `paddingBottom`.

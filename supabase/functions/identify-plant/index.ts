@@ -111,7 +111,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
 
     // Parse and validate request body
-    const body = (await req.json()) as { image?: string };
+    const body = (await req.json()) as { image?: string; language?: string };
     if (!body.image || typeof body.image !== "string") {
       return new Response(
         JSON.stringify({ error: "Missing required field: image (base64 string)" }),
@@ -136,9 +136,11 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
 
     // Call Plant.id v3 identification endpoint
+    const lang = body.language && body.language !== "en" ? body.language : undefined;
+    const langParam = lang ? `&language=${encodeURIComponent(lang)}` : "";
     console.log("Calling Plant.id with key:", Deno.env.get("PLANT_ID_API_KEY")?.substring(0, 8) + "...");
     const plantIdResponse = await fetch(
-      "https://api.plant.id/v3/identification?details=common_names,watering,best_light_condition&classification_level=species",
+      `https://api.plant.id/v3/identification?details=common_names,watering,best_light_condition&classification_level=species${langParam}`,
       {
         method: "POST",
         headers: {

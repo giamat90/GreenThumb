@@ -14,6 +14,7 @@ import {
 import { LogOut, MapPin, Info, Shield, FileText, Crown } from "lucide-react-native";
 import Constants from "expo-constants";
 import { useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
 
 import { supabase } from "@/lib/supabase";
 import { useUserStore } from "@/store/user";
@@ -60,6 +61,7 @@ function SettingRow({
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function ProfileScreen() {
+  const { t } = useTranslation();
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isSavingCity, setIsSavingCity] = useState(false);
   const { profile, setProfile } = useUserStore();
@@ -70,10 +72,10 @@ export default function ProfileScreen() {
     setIsSigningOut(true);
     try {
       const { error } = await supabase.auth.signOut();
-      if (error) Alert.alert("Error", error.message);
+      if (error) Alert.alert(t("common.error"), error.message);
       // Auth state listener in _layout.tsx handles the redirect
     } catch {
-      Alert.alert("Error", "Something went wrong. Please try again.");
+      Alert.alert(t("common.error"), t("profile.somethingWentWrong"));
     } finally {
       setIsSigningOut(false);
     }
@@ -81,12 +83,12 @@ export default function ProfileScreen() {
 
   function handleEditCity() {
     Alert.prompt(
-      "Update City",
-      "Enter your city name for weather-aware watering:",
+      t("profile.updateCity"),
+      t("profile.enterCity"),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Save",
+          text: t("common.save"),
           onPress: async (city) => {
             if (!city?.trim() || !profile?.id) return;
             setIsSavingCity(true);
@@ -99,8 +101,8 @@ export default function ProfileScreen() {
               setProfile({ ...profile, city: city.trim() });
             } catch (err) {
               Alert.alert(
-                "Error",
-                err instanceof Error ? err.message : "Failed to save city."
+                t("common.error"),
+                err instanceof Error ? err.message : t("profile.failedToSaveCity")
               );
             } finally {
               setIsSavingCity(false);
@@ -115,7 +117,7 @@ export default function ProfileScreen() {
 
   function handleOpenUrl(url: string) {
     Linking.openURL(url).catch(() =>
-      Alert.alert("Error", "Could not open URL.")
+      Alert.alert(t("common.error"), t("profile.couldNotOpenUrl"))
     );
   }
 
@@ -132,7 +134,7 @@ export default function ProfileScreen() {
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       {/* ── User info card ──────────────────────────────────────────────── */}
-      <Text style={styles.pageTitle}>Profile</Text>
+      <Text style={styles.pageTitle}>{t("profile.profile")}</Text>
 
       <View style={styles.userCard}>
         <View style={styles.avatar}>
@@ -143,8 +145,7 @@ export default function ProfileScreen() {
             {profile?.display_name ?? "User"}
           </Text>
           <Text style={styles.email}>
-            {/* email not in Profile type — show subscription badge instead */}
-            {profile?.subscription === "pro" ? "✨ Pro Member" : "Free Plan"}
+            {profile?.subscription === "pro" ? t("profile.proPlan") : t("profile.freePlan")}
           </Text>
         </View>
         {profile?.subscription === "pro" && (
@@ -160,8 +161,8 @@ export default function ProfileScreen() {
           <View style={styles.proCardLeft}>
             <Crown size={20} color="#FFD700" />
             <View>
-              <Text style={styles.proCardTitle}>GreenThumb Pro</Text>
-              <Text style={styles.proCardSub}>Active subscription</Text>
+              <Text style={styles.proCardTitle}>{t("profile.greenThumbPro")}</Text>
+              <Text style={styles.proCardSub}>{t("profile.activeSubscription")}</Text>
             </View>
           </View>
           <TouchableOpacity
@@ -172,9 +173,9 @@ export default function ProfileScreen() {
                 : "https://apps.apple.com/account/subscriptions";
               Linking.openURL(url).catch(() => {});
             }}
-            accessibilityLabel="Manage subscription"
+            accessibilityLabel={t("profile.manage")}
           >
-            <Text style={styles.manageButtonText}>Manage</Text>
+            <Text style={styles.manageButtonText}>{t("profile.manage")}</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -182,14 +183,14 @@ export default function ProfileScreen() {
           style={styles.upgradeCard}
           onPress={() => router.push("/paywall")}
           activeOpacity={0.85}
-          accessibilityLabel="Upgrade to Pro"
+          accessibilityLabel={t("profile.upgradeToPro")}
           accessibilityRole="button"
         >
           <Crown size={20} color={COLORS.primary} />
           <View style={styles.upgradeCardText}>
-            <Text style={styles.upgradeCardTitle}>Upgrade to Pro</Text>
+            <Text style={styles.upgradeCardTitle}>{t("profile.upgradeToPro")}</Text>
             <Text style={styles.upgradeCardSub}>
-              Unlimited plants, AI diagnosis & more
+              {t("profile.unlimitedPlantsAI")}
             </Text>
           </View>
           <Text style={styles.upgradeArrow}>›</Text>
@@ -200,7 +201,7 @@ export default function ProfileScreen() {
       <NotificationSettings />
 
       {/* ── App settings ──────────────────────────────────────────────────── */}
-      <Text style={styles.sectionTitle}>App Settings</Text>
+      <Text style={styles.sectionTitle}>{t("profile.appSettings")}</Text>
       <View style={styles.settingsCard}>
         <SettingRow
           icon={
@@ -210,8 +211,8 @@ export default function ProfileScreen() {
               <MapPin size={18} color={COLORS.primary} />
             )
           }
-          label="City / Location"
-          value={profile?.city ?? "Not set"}
+          label={t("profile.cityLocation")}
+          value={profile?.city ?? t("profile.notSet")}
           onPress={handleEditCity}
         />
 
@@ -219,7 +220,7 @@ export default function ProfileScreen() {
 
         <SettingRow
           icon={<Info size={18} color={COLORS.primary} />}
-          label="About GreenThumb"
+          label={t("profile.aboutGreenThumb")}
           value={`v${APP_VERSION}`}
         />
 
@@ -227,7 +228,7 @@ export default function ProfileScreen() {
 
         <SettingRow
           icon={<Shield size={18} color={COLORS.primary} />}
-          label="Privacy Policy"
+          label={t("profile.privacyPolicy")}
           onPress={() =>
             handleOpenUrl("https://greenthumb.app/privacy")
           }
@@ -237,7 +238,7 @@ export default function ProfileScreen() {
 
         <SettingRow
           icon={<FileText size={18} color={COLORS.primary} />}
-          label="Terms of Service"
+          label={t("profile.termsOfService")}
           onPress={() =>
             handleOpenUrl("https://greenthumb.app/terms")
           }
@@ -249,7 +250,7 @@ export default function ProfileScreen() {
         style={styles.signOutButton}
         onPress={handleSignOut}
         disabled={isSigningOut}
-        accessibilityLabel="Sign out"
+        accessibilityLabel={t("profile.signOut")}
         accessibilityRole="button"
       >
         {isSigningOut ? (
@@ -257,7 +258,7 @@ export default function ProfileScreen() {
         ) : (
           <>
             <LogOut size={20} color={COLORS.danger} />
-            <Text style={styles.signOutText}>Sign Out</Text>
+            <Text style={styles.signOutText}>{t("profile.signOut")}</Text>
           </>
         )}
       </Pressable>

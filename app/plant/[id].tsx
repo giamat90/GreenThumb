@@ -28,6 +28,8 @@ import {
 } from "lucide-react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+import { useTranslation } from "react-i18next";
+
 import { COLORS } from "@/constants";
 import { supabase } from "@/lib/supabase";
 import { rescheduleReminderForPlant, cancelWateringReminder, rescheduleFertilizerReminderForPlant } from "@/lib/notifications";
@@ -60,7 +62,7 @@ function formatDate(iso: string): string {
   });
 }
 
-function wateringDateLabel(iso: string): string {
+function wateringDateLabel(iso: string, t: (key: string, opts?: Record<string, unknown>) => string): string {
   const diff = Date.now() - new Date(iso).getTime();
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
   const dateStr = new Date(iso).toLocaleDateString("en-US", {
@@ -68,16 +70,16 @@ function wateringDateLabel(iso: string): string {
     day: "numeric",
     year: "numeric",
   });
-  if (days === 0) return `Today · ${dateStr}`;
-  if (days === 1) return `Yesterday · ${dateStr}`;
+  if (days === 0) return `${t("common.today")} · ${dateStr}`;
+  if (days === 1) return `${t("common.yesterday")} · ${dateStr}`;
   return dateStr;
 }
 
-function healthMessage(score: number): string {
-  if (score > 80) return "Your plant is thriving! 🌟";
-  if (score > 60) return "Doing well, keep it up 👍";
-  if (score > 40) return "Needs some attention ⚠️";
-  return "Urgent care needed! 🚨";
+function healthMessageKey(score: number): string {
+  if (score > 80) return "plantDetail.healthThriving";
+  if (score > 60) return "plantDetail.healthGood";
+  if (score > 40) return "plantDetail.healthAttention";
+  return "plantDetail.healthUrgent";
 }
 
 function healthColor(score: number): string {
@@ -86,10 +88,10 @@ function healthColor(score: number): string {
   return COLORS.danger;
 }
 
-function wateringLabel(watering: string | undefined): string {
-  if (watering === "frequent") return "Every 2 days";
-  if (watering === "minimum") return "Every 10 days";
-  return "Every 5 days";
+function wateringLabelKey(watering: string | undefined): string {
+  if (watering === "frequent") return "plantDetail.every2days";
+  if (watering === "minimum") return "plantDetail.every10days";
+  return "plantDetail.every5days";
 }
 
 // ─── Care stat tile ───────────────────────────────────────────────────────────
@@ -103,6 +105,7 @@ function CareTile({
   label: string;
   value: string;
 }) {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   // Show toggle only when value is long enough to potentially overflow 2 lines
   const canExpand = value.length > 45;
@@ -124,7 +127,7 @@ function CareTile({
           hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
         >
           <Text style={styles.careTileReadMore}>
-            {expanded ? "Read less" : "Read more"}
+            {expanded ? t("common.readLess") : t("common.readMore")}
           </Text>
         </TouchableOpacity>
       )}
@@ -163,6 +166,7 @@ class PlantDetailErrorBoundary extends React.Component<
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 function PlantDetailScreen() {
+  const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const navigation = useNavigation();
   const router = useRouter();
@@ -337,30 +341,30 @@ function PlantDetailScreen() {
         month: "short",
         day: "numeric",
       });
-      Alert.alert("✅ Watered!", `Next reminder set for ${nextDate}.`);
+      Alert.alert(t("plantDetail.wateredTitle"), t("plantDetail.wateredMessage", { date: nextDate }));
     } catch (err) {
       Alert.alert(
-        "Error",
-        err instanceof Error ? err.message : "Failed to record watering."
+        t("common.error"),
+        err instanceof Error ? err.message : t("plantDetail.failedRecordWatering")
       );
     } finally {
       setIsWatering(false);
     }
-  }, [plant, profile, updatePlant]);
+  }, [plant, profile, updatePlant, t]);
 
   // ── Delete plant ──────────────────────────────────────────────────────────
 
   const confirmDelete = useCallback(() => {
     if (!plant) return;
     Alert.alert(
-      "Delete Plant",
-      `Are you sure you want to delete ${plant.name}? This cannot be undone.`,
+      t("plantDetail.deletePlant"),
+      t("plantDetail.deleteConfirm", { name: plant.name }),
       [
-        { text: "Cancel", style: "cancel" },
-        { text: "Delete", style: "destructive", onPress: handleDelete },
+        { text: t("common.cancel"), style: "cancel" },
+        { text: t("plantDetail.delete"), style: "destructive", onPress: handleDelete },
       ]
     );
-  }, [plant]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [plant, t]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleDelete = useCallback(async () => {
     if (!plant || !profile) return;
@@ -400,17 +404,17 @@ function PlantDetailScreen() {
       navigation.goBack();
       // Small delay so the alert appears after navigation settles
       setTimeout(() => {
-        Alert.alert("", `🗑️ ${plant.name} deleted`);
+        Alert.alert("", t("plantDetail.plantDeleted", { name: plant.name }));
       }, 400);
     } catch (err) {
       Alert.alert(
-        "Error",
-        err instanceof Error ? err.message : "Failed to delete plant."
+        t("common.error"),
+        err instanceof Error ? err.message : t("plantDetail.failedDeletePlant")
       );
     } finally {
       setIsDeleting(false);
     }
-  }, [plant, profile, removePlant, navigation]);
+  }, [plant, profile, removePlant, navigation, t]);
 
   // ── Fertilize now ─────────────────────────────────────────────────────────
 
@@ -447,41 +451,41 @@ function PlantDetailScreen() {
       ]);
 
       const nextDateStr = nextDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-      Alert.alert("🌱 Fertilized!", `Next fertilizer reminder set for ${nextDateStr}.`);
+      Alert.alert(t("plantDetail.fertilizedTitle"), t("plantDetail.fertilizedMessage", { date: nextDateStr }));
     } catch (err) {
-      Alert.alert("Error", err instanceof Error ? err.message : "Failed to record fertilization.");
+      Alert.alert(t("common.error"), err instanceof Error ? err.message : t("plantDetail.failedRecordFertilization"));
     } finally {
       setIsFertilizing(false);
     }
-  }, [plant, profile, updatePlant]);
+  }, [plant, profile, updatePlant, t]);
 
   const handleChangeFertilizerType = useCallback(() => {
     if (!plant || !profile) return;
-    Alert.alert("Fertilizer Type", "Choose your fertilizer type:", [
+    Alert.alert(t("plantDetail.fertilizerType"), t("plantDetail.chooseFertilizerType"), [
       {
-        text: "Liquid",
+        text: t("plantDetail.liquid"),
         onPress: async () => {
           await supabase.from("plants").update({ fertilizer_type: "liquid" }).eq("id", plant.id);
           updatePlant(plant.id, { fertilizer_type: "liquid" });
         },
       },
       {
-        text: "Granular",
+        text: t("plantDetail.granular"),
         onPress: async () => {
           await supabase.from("plants").update({ fertilizer_type: "granular" }).eq("id", plant.id);
           updatePlant(plant.id, { fertilizer_type: "granular" });
         },
       },
       {
-        text: "Slow-release",
+        text: t("plantDetail.slowRelease"),
         onPress: async () => {
           await supabase.from("plants").update({ fertilizer_type: "slow-release" }).eq("id", plant.id);
           updatePlant(plant.id, { fertilizer_type: "slow-release" });
         },
       },
-      { text: "Cancel", style: "cancel" },
+      { text: t("common.cancel"), style: "cancel" },
     ]);
-  }, [plant, profile, updatePlant]);
+  }, [plant, profile, updatePlant, t]);
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -489,9 +493,9 @@ function PlantDetailScreen() {
     return (
       <View style={styles.notFound}>
         <Stack.Screen options={{ headerShown: false }} />
-        <Text style={styles.notFoundText}>Plant not found.</Text>
+        <Text style={styles.notFoundText}>{t("plantDetail.plantNotFound")}</Text>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backLink}>← Go back</Text>
+          <Text style={styles.backLink}>← {t("plantDetail.goBack")}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -569,26 +573,26 @@ function PlantDetailScreen() {
 
         {/* ── Care profile card ────────────────────────────────────────────── */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Care Profile</Text>
+          <Text style={styles.cardTitle}>{t("plantDetail.careProfile")}</Text>
           <View style={styles.careGrid}>
             <CareTile
               icon={<Droplets size={20} color={COLORS.secondary} />}
-              label="Watering"
-              value={wateringLabel(careProfile?.watering)}
+              label={t("plantDetail.watering")}
+              value={t(wateringLabelKey(careProfile?.watering))}
             />
             <CareTile
               icon={<Sun size={20} color={COLORS.warning} />}
-              label="Light"
-              value={careProfile?.light ?? "Bright indirect"}
+              label={t("plantDetail.light")}
+              value={careProfile?.light ?? t("plantDetail.brightIndirect")}
             />
             <CareTile
               icon={<Leaf size={20} color={COLORS.primary} />}
-              label="Soil"
-              value={careProfile?.soilType ?? "Well-draining"}
+              label={t("plantDetail.soil")}
+              value={careProfile?.soilType ?? t("plantDetail.wellDraining")}
             />
             <CareTile
               icon={<Calendar size={20} color={COLORS.textSecondary} />}
-              label="Added"
+              label={t("plantDetail.added")}
               value={formatDate(plant.created_at)}
             />
           </View>
@@ -599,42 +603,42 @@ function PlantDetailScreen() {
           const intervalDays = plant.fertilizer_interval_days ?? calculateFertilizerInterval(plant.species, new Date().getMonth());
           const nextFertDate = plant.next_fertilizer_at
             ? new Date(plant.next_fertilizer_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })
-            : "Not set";
+            : t("plantDetail.notSet");
           const fertType = plant.fertilizer_type ?? "liquid";
           const isOverdue = plant.next_fertilizer_at && new Date(plant.next_fertilizer_at) <= new Date();
           return (
             <View style={styles.card}>
               <View style={styles.fertCardHeader}>
-                <Text style={styles.cardTitle}>Fertilizer</Text>
+                <Text style={styles.cardTitle}>{t("plantDetail.fertilizer")}</Text>
                 {isOverdue && (
                   <View style={styles.fertDueBadge}>
-                    <Text style={styles.fertDueBadgeText}>Due</Text>
+                    <Text style={styles.fertDueBadgeText}>{t("plantDetail.due")}</Text>
                   </View>
                 )}
               </View>
 
               <View style={styles.fertInfoRow}>
                 <View style={styles.fertInfoItem}>
-                  <Text style={styles.fertInfoLabel}>Next</Text>
+                  <Text style={styles.fertInfoLabel}>{t("plantDetail.next")}</Text>
                   <Text style={styles.fertInfoValue}>{nextFertDate}</Text>
                 </View>
                 <View style={styles.fertInfoItem}>
-                  <Text style={styles.fertInfoLabel}>Interval</Text>
-                  <Text style={styles.fertInfoValue}>Every {intervalDays}d</Text>
+                  <Text style={styles.fertInfoLabel}>{t("plantDetail.interval")}</Text>
+                  <Text style={styles.fertInfoValue}>{t("plantDetail.everyNDays", { n: intervalDays })}</Text>
                 </View>
               </View>
 
-              <Text style={styles.fertTypeLabel}>Type</Text>
+              <Text style={styles.fertTypeLabel}>{t("plantDetail.type")}</Text>
               <View style={styles.fertTypeRow}>
-                {(["liquid", "granular", "slow-release"] as const).map((t) => (
+                {(["liquid", "granular", "slow-release"] as const).map((fType) => (
                   <TouchableOpacity
-                    key={t}
-                    style={[styles.fertTypePill, fertType === t && styles.fertTypePillSelected]}
+                    key={fType}
+                    style={[styles.fertTypePill, fertType === fType && styles.fertTypePillSelected]}
                     onPress={handleChangeFertilizerType}
-                    accessibilityLabel={`Set fertilizer type to ${t}`}
+                    accessibilityLabel={`Set fertilizer type to ${fType}`}
                   >
-                    <Text style={[styles.fertTypePillText, fertType === t && styles.fertTypePillTextSelected]}>
-                      {t.charAt(0).toUpperCase() + t.slice(1)}
+                    <Text style={[styles.fertTypePillText, fertType === fType && styles.fertTypePillTextSelected]}>
+                      {fType.charAt(0).toUpperCase() + fType.slice(1)}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -649,7 +653,7 @@ function PlantDetailScreen() {
                 {isFertilizing ? (
                   <ActivityIndicator color="#fff" size="small" />
                 ) : (
-                  <Text style={styles.fertilizeButtonText}>Fertilize Now 🌱</Text>
+                  <Text style={styles.fertilizeButtonText}>{t("plantDetail.fertilizeNow")}</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -658,31 +662,31 @@ function PlantDetailScreen() {
 
         {/* ── Health ──────────────────────────────────────────────────────── */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Health</Text>
+          <Text style={styles.cardTitle}>{t("plantDetail.health")}</Text>
           <View style={styles.healthRow}>
             <Text style={[styles.healthScoreLarge, { color: hColor }]}>
               {plant.health_score}
             </Text>
             <Text style={styles.healthScoreUnit}>/100</Text>
           </View>
-          <Text style={styles.healthMessage}>{healthMessage(plant.health_score)}</Text>
+          <Text style={styles.healthMessage}>{t(healthMessageKey(plant.health_score))}</Text>
         </View>
 
         {/* ── Watering history ─────────────────────────────────────────────── */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Watering History</Text>
+          <Text style={styles.cardTitle}>{t("plantDetail.wateringHistory")}</Text>
           {historyLoading ? (
             <ActivityIndicator color={COLORS.secondary} style={{ marginTop: 12 }} />
           ) : wateringHistory.length === 0 ? (
-            <Text style={styles.historyEmpty}>No watering history yet</Text>
+            <Text style={styles.historyEmpty}>{t("plantDetail.noWateringHistory")}</Text>
           ) : (
             wateringHistory.map((event) => (
               <View key={event.id} style={styles.historyRow}>
                 <View style={styles.historyIconWrap}>
                   <Droplets size={16} color={COLORS.secondary} />
                 </View>
-                <Text style={styles.historyLabel}>Watered</Text>
-                <Text style={styles.historyDate}>{wateringDateLabel(event.watered_at)}</Text>
+                <Text style={styles.historyLabel}>{t("plantDetail.watered")}</Text>
+                <Text style={styles.historyDate}>{wateringDateLabel(event.watered_at, t)}</Text>
               </View>
             ))
           )}
@@ -690,12 +694,12 @@ function PlantDetailScreen() {
 
         {/* ── Diagnosis history ─────────────────────────────────────────────── */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Diagnosis History</Text>
+          <Text style={styles.cardTitle}>{t("plantDetail.diagnosisHistory")}</Text>
           {diagnosisLoading ? (
             <ActivityIndicator color={COLORS.secondary} style={{ marginTop: 12 }} />
           ) : diagnosisHistory.length === 0 ? (
             <Text style={styles.historyEmpty}>
-              No diagnoses yet — tap Diagnose Health to get started
+              {t("plantDetail.noDiagnosesYet")}
             </Text>
           ) : (
             diagnosisHistory.map((d) => {
@@ -726,7 +730,7 @@ function PlantDetailScreen() {
                   <Text style={styles.historyLabel}>
                     {result?.condition ?? d.severity}
                   </Text>
-                  <Text style={styles.historyDate}>{wateringDateLabel(d.created_at)}</Text>
+                  <Text style={styles.historyDate}>{wateringDateLabel(d.created_at, t)}</Text>
                   <ChevronRight size={16} color={COLORS.textSecondary} />
                 </TouchableOpacity>
               );
@@ -736,12 +740,12 @@ function PlantDetailScreen() {
 
         {/* ── Placement history ─────────────────────────────────────────────── */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Placement History</Text>
+          <Text style={styles.cardTitle}>{t("plantDetail.placementHistory")}</Text>
           {placementLoading ? (
             <ActivityIndicator color={COLORS.secondary} style={{ marginTop: 12 }} />
           ) : placementHistory.length === 0 ? (
             <Text style={styles.historyEmpty}>
-              No placement checks yet — tap Placement to get started
+              {t("plantDetail.noPlacementYet")}
             </Text>
           ) : (
             placementHistory.map((p) => {
@@ -782,12 +786,12 @@ function PlantDetailScreen() {
         </View>
         {/* ── Fertilizer logs ───────────────────────────────────────────────── */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Fertilizer History</Text>
+          <Text style={styles.cardTitle}>{t("plantDetail.fertilizerHistory")}</Text>
           {fertilizerLoading ? (
             <ActivityIndicator color={COLORS.secondary} style={{ marginTop: 12 }} />
           ) : fertilizerHistory.length === 0 ? (
             <Text style={styles.historyEmpty}>
-              No fertilizations yet — tap Fertilize Now to get started
+              {t("plantDetail.noFertilizerYet")}
             </Text>
           ) : (
             fertilizerHistory.map((f) => (
@@ -796,9 +800,9 @@ function PlantDetailScreen() {
                   <Text style={{ fontSize: 14 }}>🌱</Text>
                 </View>
                 <Text style={styles.historyLabel}>
-                  {f.fertilizer_type ? f.fertilizer_type.charAt(0).toUpperCase() + f.fertilizer_type.slice(1) : "Fertilized"}
+                  {f.fertilizer_type ? f.fertilizer_type.charAt(0).toUpperCase() + f.fertilizer_type.slice(1) : t("plantDetail.fertilized")}
                 </Text>
-                <Text style={styles.historyDate}>{wateringDateLabel(f.fertilized_at)}</Text>
+                <Text style={styles.historyDate}>{wateringDateLabel(f.fertilized_at, t)}</Text>
               </View>
             ))
           )}
@@ -806,12 +810,12 @@ function PlantDetailScreen() {
 
         {/* ── Repotting history ─────────────────────────────────────────────── */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Repotting History</Text>
+          <Text style={styles.cardTitle}>{t("plantDetail.repottingHistory")}</Text>
           {repottingLoading ? (
             <ActivityIndicator color={COLORS.secondary} style={{ marginTop: 12 }} />
           ) : repottingHistory.length === 0 ? (
             <Text style={styles.historyEmpty}>
-              No repotting checks yet — tap Repot to get started
+              {t("plantDetail.noRepottingYet")}
             </Text>
           ) : (
             repottingHistory.map((r) => {
@@ -819,8 +823,8 @@ function PlantDetailScreen() {
                 r.recommendation === "repot_now" ? "🚨" :
                 r.recommendation === "repot_soon" ? "⚠️" : "✅";
               const recLabel =
-                r.recommendation === "repot_now" ? "Repot Now" :
-                r.recommendation === "repot_soon" ? "Repot Soon" : "All Good";
+                r.recommendation === "repot_now" ? t("repotting.repotNow") :
+                r.recommendation === "repot_soon" ? t("repotting.repotSoon") : t("repotting.wait");
               const shortDate = new Date(r.created_at).toLocaleDateString("en-US", {
                 month: "short", day: "numeric",
               });
@@ -851,12 +855,12 @@ function PlantDetailScreen() {
         </View>
         {/* ── Pruning history ───────────────────────────────────────────────── */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Pruning History</Text>
+          <Text style={styles.cardTitle}>{t("plantDetail.pruningHistory")}</Text>
           {pruningLoading ? (
             <ActivityIndicator color={COLORS.secondary} style={{ marginTop: 12 }} />
           ) : pruningHistory.length === 0 ? (
             <Text style={styles.historyEmpty}>
-              No pruning checks yet — tap Pruning to get started
+              {t("plantDetail.noPruningYet")}
             </Text>
           ) : (
             pruningHistory.map((p) => {
@@ -864,8 +868,8 @@ function PlantDetailScreen() {
                 p.recommendation === "prune_now" ? "✂️" :
                 p.recommendation === "prune_soon" ? "⚠️" : "✅";
               const recLabel =
-                p.recommendation === "prune_now" ? "Prune Now" :
-                p.recommendation === "prune_soon" ? "Prune Soon" : "No Pruning Needed";
+                p.recommendation === "prune_now" ? t("pruning.pruneNow") :
+                p.recommendation === "prune_soon" ? t("pruning.pruneSoon") : t("pruning.wait");
               const shortDate = new Date(p.created_at).toLocaleDateString("en-US", {
                 month: "short", day: "numeric",
               });
@@ -898,13 +902,13 @@ function PlantDetailScreen() {
         {/* ── Growth timeline preview ───────────────────────────────────────── */}
         <View style={styles.card}>
           <View style={styles.growthPreviewHeader}>
-            <Text style={[styles.cardTitle, { marginBottom: 0 }]}>Growth Timeline</Text>
+            <Text style={[styles.cardTitle, { marginBottom: 0 }]}>{t("plantDetail.growthTimeline")}</Text>
             <TouchableOpacity
               onPress={() => router.push({ pathname: "/growth/[id]", params: { id: plant.id } })}
-              accessibilityLabel="View full growth timeline"
+              accessibilityLabel={t("plantDetail.viewAllGrowth")}
               accessibilityRole="button"
             >
-              <Text style={styles.viewAllText}>View all →</Text>
+              <Text style={styles.viewAllText}>{t("plantDetail.viewAll")} →</Text>
             </TouchableOpacity>
           </View>
           {growthLoading ? (
@@ -914,7 +918,7 @@ function PlantDetailScreen() {
               onPress={() => router.push({ pathname: "/growth/[id]", params: { id: plant.id } })}
               activeOpacity={0.7}
             >
-              <Text style={styles.historyEmpty}>Track growth → Log your first height measurement</Text>
+              <Text style={styles.historyEmpty}>{t("plantDetail.trackGrowthHint")}</Text>
             </TouchableOpacity>
           ) : (
             growthPreview.map((log) => (
@@ -968,7 +972,7 @@ function PlantDetailScreen() {
               accessibilityRole="button"
             >
               <Stethoscope size={16} color={COLORS.primary} />
-              <Text style={styles.actionButtonSecondaryText}>Diagnose</Text>
+              <Text style={styles.actionButtonSecondaryText}>{t("plantDetail.diagnose")}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -979,7 +983,7 @@ function PlantDetailScreen() {
               accessibilityRole="button"
             >
               <MapPin size={16} color={COLORS.primary} />
-              <Text style={styles.actionButtonSecondaryText}>Placement</Text>
+              <Text style={styles.actionButtonSecondaryText}>{t("plantDetail.placementBtn")}</Text>
             </TouchableOpacity>
           </View>
 
@@ -992,7 +996,7 @@ function PlantDetailScreen() {
               accessibilityRole="button"
             >
               <Layers size={16} color={COLORS.primary} />
-              <Text style={styles.actionButtonSecondaryText}>Repot</Text>
+              <Text style={styles.actionButtonSecondaryText}>{t("plantDetail.repotBtn")}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -1003,7 +1007,7 @@ function PlantDetailScreen() {
               accessibilityRole="button"
             >
               <TrendingUp size={16} color={COLORS.primary} />
-              <Text style={styles.actionButtonSecondaryText}>Growth</Text>
+              <Text style={styles.actionButtonSecondaryText}>{t("plantDetail.growthBtn")}</Text>
             </TouchableOpacity>
           </View>
 
@@ -1016,7 +1020,7 @@ function PlantDetailScreen() {
               accessibilityRole="button"
             >
               <Scissors size={16} color={COLORS.primary} />
-              <Text style={styles.actionButtonSecondaryText}>Pruning</Text>
+              <Text style={styles.actionButtonSecondaryText}>{t("plantDetail.pruningBtn")}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1032,7 +1036,7 @@ function PlantDetailScreen() {
           ) : (
             <>
               <Droplets size={18} color="#fff" />
-              <Text style={styles.actionButtonPrimaryText}>Water Now 💧</Text>
+              <Text style={styles.actionButtonPrimaryText}>{t("plantDetail.waterNow")}</Text>
             </>
           )}
         </TouchableOpacity>

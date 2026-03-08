@@ -31,12 +31,15 @@ import {
   ChevronLeft,
 } from "lucide-react-native";
 
+import { useTranslation } from "react-i18next";
+
 import { COLORS } from "@/constants";
 import { useCamera } from "@/hooks/useCamera";
 import { useIdentificationLimit } from "@/hooks/useIdentificationLimit";
 import { compressImage } from "@/lib/imageUtils";
 import { identifyPlant } from "@/lib/plantid";
 import type { IdentificationResult, PlantSuggestion } from "@/lib/plantid";
+import { deviceLanguage } from "@/lib/i18n";
 import { usePlantsStore } from "@/store/plants";
 import { useUserStore } from "@/store/user";
 import { supabase } from "@/lib/supabase";
@@ -59,15 +62,15 @@ const VIEWFINDER_SIZE = Math.floor(SCREEN_WIDTH * 0.75);
 type ScreenState = "camera" | "loading" | "results";
 
 function getConfidence(probability: number): {
-  label: string;
+  labelKey: string;
   color: string;
   bgColor: string;
 } {
   if (probability >= 0.8)
-    return { label: "High confidence", color: COLORS.success, bgColor: "#D1FAE5" };
+    return { labelKey: "identify.highConfidence", color: COLORS.success, bgColor: "#D1FAE5" };
   if (probability >= 0.5)
-    return { label: "Medium confidence", color: COLORS.warning, bgColor: "#FEF3C7" };
-  return { label: "Low confidence", color: COLORS.danger, bgColor: "#FEE2E2" };
+    return { labelKey: "identify.mediumConfidence", color: COLORS.warning, bgColor: "#FEF3C7" };
+  return { labelKey: "identify.lowConfidence", color: COLORS.danger, bgColor: "#FEE2E2" };
 }
 
 function calculateNextWatering(
@@ -211,6 +214,7 @@ function ViewfinderOverlay() {
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function IdentifyScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const cameraRef = useRef<CameraView>(null);
@@ -317,16 +321,16 @@ export default function IdentifyScreen() {
 
       if (!base64Image) throw new Error("Could not encode image.");
 
-      const result = await identifyPlant(base64Image);
+      const result = await identifyPlant(base64Image, deviceLanguage());
       setIdentificationResult(result);
       setScreenState("results");
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Something went wrong.";
-      Alert.alert("Identification Failed", message);
+        error instanceof Error ? error.message : t("common.somethingWentWrong");
+      Alert.alert(t("identify.identificationFailed"), message);
       setScreenState("camera");
     }
-  }, [canIdentify, limitLoading]);
+  }, [canIdentify, limitLoading, t]);
 
   const handleTryAgain = useCallback(() => {
     setScreenState("camera");
@@ -429,19 +433,19 @@ export default function IdentifyScreen() {
       closeAddModal();
 
       Alert.alert(
-        "🌿 Plant Added!",
-        `${finalName} is now in your collection.`,
+        t("identify.plantAdded"),
+        t("identify.plantAddedMessage", { name: finalName }),
         [
           {
-            text: "View My Plants",
+            text: t("identify.viewMyPlants"),
             onPress: () => router.replace("/(tabs)/my-plants"),
           },
         ]
       );
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Failed to save plant.";
-      Alert.alert("Save Failed", message);
+        error instanceof Error ? error.message : t("common.somethingWentWrong");
+      Alert.alert(t("identify.saveFailed"), message);
     } finally {
       setIsSaving(false);
     }
@@ -455,6 +459,7 @@ export default function IdentifyScreen() {
     addPlant,
     closeAddModal,
     router,
+    t,
   ]);
 
   const spin = spinAnim.interpolate({
@@ -483,19 +488,18 @@ export default function IdentifyScreen() {
           <Leaf size={40} color={COLORS.primary} />
         </View>
         <Text className="text-2xl font-bold text-primary text-center mb-3">
-          Camera access needed
+          {t("identify.cameraAccessNeeded")}
         </Text>
         <Text className="text-base text-gray-500 text-center mb-8 leading-6">
-          To identify plants, GreenThumb needs access to your camera. We only
-          use it when you're actively scanning a plant.
+          {t("identify.cameraAccessDescription")}
         </Text>
         <TouchableOpacity
           onPress={requestPermission}
           className="bg-primary rounded-2xl px-8 py-4"
-          accessibilityLabel="Allow camera access"
+          accessibilityLabel={t("identify.allowCamera")}
         >
           <Text className="text-white font-semibold text-base">
-            Allow Camera
+            {t("identify.allowCamera")}
           </Text>
         </TouchableOpacity>
       </View>
@@ -577,7 +581,7 @@ export default function IdentifyScreen() {
             <Text
               style={{ color: "rgba(255,255,255,0.75)", fontSize: 13, marginBottom: 20 }}
             >
-              Center the plant in the frame
+              {t("identify.centerInFrame")}
             </Text>
 
             {/* Capture button — outer ring + inner fill */}
@@ -657,12 +661,12 @@ export default function IdentifyScreen() {
                   textAlign: "center",
                 }}
               >
-                Identifying your plant...
+                {t("identify.identifyingPlant")}
               </Text>
               <Text
                 style={{ color: "rgba(255,255,255,0.65)", fontSize: 14, textAlign: "center" }}
               >
-                This takes just a moment
+                {t("identify.takesAMoment")}
               </Text>
             </View>
           </View>
@@ -710,7 +714,7 @@ export default function IdentifyScreen() {
                   marginBottom: 10,
                 }}
               >
-                No plant found
+                {t("identify.noPlantFound")}
               </Text>
               <Text
                 style={{
@@ -721,7 +725,7 @@ export default function IdentifyScreen() {
                   lineHeight: 22,
                 }}
               >
-                Hmm, we couldn't find a plant in this photo. Try getting closer!
+                {t("identify.noPlantFoundHint")}
               </Text>
               <TouchableOpacity
                 onPress={handleTryAgain}
@@ -731,10 +735,10 @@ export default function IdentifyScreen() {
                   paddingHorizontal: 32,
                   paddingVertical: 14,
                 }}
-                accessibilityLabel="Try again with a new photo"
+                accessibilityLabel={t("identify.tryAgain")}
               >
                 <Text style={{ color: "white", fontWeight: "600", fontSize: 16 }}>
-                  Try Again
+                  {t("identify.tryAgain")}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -778,7 +782,7 @@ export default function IdentifyScreen() {
                               fontSize: 13,
                             }}
                           >
-                            {confidence.label}
+                            {t(confidence.labelKey)}
                           </Text>
                         </View>
                       </View>
@@ -807,7 +811,7 @@ export default function IdentifyScreen() {
                           {top.name}
                         </Text>
                         <Text style={{ fontSize: 13, color: "#9CA3AF" }}>
-                          {Math.round(top.probability * 100)}% match
+                          {t("identify.matchPercent", { pct: Math.round(top.probability * 100) })}
                         </Text>
                       </View>
 
@@ -833,7 +837,7 @@ export default function IdentifyScreen() {
                             marginBottom: 16,
                           }}
                         >
-                          Care Guide
+                          {t("identify.careGuide")}
                         </Text>
                         <View
                           style={{
@@ -860,7 +864,7 @@ export default function IdentifyScreen() {
                             <Text
                               style={{ fontSize: 11, color: COLORS.textSecondary }}
                             >
-                              Watering
+                              {t("identify.watering")}
                             </Text>
                           </View>
 
@@ -878,12 +882,12 @@ export default function IdentifyScreen() {
                               }}
                               numberOfLines={2}
                             >
-                              {top.careProfile.light || "Bright light"}
+                              {top.careProfile.light || t("identify.brightLight")}
                             </Text>
                             <Text
                               style={{ fontSize: 11, color: COLORS.textSecondary }}
                             >
-                              Light
+                              {t("identify.light")}
                             </Text>
                           </View>
 
@@ -901,12 +905,12 @@ export default function IdentifyScreen() {
                               }}
                               numberOfLines={2}
                             >
-                              {top.careProfile.soilType || "Well-draining"}
+                              {top.careProfile.soilType || t("identify.wellDraining")}
                             </Text>
                             <Text
                               style={{ fontSize: 11, color: COLORS.textSecondary }}
                             >
-                              Soil
+                              {t("identify.soil")}
                             </Text>
                           </View>
                         </View>
@@ -936,7 +940,7 @@ export default function IdentifyScreen() {
                                 marginBottom: 12,
                               }}
                             >
-                              Other possibilities
+                              {t("identify.otherPossibilities")}
                             </Text>
                             {identificationResult.suggestions
                               .slice(1)
@@ -1013,7 +1017,7 @@ export default function IdentifyScreen() {
                           alignItems: "center",
                           marginBottom: 12,
                         }}
-                        accessibilityLabel="Add this plant to my collection"
+                        accessibilityLabel={t("identify.addToMyPlants")}
                       >
                         <Text
                           style={{
@@ -1022,14 +1026,14 @@ export default function IdentifyScreen() {
                             fontSize: 16,
                           }}
                         >
-                          Add to My Plants
+                          {t("identify.addToMyPlants")}
                         </Text>
                       </TouchableOpacity>
 
                       <TouchableOpacity
                         onPress={handleTryAgain}
                         style={{ paddingVertical: 12, alignItems: "center" }}
-                        accessibilityLabel="Try again with a different photo"
+                        accessibilityLabel={t("identify.tryAgain")}
                       >
                         <Text
                           style={{
@@ -1038,7 +1042,7 @@ export default function IdentifyScreen() {
                             fontSize: 15,
                           }}
                         >
-                          Try Again
+                          {t("identify.tryAgain")}
                         </Text>
                       </TouchableOpacity>
                     </>
@@ -1086,7 +1090,7 @@ export default function IdentifyScreen() {
                 marginBottom: 10,
               }}
             >
-              Monthly limit reached
+              {t("identify.limitReached")}
             </Text>
             <Text
               style={{
@@ -1097,8 +1101,7 @@ export default function IdentifyScreen() {
                 marginBottom: 24,
               }}
             >
-              You've used all 5 free plant identifications this month. Upgrade
-              to Pro for unlimited scans, AI diagnosis, and weather-aware care.
+              {t("identify.limitReachedMessage")}
             </Text>
 
             <TouchableOpacity
@@ -1113,20 +1116,20 @@ export default function IdentifyScreen() {
                 alignItems: "center",
                 marginBottom: 10,
               }}
-              accessibilityLabel="Upgrade to Pro"
+              accessibilityLabel={t("identify.upgradeToPro")}
             >
               <Text style={{ color: "white", fontWeight: "700", fontSize: 16 }}>
-                Upgrade to Pro
+                {t("identify.upgradeToPro")}
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               onPress={() => setShowPaywallModal(false)}
               style={{ paddingVertical: 10, alignItems: "center" }}
-              accessibilityLabel="Dismiss paywall and go back"
+              accessibilityLabel={t("identify.maybeLater")}
             >
               <Text style={{ color: COLORS.textSecondary, fontSize: 14 }}>
-                Maybe later
+                {t("identify.maybeLater")}
               </Text>
             </TouchableOpacity>
           </View>
@@ -1186,14 +1189,14 @@ export default function IdentifyScreen() {
                     marginBottom: 20,
                   }}
                 >
-                  Name your plant
+                  {t("identify.nameYourPlant")}
                 </Text>
 
                 {/* Nickname input */}
                 <TextInput
                   value={plantNickname}
                   onChangeText={setPlantNickname}
-                  placeholder="e.g. My Monstera"
+                  placeholder={t("identify.nicknamePlaceholder")}
                   placeholderTextColor="#9CA3AF"
                   style={{
                     backgroundColor: "#F9FAFB",
@@ -1218,7 +1221,7 @@ export default function IdentifyScreen() {
                     marginBottom: 10,
                   }}
                 >
-                  Pot size
+                  {t("identify.potSize")}
                 </Text>
                 <View
                   style={{ flexDirection: "row", gap: 8, marginBottom: 20 }}
@@ -1275,7 +1278,7 @@ export default function IdentifyScreen() {
                     marginBottom: 10,
                   }}
                 >
-                  Location
+                  {t("identify.location")}
                 </Text>
                 <View
                   style={{ flexDirection: "row", gap: 8, marginBottom: 28 }}
@@ -1341,7 +1344,7 @@ export default function IdentifyScreen() {
                     <Text
                       style={{ color: "white", fontWeight: "700", fontSize: 16 }}
                     >
-                      Save Plant
+                      {t("identify.savePlant")}
                     </Text>
                   )}
                 </TouchableOpacity>

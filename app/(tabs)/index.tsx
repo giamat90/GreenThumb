@@ -12,6 +12,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Droplets, Leaf } from "lucide-react-native";
+import { useTranslation } from "react-i18next";
 
 import { COLORS } from "@/constants";
 import { useWeather } from "@/hooks/useWeather";
@@ -28,11 +29,11 @@ import type { Plant } from "@/types";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function greeting(): string {
+function greetingKey(): string {
   const h = new Date().getHours();
-  if (h < 12) return "Good morning";
-  if (h < 18) return "Good afternoon";
-  return "Good evening";
+  if (h < 12) return "home.goodMorning";
+  if (h < 18) return "home.goodAfternoon";
+  return "home.goodEvening";
 }
 
 function formatToday(): string {
@@ -84,11 +85,13 @@ function WeatherCard({
   error: string | null;
   isPro: boolean;
 }) {
+  const { t } = useTranslation();
+
   if (isLoading) {
     return (
       <View style={styles.weatherCard}>
         <ActivityIndicator color={COLORS.primary} />
-        <Text style={styles.weatherLoadingText}>Loading weather…</Text>
+        <Text style={styles.weatherLoadingText}>{t("home.loadingWeather")}</Text>
       </View>
     );
   }
@@ -97,7 +100,7 @@ function WeatherCard({
     return (
       <View style={styles.weatherCard}>
         <Text style={styles.weatherEmoji}>🌤️</Text>
-        <Text style={styles.weatherError}>{error ?? "Weather unavailable"}</Text>
+        <Text style={styles.weatherError}>{error ?? t("home.weatherUnavailable")}</Text>
       </View>
     );
   }
@@ -129,15 +132,15 @@ function WeatherCard({
 
       <View style={styles.weatherStats}>
         <View style={styles.weatherStat}>
-          <Text style={styles.weatherStatLabel}>Humidity</Text>
+          <Text style={styles.weatherStatLabel}>{t("home.humidity")}</Text>
           <Text style={styles.weatherStatValue}>{weather.humidity}%</Text>
         </View>
         <View style={styles.weatherStat}>
-          <Text style={styles.weatherStatLabel}>Rain (24h)</Text>
+          <Text style={styles.weatherStatLabel}>{t("home.rain24h")}</Text>
           <Text style={styles.weatherStatValue}>{weather.rainAmountMm} mm</Text>
         </View>
         <View style={styles.weatherStat}>
-          <Text style={styles.weatherStatLabel}>Tomorrow</Text>
+          <Text style={styles.weatherStatLabel}>{t("home.tomorrow")}</Text>
           <Text style={styles.weatherStatValue}>
             {weather.forecast[1] ? weatherEmoji(weather.forecast[1].condition) : "—"}
           </Text>
@@ -151,7 +154,7 @@ function WeatherCard({
       ) : !isPro ? (
         <View style={{ marginTop: 12 }}>
           <UpgradePrompt
-            featureName="Weather-Smart Scheduling"
+            featureName={t("home.weatherSmartScheduling")}
             description="Adjust watering based on live weather"
           />
         </View>
@@ -167,6 +170,7 @@ function TaskCard({
   plant: PlantWithStatus;
   onWater: () => void;
 }) {
+  const { t } = useTranslation();
   const urgency =
     plant.wateringStatus === "overdue" ? COLORS.danger : COLORS.warning;
 
@@ -184,7 +188,7 @@ function TaskCard({
           {plant.name}
         </Text>
         <Text style={[styles.taskStatus, { color: urgency }]}>
-          {plant.wateringStatus === "overdue" ? "Overdue! Water now" : "Water today"}
+          {plant.wateringStatus === "overdue" ? t("home.overdueWaterNow") : t("home.waterToday")}
         </Text>
       </View>
       <TouchableOpacity style={styles.taskWaterButton} onPress={onWater}>
@@ -201,6 +205,8 @@ function FertilizerTaskCard({
   plant: PlantWithStatus;
   onFertilize: () => void;
 }) {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.taskCard}>
       {plant.photo_url ? (
@@ -215,7 +221,7 @@ function FertilizerTaskCard({
           {plant.name}
         </Text>
         <Text style={[styles.taskStatus, { color: COLORS.primary }]}>
-          Fertilize today
+          {t("home.fertilizeToday")}
         </Text>
       </View>
       <TouchableOpacity
@@ -231,6 +237,7 @@ function FertilizerTaskCard({
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function HomeScreen() {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { profile } = useUserStore();
@@ -321,7 +328,7 @@ export default function HomeScreen() {
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <View style={styles.header}>
         <Text style={styles.greeting}>
-          {greeting()}, {firstName}! 🌿
+          {t(greetingKey())}, {firstName}! 🌿
         </Text>
         <Text style={styles.date}>{formatToday()}</Text>
       </View>
@@ -336,14 +343,14 @@ export default function HomeScreen() {
 
       {/* ── Today's tasks ──────────────────────────────────────────────────── */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Today's Tasks</Text>
+        <Text style={styles.sectionTitle}>{t("home.todaysTasks")}</Text>
         {plantsLoading ? (
           <ActivityIndicator color={COLORS.primary} style={{ marginTop: 12 }} />
         ) : needsWater.length === 0 && needsFertilizer.length === 0 ? (
           <View style={styles.allCaughtUp}>
             <Text style={styles.allCaughtUpEmoji}>🎉</Text>
-            <Text style={styles.allCaughtUpText}>All caught up!</Text>
-            <Text style={styles.allCaughtUpSub}>All your plants are happy</Text>
+            <Text style={styles.allCaughtUpText}>{t("home.allCaughtUp")}</Text>
+            <Text style={styles.allCaughtUpSub}>{t("home.allPlantsHappy")}</Text>
           </View>
         ) : (
           <>
@@ -368,12 +375,12 @@ export default function HomeScreen() {
       {/* ── Health summary ─────────────────────────────────────────────────── */}
       {plants.length > 0 && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Plant Health</Text>
+          <Text style={styles.sectionTitle}>{t("home.plantHealth")}</Text>
           <View style={styles.healthCard}>
             <View style={styles.healthRow}>
               <Text style={styles.healthTotal}>{plants.length}</Text>
               <Text style={styles.healthTotalLabel}>
-                {plants.length === 1 ? "plant" : "plants"} total
+                {plants.length === 1 ? t("home.plantsTotal", { count: 1 }).replace("1 ", "") : t("home.plantsTotalPlural", { count: plants.length }).replace(`${plants.length} `, "")}
               </Text>
             </View>
 
@@ -395,17 +402,17 @@ export default function HomeScreen() {
               />
             </View>
             <Text style={styles.healthSummary}>
-              {thriving > 0 ? `${thriving} thriving` : ""}
+              {thriving > 0 ? `${thriving} ${t("home.thriving")}` : ""}
               {thriving > 0 && needsAttention > 0 ? ", " : ""}
-              {needsAttention > 0 ? `${needsAttention} need attention` : ""}
-              {thriving === 0 && needsAttention === 0 ? "Looking good! 🌱" : ""}
+              {needsAttention > 0 ? `${needsAttention} ${t("home.needAttention")}` : ""}
+              {thriving === 0 && needsAttention === 0 ? t("home.lookingGood") : ""}
             </Text>
 
             <TouchableOpacity
               style={styles.viewAllButton}
               onPress={() => router.push("/(tabs)/my-plants")}
             >
-              <Text style={styles.viewAllText}>View all plants →</Text>
+              <Text style={styles.viewAllText}>{t("home.viewAllPlants")}</Text>
             </TouchableOpacity>
           </View>
         </View>

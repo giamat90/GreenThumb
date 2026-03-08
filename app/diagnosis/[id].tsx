@@ -23,9 +23,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ArrowLeft, Camera, Plus, RefreshCw } from "lucide-react-native";
 import * as FileSystem from "expo-file-system/legacy";
 
+import { useTranslation } from "react-i18next";
+
 import { COLORS } from "@/constants";
 import { compressImage } from "@/lib/imageUtils";
 import { supabase } from "@/lib/supabase";
+import { deviceLanguage } from "@/lib/i18n";
 import { usePlantsStore } from "@/store/plants";
 import { useUserStore } from "@/store/user";
 
@@ -62,11 +65,12 @@ interface PhotoSlot {
   required: boolean;
 }
 
-const PHOTO_SLOTS: PhotoSlot[] = [
-  { key: "leaves",  emoji: "🍃", label: "Leaves",       hint: "Show top & bottom of leaves", required: true  },
-  { key: "overall", emoji: "🌿", label: "Overall Plant", hint: "Full plant in frame",          required: false },
-  { key: "stem",    emoji: "🌱", label: "Stem & Base",   hint: "Stem and soil line",           required: false },
-  { key: "soil",    emoji: "🪨", label: "Soil",          hint: "Soil surface texture",         required: false },
+// Labels/hints are translated inside the component; key is English for API use.
+const PHOTO_SLOT_DEFS = [
+  { key: "leaves",  emoji: "🍃", labelKey: "diagnosis.leavesRequired", hintKey: "diagnosis.leavesHint",  required: true  },
+  { key: "overall", emoji: "🌿", labelKey: "diagnosis.overallPlant",   hintKey: "diagnosis.overallHint", required: false },
+  { key: "stem",    emoji: "🌱", labelKey: "diagnosis.stemBase",       hintKey: "diagnosis.stemHint",    required: false },
+  { key: "soil",    emoji: "🪨", labelKey: "diagnosis.soil",           hintKey: "diagnosis.soilHint",    required: false },
 ];
 
 // ─── Severity helpers ─────────────────────────────────────────────────────────
@@ -89,13 +93,14 @@ const SEVERITY_TEXT: Record<DiagnosisResult["severity"], string> = {
   critical: "#991B1B",
 };
 
+// Priority labels are translated inside the component using t()
 const PRIORITY_STYLE: Record<
   Treatment["priority"],
-  { bg: string; text: string; label: string }
+  { bg: string; text: string }
 > = {
-  immediate: { bg: "#FEE2E2", text: "#991B1B", label: "Immediate" },
-  soon:      { bg: "#FEF3C7", text: "#92400E", label: "Soon"      },
-  optional:  { bg: "#F3F4F6", text: "#6B7280", label: "Optional"  },
+  immediate: { bg: "#FEE2E2", text: "#991B1B" },
+  soon:      { bg: "#FEF3C7", text: "#92400E" },
+  optional:  { bg: "#F3F4F6", text: "#6B7280" },
 };
 
 // ─── Scanning animation ───────────────────────────────────────────────────────
@@ -131,6 +136,7 @@ function ScanLine() {
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function DiagnosisScreen() {
+  const { t } = useTranslation();
   const { id: plantId, existingDiagnosis } = useLocalSearchParams<{
     id: string;
     existingDiagnosis?: string;
@@ -139,6 +145,14 @@ export default function DiagnosisScreen() {
   const router = useRouter();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+
+  const PHOTO_SLOTS: PhotoSlot[] = PHOTO_SLOT_DEFS.map((d) => ({
+    key: d.key,
+    emoji: d.emoji,
+    label: t(d.labelKey),
+    hint: t(d.hintKey),
+    required: d.required,
+  }));
 
   const { plants, updatePlant } = usePlantsStore();
   const { profile, subscription } = useUserStore();
@@ -186,9 +200,9 @@ export default function DiagnosisScreen() {
   // ── Pick photo for a slot ─────────────────────────────────────────────────
 
   const handlePickPhoto = useCallback((slotKey: string) => {
-    Alert.alert("Add Photo", "Choose a source", [
+    Alert.alert(t("diagnosis.addPhoto"), t("diagnosis.chooseSource"), [
       {
-        text: "Camera",
+        text: t("common.takePhoto"),
         onPress: async () => {
           const result = await ImagePicker.launchCameraAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -201,7 +215,7 @@ export default function DiagnosisScreen() {
         },
       },
       {
-        text: "Photo Library",
+        text: t("common.chooseFromGallery"),
         onPress: async () => {
           const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -213,9 +227,9 @@ export default function DiagnosisScreen() {
           }
         },
       },
-      { text: "Cancel", style: "cancel" },
+      { text: t("common.cancel"), style: "cancel" },
     ]);
-  }, []);
+  }, [t]);
 
   // ── Analyze ───────────────────────────────────────────────────────────────
 
@@ -265,6 +279,7 @@ export default function DiagnosisScreen() {
             userId: profile.id,
             plantName: plant.name,
             species: plant.species ?? plant.common_name ?? "Unknown",
+            language: deviceLanguage(),
           }),
         }
       );
@@ -301,12 +316,12 @@ export default function DiagnosisScreen() {
       setScreenState("results");
     } catch (err) {
       Alert.alert(
-        "Diagnosis Failed",
-        err instanceof Error ? err.message : "Something went wrong. Please try again."
+        t("diagnosis.diagnosisFailed"),
+        err instanceof Error ? err.message : t("common.somethingWentWrong")
       );
       setScreenState("picker");
     }
-  }, [plant, profile, slotUris, updatePlant]);
+  }, [plant, profile, slotUris, updatePlant, t]);
 
   const handleTryAgain = useCallback(() => {
     setDiagnosis(null);
@@ -342,9 +357,9 @@ export default function DiagnosisScreen() {
     return (
       <View style={styles.notFound}>
         <Stack.Screen options={{ headerShown: false }} />
-        <Text style={styles.notFoundText}>Plant not found.</Text>
+        <Text style={styles.notFoundText}>{t("plantDetail.plantNotFound")}</Text>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backLink}>← Go back</Text>
+          <Text style={styles.backLink}>{t("plantDetail.goBack")}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -380,12 +395,12 @@ export default function DiagnosisScreen() {
 
           {/* Header */}
           <View style={styles.pickerHeader}>
-            <Text style={styles.pickerTitle}>Plant Health Check</Text>
+            <Text style={styles.pickerTitle}>{t("diagnosis.title")}</Text>
             <Text style={styles.pickerSubtitle}>
-              Diagnosing: <Text style={{ fontWeight: "700", color: COLORS.primary }}>{plant.name}</Text>
+              {t("diagnosis.diagnosing", { name: plant.name })}
             </Text>
             <Text style={styles.pickerHint}>
-              Add photos from different angles. More photos = more accurate diagnosis.
+              {t("diagnosis.morePhotosAccurate")}
             </Text>
           </View>
 
@@ -437,7 +452,7 @@ export default function DiagnosisScreen() {
 
           {!leavesReady && (
             <Text style={styles.requiredNote}>
-              * Leaves photo is required to start the analysis.
+              {t("diagnosis.leafPhotoRequired")}
             </Text>
           )}
         </ScrollView>
@@ -453,8 +468,8 @@ export default function DiagnosisScreen() {
           >
             <Text style={styles.analyzeButtonText}>
               {filledCount > 0
-                ? `Analyze Health (${filledCount} photo${filledCount > 1 ? "s" : ""})`
-                : "Analyze Health"}
+                ? t("common.analyzeNPhotos", { n: filledCount })
+                : t("diagnosis.analyzeHealth")}
             </Text>
           </TouchableOpacity>
         </View>
@@ -485,9 +500,9 @@ export default function DiagnosisScreen() {
         <View style={styles.analyzingContent}>
           <ActivityIndicator color={COLORS.secondary} size="large" />
           <Text style={styles.analyzingTitle}>
-            Analyzing {filledCount} photo{filledCount > 1 ? "s" : ""}...
+            {t("diagnosis.analyzing", { n: filledCount })}
           </Text>
-          <Text style={styles.analyzingSubtitle}>AI is examining your plant</Text>
+          <Text style={styles.analyzingSubtitle}>{t("diagnosis.aiExamining")}</Text>
         </View>
       </View>
     );
@@ -532,11 +547,11 @@ export default function DiagnosisScreen() {
             {diagnosis.condition}
           </Text>
           <Text style={[styles.confidenceText, { color: severityTextColor }]}>
-            {confidencePct}% confidence
+            {confidencePct}% {t("diagnosis.confidence")}
           </Text>
           {!isViewingExisting && analyzedCount > 0 && (
             <Text style={[styles.photosAnalyzedText, { color: severityTextColor }]}>
-              Photos analyzed: {analyzedCount}
+              {t("common.photosAnalyzed", { n: analyzedCount })}
             </Text>
           )}
           <Text style={[styles.descriptionText, { color: severityTextColor }]}>
@@ -547,18 +562,20 @@ export default function DiagnosisScreen() {
         {/* ── Treatments card ───────────────────────────────────────────── */}
         {diagnosis.treatments.length > 0 && diagnosis.severity !== "healthy" && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Recommended Actions</Text>
-            {diagnosis.treatments.map((t, i) => {
-              const ps = PRIORITY_STYLE[t.priority];
+            <Text style={styles.cardTitle}>{t("diagnosis.recommendedActions")}</Text>
+            {diagnosis.treatments.map((treatment, i) => {
+              const ps = PRIORITY_STYLE[treatment.priority];
+              // Priority label is an AI-defined classification; capitalize for display
+              const priorityLabel = treatment.priority.charAt(0).toUpperCase() + treatment.priority.slice(1);
               return (
                 <View key={i} style={[styles.treatmentRow, i > 0 && styles.treatmentSpacer]}>
                   <View style={[styles.priorityBadge, { backgroundColor: ps.bg }]}>
                     <Text style={[styles.priorityBadgeText, { color: ps.text }]}>
-                      {ps.label}
+                      {priorityLabel}
                     </Text>
                   </View>
-                  <Text style={styles.treatmentAction}>{t.action}</Text>
-                  <Text style={styles.treatmentDetail}>{t.detail}</Text>
+                  <Text style={styles.treatmentAction}>{treatment.action}</Text>
+                  <Text style={styles.treatmentDetail}>{treatment.detail}</Text>
                 </View>
               );
             })}
@@ -568,7 +585,7 @@ export default function DiagnosisScreen() {
         {/* ── Causes card ───────────────────────────────────────────────── */}
         {diagnosis.causes.length > 0 && diagnosis.severity !== "healthy" && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Possible Causes</Text>
+            <Text style={styles.cardTitle}>{t("diagnosis.possibleCauses")}</Text>
             {diagnosis.causes.map((cause, i) => (
               <View key={i} style={styles.bulletRow}>
                 <Text style={styles.bullet}>•</Text>
@@ -581,7 +598,7 @@ export default function DiagnosisScreen() {
         {/* ── Prevention card ───────────────────────────────────────────── */}
         {diagnosis.prevention.length > 0 && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Prevention Tips</Text>
+            <Text style={styles.cardTitle}>{t("diagnosis.preventionTips")}</Text>
             {diagnosis.prevention.map((tip, i) => (
               <View key={i} style={styles.bulletRow}>
                 <Text style={styles.bullet}>•</Text>
@@ -594,7 +611,7 @@ export default function DiagnosisScreen() {
         {/* ── Health score — only for fresh diagnoses ───────────────────── */}
         {!isViewingExisting && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Health Score Impact</Text>
+            <Text style={styles.cardTitle}>{t("diagnosis.healthScoreImpact")}</Text>
             <View style={styles.healthScoreRow}>
               <Text style={styles.healthScoreValue}>{plant.health_score}</Text>
               <Text style={styles.healthScoreArrow}>→</Text>
@@ -606,7 +623,7 @@ export default function DiagnosisScreen() {
                   : Math.max(0, plant.health_score - 30)}
               </Text>
             </View>
-            <Text style={styles.healthScoreLabel}>Updated health score for {plant.name}</Text>
+            <Text style={styles.healthScoreLabel}>{t("diagnosis.updatedHealthScore", { name: plant.name })}</Text>
           </View>
         )}
       </ScrollView>
@@ -620,31 +637,31 @@ export default function DiagnosisScreen() {
             accessibilityLabel="Go back to plant detail"
             accessibilityRole="button"
           >
-            <Text style={styles.saveButtonText}>Done</Text>
+            <Text style={styles.saveButtonText}>{t("common.done")}</Text>
           </TouchableOpacity>
         ) : (
           <>
             <TouchableOpacity
               style={styles.tryAgainButton}
               onPress={handleTryAgain}
-              accessibilityLabel="Try again with new photos"
+              accessibilityLabel={t("diagnosis.tryAgain")}
               accessibilityRole="button"
             >
               <RefreshCw size={18} color={COLORS.primary} />
-              <Text style={styles.tryAgainText}>Try Again</Text>
+              <Text style={styles.tryAgainText}>{t("diagnosis.tryAgain")}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.saveButton}
               onPress={handleSave}
               disabled={isSaving}
-              accessibilityLabel="Save diagnosis and go back"
+              accessibilityLabel={t("diagnosis.saveDiagnosis")}
               accessibilityRole="button"
             >
               {isSaving ? (
                 <ActivityIndicator color="#fff" size="small" />
               ) : (
-                <Text style={styles.saveButtonText}>Save Diagnosis</Text>
+                <Text style={styles.saveButtonText}>{t("diagnosis.saveDiagnosis")}</Text>
               )}
             </TouchableOpacity>
           </>

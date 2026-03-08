@@ -18,9 +18,12 @@ import { ArrowLeft, Camera, Plus, RefreshCw } from "lucide-react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system/legacy";
 
+import { useTranslation } from "react-i18next";
+
 import { COLORS } from "@/constants";
 import { supabase } from "@/lib/supabase";
 import { compressImage } from "@/lib/imageUtils";
+import { deviceLanguage } from "@/lib/i18n";
 import { usePlantsStore } from "@/store/plants";
 import { useUserStore } from "@/store/user";
 import type { PruningAnalysis } from "@/types";
@@ -139,6 +142,7 @@ function PillOption({
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function PruningScreen() {
+  const { t } = useTranslation();
   const { id: plantId, existingAnalysis } = useLocalSearchParams<{ id: string; existingAnalysis?: string }>();
   const navigation = useNavigation();
   const router = useRouter();
@@ -281,6 +285,7 @@ export default function PruningScreen() {
           goal,
           signs: Array.from(selectedSigns),
           photos: photos.length > 0 ? photos : undefined,
+          language: deviceLanguage(),
         }),
       });
 
@@ -343,9 +348,9 @@ export default function PruningScreen() {
     return (
       <View style={styles.notFound}>
         <Stack.Screen options={{ headerShown: false }} />
-        <Text style={styles.notFoundText}>Plant not found.</Text>
+        <Text style={styles.notFoundText}>{t("plantDetail.plantNotFound")}</Text>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backLink}>← Go back</Text>
+          <Text style={styles.backLink}>{t("plantDetail.goBack")}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -375,7 +380,7 @@ export default function PruningScreen() {
             <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} accessibilityLabel="Go back">
               <ArrowLeft size={20} color={COLORS.textPrimary} />
             </TouchableOpacity>
-            <Text style={styles.formTitle}>Pruning Advisor</Text>
+            <Text style={styles.formTitle}>{t("pruning.title")}</Text>
           </View>
 
           {/* Plant preview */}
@@ -395,7 +400,7 @@ export default function PruningScreen() {
 
           {/* ── Last pruned ───────────────────────────────────────────────── */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Last pruned</Text>
+            <Text style={styles.sectionTitle}>{t("pruning.lastPruned")}</Text>
             <View style={styles.pillRow}>
               {LAST_PRUNED_OPTIONS.map((opt) => (
                 <PillOption key={opt} label={opt} selected={lastPruned === opt} onPress={() => setLastPruned(opt)} />
@@ -405,7 +410,7 @@ export default function PruningScreen() {
 
           {/* ── Growth stage ──────────────────────────────────────────────── */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Current growth stage</Text>
+            <Text style={styles.sectionTitle}>{t("pruning.growthStage")}</Text>
             <View style={styles.pillRow}>
               {GROWTH_STAGE_OPTIONS.map((opt) => (
                 <PillOption key={opt.value} label={opt.label} selected={growthStage === opt.value} onPress={() => setGrowthStage(opt.value)} />
@@ -415,7 +420,7 @@ export default function PruningScreen() {
 
           {/* ── Pruning goal ──────────────────────────────────────────────── */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Pruning goal</Text>
+            <Text style={styles.sectionTitle}>{t("pruning.goal")}</Text>
             <View style={styles.pillRow}>
               {GOAL_OPTIONS.map((opt) => (
                 <PillOption key={opt.value} label={opt.label} selected={goal === opt.value} onPress={() => setGoal(opt.value)} />
@@ -425,8 +430,8 @@ export default function PruningScreen() {
 
           {/* ── Observed signs ────────────────────────────────────────────── */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Observed signs</Text>
-            <Text style={styles.sectionSubtitle}>Select all that apply</Text>
+            <Text style={styles.sectionTitle}>{t("pruning.observedSigns")}</Text>
+            <Text style={styles.sectionSubtitle}>{t("pruning.selectAllThatApply")}</Text>
             {OBSERVED_SIGNS.map((sign) => {
               const checked = selectedSigns.has(sign);
               return (
@@ -448,8 +453,8 @@ export default function PruningScreen() {
 
           {/* ── Photos (optional) ─────────────────────────────────────────── */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Photos (optional)</Text>
-            <Text style={styles.sectionSubtitle}>Add photos for better assessment — tap any slot to add</Text>
+            <Text style={styles.sectionTitle}>{t("repotting.photosOptional")}</Text>
+            <Text style={styles.sectionSubtitle}>{t("repotting.photosSubtitle")}</Text>
             <View style={styles.slotGrid}>
               {PHOTO_SLOTS.map((slot) => {
                 const uri = slotUris[slot.key] ?? null;
@@ -495,8 +500,8 @@ export default function PruningScreen() {
           <TouchableOpacity style={styles.analyzeButton} onPress={handleAnalyze} activeOpacity={0.85}>
             <Text style={styles.analyzeButtonText}>
               {photoCount > 0
-                ? `Analyze Pruning Need (${photoCount} photo${photoCount > 1 ? "s" : ""})`
-                : "Analyze Pruning Need"}
+                ? `${t("pruning.analyzePruning")} (${photoCount})`
+                : t("pruning.analyzePruning")}
             </Text>
           </TouchableOpacity>
         </View>
@@ -521,8 +526,8 @@ export default function PruningScreen() {
 
         <View style={styles.analyzingContent}>
           <ActivityIndicator color={COLORS.secondary} size="large" />
-          <Text style={styles.analyzingTitle}>Analyzing your plant...</Text>
-          <Text style={styles.analyzingSubtitle}>Checking growth, health, and pruning needs</Text>
+          <Text style={styles.analyzingTitle}>{t("pruning.analyzing")}</Text>
+          <Text style={styles.analyzingSubtitle}>{t("pruning.analyzePruning")}</Text>
         </View>
       </View>
     );
@@ -535,6 +540,9 @@ export default function PruningScreen() {
   if (!result) return null;
 
   const recConfig = REC_CONFIG[result.recommendation];
+  const recLabel = result.recommendation === "prune_now" ? t("pruning.pruneNow")
+    : result.recommendation === "prune_soon" ? t("pruning.pruneSoon")
+    : t("pruning.wait");
 
   return (
     <View style={styles.screen}>
@@ -561,7 +569,7 @@ export default function PruningScreen() {
               <Text style={[styles.scoreLabel, { color: recConfig.text }]}>/10</Text>
             </View>
             <View style={styles.recTextWrap}>
-              <Text style={[styles.recVerdict, { color: recConfig.text }]}>{recConfig.label}</Text>
+              <Text style={[styles.recVerdict, { color: recConfig.text }]}>{recLabel}</Text>
               <Text style={[styles.recSummary, { color: recConfig.text }]}>{result.summary}</Text>
             </View>
           </View>
@@ -569,7 +577,7 @@ export default function PruningScreen() {
 
         {/* ── Reasons ──────────────────────────────────────────────────── */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Why this recommendation</Text>
+          <Text style={styles.cardTitle}>{t("pruning.reasons")}</Text>
           {result.reasons.map((r, i) => (
             <View key={i} style={styles.bulletRow}>
               <Text style={styles.bulletDot}>•</Text>
@@ -581,7 +589,7 @@ export default function PruningScreen() {
         {/* ── Best time ────────────────────────────────────────────────── */}
         {result.best_time ? (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Best time to prune</Text>
+            <Text style={styles.cardTitle}>{t("pruning.bestTime")}</Text>
             <Text style={styles.bodyText}>{result.best_time}</Text>
           </View>
         ) : null}
@@ -589,7 +597,7 @@ export default function PruningScreen() {
         {/* ── Branches to remove ───────────────────────────────────────── */}
         {result.branches_to_remove.length > 0 && result.recommendation !== "wait" && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>What to remove</Text>
+            <Text style={styles.cardTitle}>{t("pruning.branchesToRemove")}</Text>
             {result.branches_to_remove.map((b, i) => (
               <View key={i} style={styles.bulletRow}>
                 <Text style={styles.bulletDot}>✂️</Text>
@@ -602,11 +610,11 @@ export default function PruningScreen() {
         {/* ── Tools needed ─────────────────────────────────────────────── */}
         {result.tools_needed.length > 0 && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Tools needed</Text>
-            {result.tools_needed.map((t, i) => (
+            <Text style={styles.cardTitle}>{t("pruning.toolsNeeded")}</Text>
+            {result.tools_needed.map((tool, i) => (
               <View key={i} style={styles.bulletRow}>
                 <Text style={styles.bulletDot}>🔧</Text>
-                <Text style={styles.bulletText}>{t}</Text>
+                <Text style={styles.bulletText}>{tool}</Text>
               </View>
             ))}
           </View>
@@ -615,7 +623,7 @@ export default function PruningScreen() {
         {/* ── Step-by-step instructions ─────────────────────────────────── */}
         {result.steps.length > 0 && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>How to prune</Text>
+            <Text style={styles.cardTitle}>{t("pruning.steps")}</Text>
             {result.steps.map((step, i) => (
               <View key={i} style={styles.stepRow}>
                 <View style={styles.stepNum}>
@@ -630,7 +638,7 @@ export default function PruningScreen() {
         {/* ── Aftercare ─────────────────────────────────────────────────── */}
         {result.aftercare.length > 0 && (
           <View style={[styles.card, styles.aftercareCard]}>
-            <Text style={styles.aftercareTitle}>🌱 Aftercare tips</Text>
+            <Text style={styles.aftercareTitle}>{t("pruning.aftercare")}</Text>
             {result.aftercare.map((tip, i) => (
               <View key={i} style={styles.bulletRow}>
                 <Text style={styles.bulletDot}>•</Text>
@@ -646,11 +654,11 @@ export default function PruningScreen() {
         <TouchableOpacity style={styles.retakeButton} onPress={handleRetake} accessibilityRole="button">
           <RefreshCw size={18} color={COLORS.primary} />
           <Text style={styles.retakeButtonText}>
-            {isViewingExisting ? "New Analysis" : "Check Again"}
+            {isViewingExisting ? t("pruning.newAnalysis") : t("pruning.checkAgain")}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.doneButton} onPress={() => navigation.goBack()} accessibilityRole="button">
-          <Text style={styles.doneButtonText}>Done ✓</Text>
+          <Text style={styles.doneButtonText}>{t("common.done")} ✓</Text>
         </TouchableOpacity>
       </View>
     </View>

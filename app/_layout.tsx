@@ -1,3 +1,4 @@
+import '@/lib/i18n';
 import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, AppState, View } from "react-native";
 import { useFonts } from "expo-font";

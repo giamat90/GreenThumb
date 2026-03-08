@@ -18,9 +18,12 @@ import { ArrowLeft, RefreshCw, Camera, Plus } from "lucide-react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system/legacy";
 
+import { useTranslation } from "react-i18next";
+
 import { COLORS } from "@/constants";
 import { supabase } from "@/lib/supabase";
 import { compressImage } from "@/lib/imageUtils";
+import { deviceLanguage } from "@/lib/i18n";
 import { usePlantsStore } from "@/store/plants";
 import { useUserStore } from "@/store/user";
 import type { RepottingAnalysis } from "@/types";
@@ -131,6 +134,7 @@ function PillOption({
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function RepottingScreen() {
+  const { t } = useTranslation();
   const { id: plantId, existingAnalysis } = useLocalSearchParams<{ id: string; existingAnalysis?: string }>();
   const navigation = useNavigation();
   const router = useRouter();
@@ -276,6 +280,7 @@ export default function RepottingScreen() {
           lastRepotted,
           observedSigns: Array.from(selectedSigns),
           photos: photos.length > 0 ? photos : undefined,
+          language: deviceLanguage(),
         }),
       });
 
@@ -337,9 +342,9 @@ export default function RepottingScreen() {
     return (
       <View style={styles.notFound}>
         <Stack.Screen options={{ headerShown: false }} />
-        <Text style={styles.notFoundText}>Plant not found.</Text>
+        <Text style={styles.notFoundText}>{t("plantDetail.plantNotFound")}</Text>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backLink}>← Go back</Text>
+          <Text style={styles.backLink}>{t("plantDetail.goBack")}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -367,7 +372,7 @@ export default function RepottingScreen() {
             <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} accessibilityLabel="Go back">
               <ArrowLeft size={20} color={COLORS.textPrimary} />
             </TouchableOpacity>
-            <Text style={styles.formTitle}>Repotting Advisor</Text>
+            <Text style={styles.formTitle}>{t("repotting.title")}</Text>
           </View>
 
           {/* Plant preview */}
@@ -387,7 +392,7 @@ export default function RepottingScreen() {
 
           {/* ── Current pot size ──────────────────────────────────────────── */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Current pot size</Text>
+            <Text style={styles.sectionTitle}>{t("repotting.potSize")}</Text>
             <View style={styles.pillRow}>
               {POT_SIZE_OPTIONS.map((opt) => (
                 <PillOption key={opt} label={opt} selected={potSize === opt} onPress={() => setPotSize(opt)} />
@@ -397,7 +402,7 @@ export default function RepottingScreen() {
 
           {/* ── Pot material ──────────────────────────────────────────────── */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Pot material</Text>
+            <Text style={styles.sectionTitle}>{t("repotting.potMaterial")}</Text>
             <View style={styles.pillRow}>
               {POT_MATERIAL_OPTIONS.map((opt) => (
                 <PillOption key={opt} label={opt} selected={potMaterial === opt} onPress={() => setPotMaterial(opt)} />
@@ -407,7 +412,7 @@ export default function RepottingScreen() {
 
           {/* ── Last repotted ─────────────────────────────────────────────── */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Last repotted</Text>
+            <Text style={styles.sectionTitle}>{t("repotting.lastRepotted")}</Text>
             <View style={styles.pillRow}>
               {LAST_REPOTTED_OPTIONS.map((opt) => (
                 <PillOption key={opt} label={opt} selected={lastRepotted === opt} onPress={() => setLastRepotted(opt)} />
@@ -417,8 +422,8 @@ export default function RepottingScreen() {
 
           {/* ── Observed signs ────────────────────────────────────────────── */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Observed signs</Text>
-            <Text style={styles.sectionSubtitle}>Select all that apply</Text>
+            <Text style={styles.sectionTitle}>{t("repotting.signs")}</Text>
+            <Text style={styles.sectionSubtitle}>{t("repotting.selectAllThatApply")}</Text>
             {OBSERVED_SIGNS.map((sign) => {
               const checked = selectedSigns.has(sign);
               return (
@@ -440,8 +445,8 @@ export default function RepottingScreen() {
 
           {/* ── Photos (optional) ─────────────────────────────────────────── */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Photos (optional)</Text>
-            <Text style={styles.sectionSubtitle}>Add photos for better assessment — tap any slot to add</Text>
+            <Text style={styles.sectionTitle}>{t("repotting.photosOptional")}</Text>
+            <Text style={styles.sectionSubtitle}>{t("repotting.photosSubtitle")}</Text>
             <View style={styles.slotGrid}>
               {PHOTO_SLOTS.map((slot) => {
                 const uri = slotUris[slot.key] ?? null;
@@ -488,7 +493,7 @@ export default function RepottingScreen() {
             <Text style={styles.analyzeButtonText}>
               {(() => {
                 const n = PHOTO_SLOTS.filter((s) => slotUris[s.key]).length;
-                return n > 0 ? `Check Repotting Need (${n} photo${n > 1 ? "s" : ""})` : "Check Repotting Need";
+                return n > 0 ? `${t("repotting.analyzeRepotting")} (${n})` : t("repotting.analyzeRepotting");
               })()}
             </Text>
           </TouchableOpacity>
@@ -514,8 +519,8 @@ export default function RepottingScreen() {
 
         <View style={styles.analyzingContent}>
           <ActivityIndicator color={COLORS.secondary} size="large" />
-          <Text style={styles.analyzingTitle}>Analyzing your plant...</Text>
-          <Text style={styles.analyzingSubtitle}>Checking root health, pot fit, and growth stage</Text>
+          <Text style={styles.analyzingTitle}>{t("repotting.analyzing")}</Text>
+          <Text style={styles.analyzingSubtitle}>{t("repotting.repottingDetails")}</Text>
         </View>
       </View>
     );
@@ -528,6 +533,9 @@ export default function RepottingScreen() {
   if (!result) return null;
 
   const recConfig = REC_CONFIG[result.recommendation];
+  const recLabel = result.recommendation === "repot_now" ? t("repotting.repotNow")
+    : result.recommendation === "repot_soon" ? t("repotting.repotSoon")
+    : t("repotting.wait");
 
   return (
     <View style={styles.screen}>
@@ -554,7 +562,7 @@ export default function RepottingScreen() {
               <Text style={[styles.scoreLabel, { color: recConfig.text }]}>/100</Text>
             </View>
             <View style={styles.recTextWrap}>
-              <Text style={[styles.recVerdict, { color: recConfig.text }]}>{recConfig.label}</Text>
+              <Text style={[styles.recVerdict, { color: recConfig.text }]}>{recLabel}</Text>
               <Text style={[styles.recSummary, { color: recConfig.text }]}>{result.summary}</Text>
             </View>
           </View>
@@ -562,7 +570,7 @@ export default function RepottingScreen() {
 
         {/* ── Reasons ──────────────────────────────────────────────────── */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Why this recommendation</Text>
+          <Text style={styles.cardTitle}>{t("repotting.reasons")}</Text>
           {result.reasons.map((r, i) => (
             <View key={i} style={styles.bulletRow}>
               <Text style={styles.bulletDot}>•</Text>
@@ -573,22 +581,22 @@ export default function RepottingScreen() {
 
         {/* ── Repotting details ─────────────────────────────────────────── */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Repotting details</Text>
+          <Text style={styles.cardTitle}>{t("repotting.repottingDetails")}</Text>
           {result.best_time ? (
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Best time</Text>
+              <Text style={styles.detailLabel}>{t("repotting.bestTime")}</Text>
               <Text style={styles.detailValue}>{result.best_time}</Text>
             </View>
           ) : null}
           {result.pot_size ? (
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>New pot size</Text>
+              <Text style={styles.detailLabel}>{t("repotting.recommendedPotSize")}</Text>
               <Text style={styles.detailValue}>{result.pot_size}</Text>
             </View>
           ) : null}
           {result.soil_mix ? (
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Soil mix</Text>
+              <Text style={styles.detailLabel}>{t("repotting.soilMix")}</Text>
               <Text style={styles.detailValue}>{result.soil_mix}</Text>
             </View>
           ) : null}
@@ -597,7 +605,7 @@ export default function RepottingScreen() {
         {/* ── Step-by-step instructions ─────────────────────────────────── */}
         {result.steps.length > 0 && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>How to repot</Text>
+            <Text style={styles.cardTitle}>{t("repotting.steps")}</Text>
             {result.steps.map((step, i) => (
               <View key={i} style={styles.stepRow}>
                 <View style={styles.stepNum}>
@@ -612,7 +620,7 @@ export default function RepottingScreen() {
         {/* ── Warnings ─────────────────────────────────────────────────── */}
         {result.warnings && result.warnings.length > 0 && (
           <View style={[styles.card, styles.warningCard]}>
-            <Text style={styles.warningTitle}>⚠️ Things to watch out for</Text>
+            <Text style={styles.warningTitle}>{t("repotting.warnings")}</Text>
             {result.warnings.map((w, i) => (
               <View key={i} style={styles.bulletRow}>
                 <Text style={styles.bulletDot}>•</Text>
@@ -628,11 +636,11 @@ export default function RepottingScreen() {
         <TouchableOpacity style={styles.retakeButton} onPress={handleRetake} accessibilityRole="button">
           <RefreshCw size={18} color={COLORS.primary} />
           <Text style={styles.retakeButtonText}>
-            {isViewingExisting ? "New Analysis" : "Start over"}
+            {isViewingExisting ? t("repotting.newAnalysis") : t("repotting.checkAgain")}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.doneButton} onPress={() => navigation.goBack()} accessibilityRole="button">
-          <Text style={styles.doneButtonText}>Done ✓</Text>
+          <Text style={styles.doneButtonText}>{t("common.done")} ✓</Text>
         </TouchableOpacity>
       </View>
     </View>

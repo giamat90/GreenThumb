@@ -13,6 +13,7 @@ import {
 import type { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Bell, Clock } from "lucide-react-native";
+import { useTranslation } from "react-i18next";
 
 import { COLORS } from "@/constants";
 import { usePlantsStore } from "@/store/plants";
@@ -41,6 +42,7 @@ function buildPickerDate(hour: number, minute: number): Date {
 }
 
 export function NotificationSettings() {
+  const { t } = useTranslation();
   const [enabled, setEnabled] = useState(true);
   const [reminderHour, setReminderHour] = useState(9);
   const [reminderMinute, setReminderMinute] = useState(0);
@@ -117,9 +119,9 @@ export function NotificationSettings() {
         "💧 Test Notification",
         "GreenThumb notifications are working!"
       );
-      Alert.alert("Sent!", "Check your notification shade.");
+      Alert.alert(t("profile.sent"), t("profile.checkNotificationShade"));
     } catch (err) {
-      Alert.alert("Error", "Could not send test notification.");
+      Alert.alert(t("common.error"), t("profile.couldNotSendTest"));
       console.warn("NotificationSettings: test notification failed", err);
     }
   }
@@ -128,7 +130,7 @@ export function NotificationSettings() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.sectionTitle}>Notifications</Text>
+      <Text style={styles.sectionTitle}>{t("notifications.wateringReminders")}</Text>
 
       {/* ── Watering reminders toggle ──────────────────────────────────────── */}
       <View style={styles.card}>
@@ -138,9 +140,9 @@ export function NotificationSettings() {
               <Bell size={18} color={COLORS.primary} />
             </View>
             <View>
-              <Text style={styles.rowLabel}>Watering Reminders</Text>
+              <Text style={styles.rowLabel}>{t("notifications.wateringReminders")}</Text>
               <Text style={styles.rowSubLabel}>
-                Get notified when plants need water
+                {t("notifications.getNotified")}
               </Text>
             </View>
           </View>
@@ -171,7 +173,7 @@ export function NotificationSettings() {
                 <View style={styles.iconWrap}>
                   <Clock size={18} color={COLORS.primary} />
                 </View>
-                <Text style={styles.rowLabel}>Reminder Time</Text>
+                <Text style={styles.rowLabel}>{t("notifications.reminderTime")}</Text>
               </View>
               <View style={styles.timeDisplay}>
                 <Text style={styles.timeText}>
@@ -207,13 +209,13 @@ export function NotificationSettings() {
                 <View style={styles.iosModalBackdrop}>
                   <View style={styles.iosPickerSheet}>
                     <View style={styles.iosPickerHeader}>
-                      <Text style={styles.iosPickerTitle}>Reminder Time</Text>
+                      <Text style={styles.iosPickerTitle}>{t("notifications.reminderTime")}</Text>
                       <TouchableOpacity
                         onPress={() => setShowPicker(false)}
-                        accessibilityLabel="Done"
+                        accessibilityLabel={t("common.done")}
                         accessibilityRole="button"
                       >
-                        <Text style={styles.iosDoneButton}>Done</Text>
+                        <Text style={styles.iosDoneButton}>{t("common.done")}</Text>
                       </TouchableOpacity>
                     </View>
                     {(() => {
@@ -245,7 +247,7 @@ export function NotificationSettings() {
           accessibilityLabel="Send test notification"
           accessibilityRole="button"
         >
-          <Text style={styles.testButtonText}>🔔 Send Test Notification</Text>
+          <Text style={styles.testButtonText}>{t("notifications.sendTest")}</Text>
         </TouchableOpacity>
       )}
     </View>

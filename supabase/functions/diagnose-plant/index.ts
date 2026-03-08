@@ -17,6 +17,7 @@ interface DiagnoseRequestBody {
   userId: string;       // uuid
   plantName: string;
   species: string;
+  language?: string;    // BCP-47 language code, e.g. "en", "it", "es"
 }
 
 interface Treatment {
@@ -162,7 +163,8 @@ Respond ONLY with this exact JSON structure, no other text:
         model: "claude-opus-4-5",
         max_tokens: 1024,
         system:
-          "You are an expert botanist and plant pathologist. Analyze plant images for diseases, pests, nutrient deficiencies, and other health issues. When multiple photos from different angles are provided, cross-reference symptoms across all views for a more accurate diagnosis. Always respond in valid JSON format only.",
+          "You are an expert botanist and plant pathologist. Analyze plant images for diseases, pests, nutrient deficiencies, and other health issues. When multiple photos from different angles are provided, cross-reference symptoms across all views for a more accurate diagnosis. Always respond in valid JSON format only." +
+          (body.language && body.language !== "en" ? `\n\nIMPORTANT: Write all text values in your JSON response (descriptions, causes, treatments, prevention) in ${body.language} language.` : ""),
         messages: [{ role: "user", content: userContent }],
       }),
     });

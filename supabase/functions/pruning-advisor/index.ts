@@ -18,6 +18,7 @@ interface PruningRequestBody {
   goal: "shape" | "size" | "health" | "bushing";
   signs: string[];           // observed signs
   photos?: PhotoInput[];     // optional — analysis works from form data alone
+  language?: string;         // BCP-47 language code, e.g. "en", "it", "es"
 }
 
 // ─── Response types ───────────────────────────────────────────────────────────
@@ -175,7 +176,8 @@ If recommendation is "wait", branches_to_remove can be an empty array.`;
       body: JSON.stringify({
         model: "claude-opus-4-5",
         max_tokens: 1000,
-        system: "You are an expert botanist specialising in plant pruning. When photos are provided, cross-reference visual evidence with the form data for the most accurate pruning assessment. Always respond in valid JSON format only.",
+        system: "You are an expert botanist specialising in plant pruning. When photos are provided, cross-reference visual evidence with the form data for the most accurate pruning assessment. Always respond in valid JSON format only." +
+          (body.language && body.language !== "en" ? `\n\nIMPORTANT: Write all text values in your JSON response (reasons, steps, aftercare, branchesToRemove, toolsNeeded, bestTime) in ${body.language} language.` : ""),
         messages: [{ role: "user", content: userContent }],
       }),
     });

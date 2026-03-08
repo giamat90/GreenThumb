@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ArrowLeft, Plus, Camera, ImageIcon, TrendingUp } from "lucide-react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system/legacy";
+import { useTranslation } from "react-i18next";
 
 import { COLORS } from "@/constants";
 import { supabase } from "@/lib/supabase";
@@ -39,6 +40,8 @@ function TimelineEntry({
   prevLog?: GrowthLog;
   isLast: boolean;
 }) {
+  const { t } = useTranslation();
+
   const heightDiff =
     log.height_cm != null && prevLog?.height_cm != null
       ? log.height_cm - prevLog.height_cm
@@ -86,7 +89,7 @@ function TimelineEntry({
             ]}
           >
             {heightDiff >= 0 ? "+" : ""}
-            {heightDiff.toFixed(1)} cm since last entry
+            {heightDiff.toFixed(1)} {t("growth.sinceLastEntry")}
           </Text>
         )}
       </View>
@@ -97,6 +100,7 @@ function TimelineEntry({
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function GrowthScreen() {
+  const { t } = useTranslation();
   const { id: plantId } = useLocalSearchParams<{ id: string }>();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -143,7 +147,7 @@ export default function GrowthScreen() {
       if (source === "camera") {
         const { status } = await ImagePicker.requestCameraPermissionsAsync();
         if (status !== "granted") {
-          Alert.alert("Camera access required", "Please allow camera access in your device settings.");
+          Alert.alert(t("growth.cameraAccessRequired"), t("growth.allowCameraAccess"));
           return;
         }
         result = await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], quality: 0.8 });
@@ -154,22 +158,22 @@ export default function GrowthScreen() {
         setAddPhotoUri(result.assets[0].uri);
       }
     } catch {
-      Alert.alert("Error", "Could not access photo. Please try again.");
+      Alert.alert(t("common.error"), t("common.tryAgain"));
     }
-  }, []);
+  }, [t]);
 
   // ── Save entry ────────────────────────────────────────────────────────────────
   const handleSave = useCallback(async () => {
     if (!profile || !plantId) return;
     if (!addPhotoUri && !addHeight.trim() && !addNotes.trim()) {
-      Alert.alert("Nothing to save", "Add a photo, height, or note before saving.");
+      Alert.alert(t("growth.nothingToSave"), t("growth.addPhotoHeightOrNote"));
       return;
     }
 
     // Validate height before starting the async work
     const heightValue = addHeight.trim() ? parseFloat(addHeight.trim()) : null;
     if (heightValue !== null && isNaN(heightValue)) {
-      Alert.alert("Invalid height", "Please enter a valid number.");
+      Alert.alert(t("growth.invalidHeight"), t("growth.enterValidNumber"));
       return;
     }
 
@@ -240,13 +244,13 @@ export default function GrowthScreen() {
       setAddNotes("");
       setScreenState("timeline");
     } catch (error: unknown) {
-      const msg = error instanceof Error ? error.message : "Failed to save entry.";
+      const msg = error instanceof Error ? error.message : t("common.somethingWentWrong");
       console.error("Save entry error:", error);
-      Alert.alert("Error", msg);
+      Alert.alert(t("common.error"), msg);
     } finally {
       setIsSaving(false);
     }
-  }, [profile, plantId, addPhotoUri, addHeight, addNotes]);
+  }, [profile, plantId, addPhotoUri, addHeight, addNotes, t]);
 
   const handleCancelAdd = useCallback(() => {
     setAddPhotoUri(null);
@@ -260,9 +264,9 @@ export default function GrowthScreen() {
     return (
       <View style={styles.notFound}>
         <Stack.Screen options={{ headerShown: false }} />
-        <Text style={styles.notFoundText}>Plant not found.</Text>
+        <Text style={styles.notFoundText}>{t("plantDetail.plantNotFound")}</Text>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backLink}>← Go back</Text>
+          <Text style={styles.backLink}>{t("plantDetail.goBack")}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -294,28 +298,28 @@ export default function GrowthScreen() {
             <TouchableOpacity style={styles.backButton} onPress={handleCancelAdd}>
               <ArrowLeft size={20} color={COLORS.textPrimary} />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Add Growth Entry</Text>
+            <Text style={styles.headerTitle}>{t("growth.addEntry")}</Text>
           </View>
 
           {/* Photo */}
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Photo</Text>
+            <Text style={styles.sectionLabel}>{t("growth.photo")}</Text>
             {addPhotoUri ? (
               <View style={styles.photoWrap}>
                 <Image source={{ uri: addPhotoUri }} style={styles.photoPreview} resizeMode="cover" />
                 <TouchableOpacity style={styles.removePhotoBtn} onPress={() => setAddPhotoUri(null)}>
-                  <Text style={styles.removePhotoText}>✕ Remove</Text>
+                  <Text style={styles.removePhotoText}>{t("growth.removePhoto")}</Text>
                 </TouchableOpacity>
               </View>
             ) : (
               <View style={styles.photoButtonRow}>
                 <TouchableOpacity style={styles.photoButton} onPress={() => handlePickPhoto("camera")}>
                   <Camera size={20} color={COLORS.primary} />
-                  <Text style={styles.photoButtonText}>Camera</Text>
+                  <Text style={styles.photoButtonText}>{t("growth.camera")}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.photoButton} onPress={() => handlePickPhoto("gallery")}>
                   <ImageIcon size={20} color={COLORS.primary} />
-                  <Text style={styles.photoButtonText}>Library</Text>
+                  <Text style={styles.photoButtonText}>{t("growth.library")}</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -323,12 +327,12 @@ export default function GrowthScreen() {
 
           {/* Height */}
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Height (cm) — optional</Text>
+            <Text style={styles.sectionLabel}>{t("growth.heightCm")}</Text>
             <TextInput
               style={styles.textInput}
               value={addHeight}
               onChangeText={setAddHeight}
-              placeholder="e.g. 24.5"
+              placeholder={t("growth.heightPlaceholder")}
               keyboardType="decimal-pad"
               placeholderTextColor={COLORS.textSecondary}
               returnKeyType="done"
@@ -337,12 +341,12 @@ export default function GrowthScreen() {
 
           {/* Notes */}
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Notes — optional</Text>
+            <Text style={styles.sectionLabel}>{t("growth.notes")}</Text>
             <TextInput
               style={[styles.textInput, styles.textInputMulti]}
               value={addNotes}
               onChangeText={setAddNotes}
-              placeholder="New leaf unfurling, looking healthy..."
+              placeholder={t("growth.notesPlaceholder")}
               placeholderTextColor={COLORS.textSecondary}
               multiline
               numberOfLines={3}
@@ -354,7 +358,7 @@ export default function GrowthScreen() {
         {/* Bottom bar */}
         <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 12 }]} onLayout={(e) => setActionBarHeight(e.nativeEvent.layout.height)}>
           <TouchableOpacity style={styles.cancelButton} onPress={handleCancelAdd}>
-            <Text style={styles.cancelButtonText}>Cancel</Text>
+            <Text style={styles.cancelButtonText}>{t("growth.cancel")}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.saveButton, isSaving && { opacity: 0.7 }]}
@@ -364,7 +368,7 @@ export default function GrowthScreen() {
             {isSaving ? (
               <ActivityIndicator color="#fff" size="small" />
             ) : (
-              <Text style={styles.saveButtonText}>Save Entry</Text>
+              <Text style={styles.saveButtonText}>{t("growth.saveEntry")}</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -386,16 +390,16 @@ export default function GrowthScreen() {
           <ArrowLeft size={20} color={COLORS.textPrimary} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>Growth Timeline</Text>
+          <Text style={styles.headerTitle}>{t("growth.title")}</Text>
           <Text style={styles.headerSubtitle} numberOfLines={1}>{plant.name}</Text>
         </View>
         <TouchableOpacity
           style={styles.addButton}
           onPress={() => setScreenState("add")}
-          accessibilityLabel="Add growth entry"
+          accessibilityLabel={t("growth.addEntry")}
         >
           <Plus size={16} color="#fff" />
-          <Text style={styles.addButtonText}>Add</Text>
+          <Text style={styles.addButtonText}>{t("common.add")}</Text>
         </TouchableOpacity>
       </View>
 
@@ -407,15 +411,15 @@ export default function GrowthScreen() {
         /* Empty state */
         <View style={styles.centered}>
           <TrendingUp size={56} color={COLORS.lightgreen} />
-          <Text style={styles.emptyTitle}>Start tracking growth</Text>
+          <Text style={styles.emptyTitle}>{t("growth.startTracking")}</Text>
           <Text style={styles.emptySubtitle}>
-            Record photos, height, and notes to watch your plant thrive over time.
+            {t("growth.startTrackingDesc")}
           </Text>
           <TouchableOpacity
             style={styles.emptyAddButton}
             onPress={() => setScreenState("add")}
           >
-            <Text style={styles.emptyAddButtonText}>Add First Entry</Text>
+            <Text style={styles.emptyAddButtonText}>{t("growth.addFirstEntry")}</Text>
           </TouchableOpacity>
         </View>
       ) : (

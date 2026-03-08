@@ -23,7 +23,8 @@ export interface IdentificationResult {
  * The Plant.id API key is kept server-side — it is NEVER sent to the client.
  */
 export async function identifyPlant(
-  base64Image: string
+  base64Image: string,
+  language?: string
 ): Promise<IdentificationResult> {
   const {
     data: { session },
@@ -43,7 +44,7 @@ export async function identifyPlant(
       apikey: anonKey,
       Authorization: `Bearer ${anonKey}`,
     },
-    body: JSON.stringify({ image: base64Image }),
+    body: JSON.stringify({ image: base64Image, language }),
   });
 
   const data: unknown = await response.json();

@@ -15,6 +15,7 @@ import { useNavigation } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { X, Check, Lock } from "lucide-react-native";
 import type { PurchasesPackage, PurchasesOffering } from "react-native-purchases";
+import { useTranslation } from "react-i18next";
 
 import { COLORS } from "@/constants";
 import { useUserStore } from "@/store/user";
@@ -32,19 +33,6 @@ interface FeatureRow {
   free: string | boolean;
   pro: string | boolean;
 }
-
-const FEATURES: FeatureRow[] = [
-  { name: "Plant identification", free: "5 / month", pro: "Unlimited" },
-  { name: "My plants", free: "3 plants", pro: "Unlimited" },
-  { name: "Watering reminders", free: true, pro: true },
-  { name: "Weather-aware scheduling", free: false, pro: true },
-  { name: "AI disease diagnosis", free: false, pro: true },
-  { name: "Placement advisor", free: false, pro: true },
-  { name: "Repotting advisor", free: false, pro: true },
-  { name: "Pruning advisor", free: false, pro: true },
-  { name: "Growth tracking", free: false, pro: true },
-  { name: "Priority support", free: false, pro: true },
-];
 
 // ─── Feature row component ────────────────────────────────────────────────────
 
@@ -97,6 +85,7 @@ function PriceSkeleton() {
 // ─── Success overlay ──────────────────────────────────────────────────────────
 
 function SuccessOverlay() {
+  const { t } = useTranslation();
   const scale = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -113,8 +102,8 @@ function SuccessOverlay() {
       <Animated.View style={[styles.successCircle, { transform: [{ scale }] }]}>
         <Check size={48} color="#fff" strokeWidth={3} />
       </Animated.View>
-      <Text style={styles.successTitle}>Welcome to Pro! 🌿</Text>
-      <Text style={styles.successSubtitle}>All features are now unlocked</Text>
+      <Text style={styles.successTitle}>{t("paywall.welcomePro")}</Text>
+      <Text style={styles.successSubtitle}>{t("paywall.allFeaturesUnlocked")}</Text>
     </View>
   );
 }
@@ -122,6 +111,7 @@ function SuccessOverlay() {
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function PaywallScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -134,6 +124,19 @@ export default function PaywallScreen() {
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+
+  const FEATURES: FeatureRow[] = [
+    { name: t("paywall.plantIdentification"), free: t("paywall.perMonth"), pro: t("paywall.unlimited") },
+    { name: t("paywall.myPlants"), free: t("paywall.perMonthFree"), pro: t("paywall.unlimited") },
+    { name: t("paywall.wateringReminders"), free: true, pro: true },
+    { name: t("paywall.weatherAwareScheduling"), free: false, pro: true },
+    { name: t("paywall.aiDiseaseDiagnosis"), free: false, pro: true },
+    { name: t("paywall.placementAdvisor"), free: false, pro: true },
+    { name: t("paywall.repottingAdvisor"), free: false, pro: true },
+    { name: t("paywall.pruningAdvisor"), free: false, pro: true },
+    { name: t("paywall.growthTracking"), free: false, pro: true },
+    { name: t("paywall.prioritySupport"), free: false, pro: true },
+  ];
 
   // Load available packages from RevenueCat
   useEffect(() => {
@@ -168,8 +171,8 @@ export default function PaywallScreen() {
       // false = user cancelled → no alert needed
     } catch (err) {
       Alert.alert(
-        "Purchase Failed",
-        err instanceof Error ? err.message : "Something went wrong. Please try again."
+        t("paywall.purchaseFailed"),
+        err instanceof Error ? err.message : t("common.somethingWentWrong")
       );
     } finally {
       setIsPurchasing(false);
@@ -183,10 +186,10 @@ export default function PaywallScreen() {
       if (hasPro) {
         await onPurchaseSuccess();
       } else {
-        Alert.alert("No purchases found", "We couldn't find an active Pro subscription to restore.");
+        Alert.alert(t("paywall.noPurchasesFound"), t("paywall.noPurchasesFoundMsg"));
       }
     } catch (err) {
-      Alert.alert("Restore Failed", err instanceof Error ? err.message : "Please try again.");
+      Alert.alert(t("paywall.restoreFailed"), err instanceof Error ? err.message : t("common.tryAgain"));
     } finally {
       setIsRestoring(false);
     }
@@ -220,12 +223,10 @@ export default function PaywallScreen() {
   }
 
   function ctaLabel(): string {
-    if (!selectedPkg) return "Select a plan";
+    if (!selectedPkg) return t("paywall.selectPlan");
     const isAnnual = selectedPkg === annualPkg;
     const price = priceLabel(selectedPkg);
-    return isAnnual
-      ? `Start Pro — ${price} / year`
-      : `Start Pro — ${price} / month`;
+    return t("paywall.startPro", { price, period: isAnnual ? t("paywall.year") : t("paywall.month") });
   }
 
   if (showSuccess) {
@@ -254,8 +255,8 @@ export default function PaywallScreen() {
         {/* ── Header ──────────────────────────────────────────────────────── */}
         <View style={styles.header}>
           <Text style={styles.headerEmoji}>🌿</Text>
-          <Text style={styles.headerTitle}>GreenThumb Pro</Text>
-          <Text style={styles.headerSubtitle}>Your personal AI botanist</Text>
+          <Text style={styles.headerTitle}>{t("paywall.greenThumbPro")}</Text>
+          <Text style={styles.headerSubtitle}>{t("paywall.personalAIBotanist")}</Text>
         </View>
 
         {/* ── Feature comparison ───────────────────────────────────────────── */}
@@ -265,10 +266,10 @@ export default function PaywallScreen() {
             <View style={{ flex: 1 }} />
             <View style={styles.featureCells}>
               <View style={styles.featureCell}>
-                <Text style={styles.columnHeader}>Free</Text>
+                <Text style={styles.columnHeader}>{t("paywall.free")}</Text>
               </View>
               <View style={[styles.featureCell, styles.featureCellPro]}>
-                <Text style={[styles.columnHeader, styles.columnHeaderPro]}>Pro</Text>
+                <Text style={[styles.columnHeader, styles.columnHeaderPro]}>{t("paywall.pro")}</Text>
               </View>
             </View>
           </View>
@@ -282,7 +283,7 @@ export default function PaywallScreen() {
         </View>
 
         {/* ── Pricing ──────────────────────────────────────────────────────── */}
-        <Text style={styles.pricingTitle}>Choose your plan</Text>
+        <Text style={styles.pricingTitle}>{t("paywall.choosePlan")}</Text>
 
         {offeringsLoading ? (
           <>
@@ -298,12 +299,12 @@ export default function PaywallScreen() {
             >
               <View style={styles.priceCardTop}>
                 <View>
-                  <Text style={styles.pricePeriod}>Annual</Text>
-                  <Text style={styles.priceAmount}>$34.99 / year</Text>
-                  <Text style={styles.priceSub}>Just $2.92/month</Text>
+                  <Text style={styles.pricePeriod}>{t("paywall.annual")}</Text>
+                  <Text style={styles.priceAmount}>$34.99 / {t("paywall.year")}</Text>
+                  <Text style={styles.priceSub}>{t("paywall.justPerMonth", { price: "2.92" })}</Text>
                 </View>
                 <View style={styles.saveBadge}>
-                  <Text style={styles.saveBadgeText}>SAVE 42%</Text>
+                  <Text style={styles.saveBadgeText}>{t("paywall.savePercent", { percent: "42" })}</Text>
                 </View>
               </View>
             </TouchableOpacity>
@@ -312,8 +313,8 @@ export default function PaywallScreen() {
               style={styles.priceCard}
               onPress={() => setSelectedPkg(null)}
             >
-              <Text style={styles.pricePeriod}>Monthly</Text>
-              <Text style={styles.priceAmount}>$4.99 / month</Text>
+              <Text style={styles.pricePeriod}>{t("paywall.monthly")}</Text>
+              <Text style={styles.priceAmount}>$4.99 / {t("paywall.month")}</Text>
             </TouchableOpacity>
           </>
         ) : (
@@ -325,27 +326,27 @@ export default function PaywallScreen() {
                 key={pkg.identifier}
                 style={[styles.priceCard, isSelected && styles.priceCardSelected]}
                 onPress={() => setSelectedPkg(pkg)}
-                accessibilityLabel={`Select ${isAnnual ? "annual" : "monthly"} plan`}
+                accessibilityLabel={`Select ${isAnnual ? t("paywall.annual") : t("paywall.monthly")} plan`}
                 accessibilityRole="radio"
                 accessibilityState={{ selected: isSelected }}
               >
                 <View style={styles.priceCardTop}>
                   <View>
                     <Text style={[styles.pricePeriod, isSelected && styles.pricePeriodSelected]}>
-                      {isAnnual ? "Annual" : "Monthly"}
+                      {isAnnual ? t("paywall.annual") : t("paywall.monthly")}
                     </Text>
                     <Text style={[styles.priceAmount, isSelected && styles.priceAmountSelected]}>
-                      {priceLabel(pkg)}{isAnnual ? " / year" : " / month"}
+                      {priceLabel(pkg)} / {isAnnual ? t("paywall.year") : t("paywall.month")}
                     </Text>
                     {isAnnual && (
                       <Text style={[styles.priceSub, isSelected && styles.priceSubSelected]}>
-                        Just {monthlyPkg ? `${(parseFloat(pkg.product.price) / 12).toFixed(2)}` : "2.92"}/month
+                        {t("paywall.justPerMonth", { price: monthlyPkg ? `${(parseFloat(pkg.product.price) / 12).toFixed(2)}` : "2.92" })}
                       </Text>
                     )}
                   </View>
                   {isAnnual && (
                     <View style={styles.saveBadge}>
-                      <Text style={styles.saveBadgeText}>SAVE 42%</Text>
+                      <Text style={styles.saveBadgeText}>{t("paywall.savePercent", { percent: "42" })}</Text>
                     </View>
                   )}
                 </View>
@@ -378,25 +379,25 @@ export default function PaywallScreen() {
           style={styles.restoreButton}
           onPress={handleRestore}
           disabled={isRestoring}
-          accessibilityLabel="Restore previous purchases"
+          accessibilityLabel={t("paywall.restorePurchases")}
           accessibilityRole="button"
         >
           {isRestoring ? (
             <ActivityIndicator size="small" color={COLORS.textSecondary} />
           ) : (
-            <Text style={styles.restoreText}>Restore Purchases</Text>
+            <Text style={styles.restoreText}>{t("paywall.restorePurchases")}</Text>
           )}
         </TouchableOpacity>
 
-        <Text style={styles.legalText}>Cancel anytime • Secure payment</Text>
+        <Text style={styles.legalText}>{t("paywall.cancelAnytime")}</Text>
 
         <View style={styles.legalLinks}>
           <TouchableOpacity onPress={() => Linking.openURL("https://greenthumb.app/privacy")}>
-            <Text style={styles.legalLink}>Privacy Policy</Text>
+            <Text style={styles.legalLink}>{t("profile.privacyPolicy")}</Text>
           </TouchableOpacity>
           <Text style={styles.legalSep}>·</Text>
           <TouchableOpacity onPress={() => Linking.openURL("https://greenthumb.app/terms")}>
-            <Text style={styles.legalLink}>Terms of Service</Text>
+            <Text style={styles.legalLink}>{t("profile.termsOfService")}</Text>
           </TouchableOpacity>
         </View>
       </View>
