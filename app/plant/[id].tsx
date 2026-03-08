@@ -24,6 +24,7 @@ import {
   Layers,
   TrendingUp,
   Trash2,
+  Scissors,
 } from "lucide-react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -33,7 +34,7 @@ import { rescheduleReminderForPlant, cancelWateringReminder, rescheduleFertilize
 import { calculateFertilizerInterval } from "@/lib/fertilizer";
 import { usePlantsStore } from "@/store/plants";
 import { useUserStore } from "@/store/user";
-import type { WateringEvent, Diagnosis, PlacementAnalysis, FertilizerLog, RepottingAnalysis, GrowthLog } from "@/types";
+import type { WateringEvent, Diagnosis, PlacementAnalysis, FertilizerLog, RepottingAnalysis, GrowthLog, PruningAnalysis } from "@/types";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -184,6 +185,8 @@ function PlantDetailScreen() {
   const [isFertilizing, setIsFertilizing] = useState(false);
   const [repottingHistory, setRepottingHistory] = useState<RepottingAnalysis[]>([]);
   const [repottingLoading, setRepottingLoading] = useState(true);
+  const [pruningHistory, setPruningHistory] = useState<PruningAnalysis[]>([]);
+  const [pruningLoading, setPruningLoading] = useState(true);
   const [growthPreview, setGrowthPreview] = useState<GrowthLog[]>([]);
   const [growthLoading, setGrowthLoading] = useState(true);
 
@@ -201,10 +204,11 @@ function PlantDetailScreen() {
         setPlacementLoading(true);
         setFertilizerLoading(true);
         setRepottingLoading(true);
+        setPruningLoading(true);
         setGrowthLoading(true);
 
         // Fetch all history in parallel
-        const [wateringResult, diagnosisResult, placementResult, fertilizerLogsResult, repottingResult, growthResult] = await Promise.all([
+        const [wateringResult, diagnosisResult, placementResult, fertilizerLogsResult, repottingResult, pruningResult, growthResult] = await Promise.all([
           supabase
             .from("watering_events")
             .select("*")
@@ -236,6 +240,12 @@ function PlantDetailScreen() {
             .order("created_at", { ascending: false })
             .limit(3),
           supabase
+            .from("pruning_analyses")
+            .select("*")
+            .eq("plant_id", id)
+            .order("created_at", { ascending: false })
+            .limit(3),
+          supabase
             .from("growth_logs")
             .select("*")
             .eq("plant_id", id)
@@ -249,12 +259,14 @@ function PlantDetailScreen() {
         setPlacementHistory((placementResult.data ?? []) as PlacementAnalysis[]);
         setFertilizerHistory((fertilizerLogsResult.data ?? []) as FertilizerLog[]);
         setRepottingHistory((repottingResult.data ?? []) as RepottingAnalysis[]);
+        setPruningHistory((pruningResult.data ?? []) as PruningAnalysis[]);
         setGrowthPreview((growthResult.data ?? []) as GrowthLog[]);
         setHistoryLoading(false);
         setDiagnosisLoading(false);
         setPlacementLoading(false);
         setFertilizerLoading(false);
         setRepottingLoading(false);
+        setPruningLoading(false);
         setGrowthLoading(false);
       };
 
@@ -836,6 +848,52 @@ function PlantDetailScreen() {
             })
           )}
         </View>
+        {/* ── Pruning history ───────────────────────────────────────────────── */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Pruning History</Text>
+          {pruningLoading ? (
+            <ActivityIndicator color={COLORS.secondary} style={{ marginTop: 12 }} />
+          ) : pruningHistory.length === 0 ? (
+            <Text style={styles.historyEmpty}>
+              No pruning checks yet — tap Pruning to get started
+            </Text>
+          ) : (
+            pruningHistory.map((p) => {
+              const recEmoji =
+                p.recommendation === "prune_now" ? "✂️" :
+                p.recommendation === "prune_soon" ? "⚠️" : "✅";
+              const recLabel =
+                p.recommendation === "prune_now" ? "Prune Now" :
+                p.recommendation === "prune_soon" ? "Prune Soon" : "No Pruning Needed";
+              const shortDate = new Date(p.created_at).toLocaleDateString("en-US", {
+                month: "short", day: "numeric",
+              });
+              return (
+                <TouchableOpacity
+                  key={p.id}
+                  style={styles.historyRow}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/pruning/[id]",
+                      params: { id: plant.id, existingAnalysis: JSON.stringify(p) },
+                    })
+                  }
+                  activeOpacity={0.7}
+                  accessibilityLabel={`View pruning analysis: ${recLabel}`}
+                  accessibilityRole="button"
+                >
+                  <View style={styles.historyIconWrap}>
+                    <Text style={{ fontSize: 14 }}>{recEmoji}</Text>
+                  </View>
+                  <Text style={styles.historyLabel}>{recLabel}</Text>
+                  <Text style={styles.historyDate}>{shortDate}</Text>
+                  <ChevronRight size={16} color={COLORS.textSecondary} />
+                </TouchableOpacity>
+              );
+            })
+          )}
+        </View>
+
         {/* ── Growth timeline preview ───────────────────────────────────────── */}
         <View style={styles.card}>
           <View style={styles.growthPreviewHeader}>
@@ -944,6 +1002,19 @@ function PlantDetailScreen() {
             >
               <TrendingUp size={16} color={COLORS.primary} />
               <Text style={styles.actionButtonSecondaryText}>Growth</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.actionButtonRow}>
+            <TouchableOpacity
+              style={[styles.actionButtonSecondary, { flex: 1 }]}
+              activeOpacity={0.8}
+              onPress={() => router.push({ pathname: "/pruning/[id]", params: { id: plant.id } })}
+              accessibilityLabel="Pruning advisor"
+              accessibilityRole="button"
+            >
+              <Scissors size={16} color={COLORS.primary} />
+              <Text style={styles.actionButtonSecondaryText}>Pruning ✂️</Text>
             </TouchableOpacity>
           </View>
         </View>

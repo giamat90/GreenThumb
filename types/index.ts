@@ -111,6 +111,26 @@ export interface RepottingAnalysis {
   created_at: string;
 }
 
+export interface PruningAnalysis {
+  id: string;
+  plant_id: string;
+  user_id: string;
+  recommendation: "prune_now" | "prune_soon" | "wait";
+  urgency_score: number;
+  reasons: string[];
+  best_time: string | null;
+  branches_to_remove: string[];
+  tools_needed: string[];
+  steps: string[];
+  aftercare: string[];
+  summary: string;
+  last_pruned: string | null;
+  growth_stage: string | null;
+  goal: string | null;
+  signs: string[] | null;
+  created_at: string;
+}
+
 export interface PlacementAnalysis {
   id: string;
   plant_id: string;
