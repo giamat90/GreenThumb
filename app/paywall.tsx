@@ -129,6 +129,7 @@ export default function PaywallScreen() {
 
   const [offering, setOffering] = useState<PurchasesOffering | null>(null);
   const [offeringsLoading, setOfferingsLoading] = useState(true);
+  const [bottomBarHeight, setBottomBarHeight] = useState(0);
   const [selectedPkg, setSelectedPkg] = useState<PurchasesPackage | null>(null);
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
@@ -246,7 +247,7 @@ export default function PaywallScreen() {
       <ScrollView
         contentContainerStyle={[
           styles.content,
-          { paddingTop: insets.top + 56, paddingBottom: insets.bottom + 120 },
+          { paddingTop: insets.top + 56, paddingBottom: bottomBarHeight + 16 },
         ]}
         showsVerticalScrollIndicator={false}
       >
@@ -355,7 +356,7 @@ export default function PaywallScreen() {
       </ScrollView>
 
       {/* ── Fixed bottom bar ──────────────────────────────────────────────── */}
-      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 12 }]}>
+      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 12 }]} onLayout={(e) => setBottomBarHeight(e.nativeEvent.layout.height)}>
         <TouchableOpacity
           style={[styles.ctaButton, (!selectedPkg && packages.length > 0) && styles.ctaButtonDisabled]}
           onPress={handlePurchase}

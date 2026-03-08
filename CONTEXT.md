@@ -100,6 +100,10 @@ All required assets present in `assets/images/`:
 - `splash-icon.png` — splash screen
 - `favicon.png` — web favicon
 
+## Layout Rules
+
+**Never use hardcoded pixel values for layout spacing.** Always use dynamic measurement (`onLayout`), relative values, or safe area insets. This applies especially to sticky bottom bars overlapping scroll content — measure the bar's rendered height via `onLayout` and use that value for the ScrollView's `paddingBottom`.
+
 ## RevenueCat Notes
 - RevenueCat is **only initialised in `__DEV__` builds**. Preview/production builds skip it entirely to avoid fatal crashes from Test Store keys.
 - In non-dev builds: `checkSubscriptionStatus` → `'free'`, `getOfferings` → `null`, `purchasePackage` → shows "Coming Soon" alert, `restorePurchases` → `false`.
