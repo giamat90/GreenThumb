@@ -566,6 +566,8 @@
     "postFailed": "投稿の共有に失敗しました",
     "noFollowingPosts": "フォロー中のユーザーの投稿はまだありません",
     "tapToExpand": "もっと見る",
+    "loadError": "投稿を読み込めませんでした。",
+    "tapToRetry": "タップして再試行",
     "myGarden": "マイガーデン",
     "viewMyProfile": "公開プロフィールを見る",
     "myPostsCount": "{{count}}件の投稿",

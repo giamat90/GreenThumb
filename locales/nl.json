@@ -566,6 +566,8 @@
     "postFailed": "Bericht delen mislukt",
     "noFollowingPosts": "Nog geen berichten van mensen die je volgt",
     "tapToExpand": "meer",
+    "loadError": "Berichten konden niet worden geladen.",
+    "tapToRetry": "Tik om opnieuw te proberen",
     "myGarden": "Mijn Tuin",
     "viewMyProfile": "Mijn openbaar profiel bekijken",
     "myPostsCount": "{{count}} berichten gedeeld",

@@ -10,7 +10,6 @@ import {
   RefreshControl,
   Alert,
 } from "react-native";
-import { useFocusEffect } from "expo-router";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Heart, MessageCircle, Plus, Users } from "lucide-react-native";
@@ -140,6 +139,91 @@ function PostCard({
   );
 }
 
+// ─── Shared query helper ──────────────────────────────────────────────────────
+
+async function fetchFeedRows(
+  userId: string,
+  offset: number,
+  filterUserIds?: string[]
+): Promise<{ rows: Record<string, unknown>[]; error: unknown }> {
+  let query = supabase
+    .from("posts")
+    .select("*")
+    .eq("is_public", true)
+    .order("created_at", { ascending: false })
+    .range(offset, offset + PAGE_SIZE - 1);
+
+  if (filterUserIds !== undefined) {
+    if (filterUserIds.length === 0) return { rows: [], error: null };
+    query = query.in("user_id", filterUserIds);
+  }
+
+  const { data, error } = await query;
+  if (error) return { rows: [], error };
+  return { rows: data ?? [], error: null };
+}
+
+async function enrichRows(
+  rows: Record<string, unknown>[],
+  userId: string
+): Promise<CommunityPost[]> {
+  if (rows.length === 0) return [];
+
+  const { data: likedData } = await supabase
+    .from("post_likes")
+    .select("post_id")
+    .eq("user_id", userId);
+  const likedIds = new Set((likedData ?? []).map((l: { post_id: string }) => l.post_id));
+
+  const userIds = [...new Set(rows.map((r) => r.user_id as string))];
+  const profileMap: Record<string, Record<string, unknown>> = {};
+  if (userIds.length > 0) {
+    const { data: profilesData } = await supabase
+      .from("user_profiles")
+      .select("id, username, avatar_url")
+      .in("id", userIds);
+    for (const up of profilesData ?? []) {
+      profileMap[(up as Record<string, unknown>).id as string] = up as Record<string, unknown>;
+    }
+  }
+
+  const plantIds = [
+    ...new Set(rows.map((r) => r.plant_id as string | null).filter(Boolean) as string[]),
+  ];
+  const plantMap: Record<string, string> = {};
+  if (plantIds.length > 0) {
+    const { data: plantsData } = await supabase
+      .from("plants")
+      .select("id, name")
+      .in("id", plantIds);
+    for (const pl of plantsData ?? []) {
+      const p = pl as Record<string, unknown>;
+      plantMap[p.id as string] = p.name as string;
+    }
+  }
+
+  return rows.map((row) => {
+    const up = profileMap[row.user_id as string] ?? null;
+    return {
+      id: row.id as string,
+      user_id: row.user_id as string,
+      plant_id: row.plant_id as string | null,
+      photo_url: row.photo_url as string,
+      caption: row.caption as string | null,
+      likes_count: row.likes_count as number,
+      comments_count: row.comments_count as number,
+      is_public: row.is_public as boolean,
+      created_at: row.created_at as string,
+      username: up?.username as string | undefined,
+      avatar_url: up?.avatar_url as string | null | undefined,
+      plant_name: row.plant_id ? (plantMap[row.plant_id as string] ?? null) : null,
+      is_liked: likedIds.has(row.id as string),
+    };
+  });
+}
+
+// ─── Screen ───────────────────────────────────────────────────────────────────
+
 export default function CommunityScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -148,118 +232,145 @@ export default function CommunityScreen() {
   const { isPro, showPaywall } = useProGate();
 
   const [activeTab, setActiveTab] = useState<"discover" | "following">("discover");
+
+  // Each feed has its own state — tab switching never resets the other feed
   const [discoverPosts, setDiscoverPosts] = useState<CommunityPost[]>([]);
+  const [discoverError, setDiscoverError] = useState<string | null>(null);
+  const [discoverLoading, setDiscoverLoading] = useState(false);
+  const [discoverRefreshing, setDiscoverRefreshing] = useState(false);
+  const [discoverHasMore, setDiscoverHasMore] = useState(true);
+  const discoverPageRef = useRef(0);
+  const isFetchingDiscoverRef = useRef(false);
+
   const [followingPosts, setFollowingPosts] = useState<CommunityPost[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
-  const pageRef = useRef(0);
+  const [followingError, setFollowingError] = useState<string | null>(null);
+  const [followingLoading, setFollowingLoading] = useState(false);
+  const [followingRefreshing, setFollowingRefreshing] = useState(false);
+  const [followingHasMore, setFollowingHasMore] = useState(true);
+  const followingPageRef = useRef(0);
+  const isFetchingFollowingRef = useRef(false);
 
-  const posts = activeTab === "discover" ? discoverPosts : followingPosts;
-  const setPosts = activeTab === "discover" ? setDiscoverPosts : setFollowingPosts;
+  // ── Ensure user_profile row exists ──────────────────────────────────────────
+  React.useEffect(() => {
+    async function ensureUserProfile() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      await supabase.from("user_profiles").upsert(
+        { id: user.id, username: user.email?.split("@")[0] ?? "plant_lover", created_at: new Date().toISOString() },
+        { onConflict: "id", ignoreDuplicates: true }
+      );
+    }
+    ensureUserProfile();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const fetchPosts = useCallback(async (reset = false) => {
+  // ── Fetch Discover ───────────────────────────────────────────────────────────
+  const fetchDiscover = useCallback(async (reset = false) => {
     if (!profile) return;
+    if (isFetchingDiscoverRef.current) return;
+    isFetchingDiscoverRef.current = true;
+
     if (reset) {
-      pageRef.current = 0;
-      setHasMore(true);
+      discoverPageRef.current = 0;
+      setDiscoverHasMore(true);
+      setDiscoverError(null);
     }
-    setLoading(true);
+    setDiscoverLoading(true);
     try {
-      const offset = pageRef.current * PAGE_SIZE;
-
-      // Get liked post IDs for current user
-      const { data: likedData } = await supabase
-        .from("post_likes")
-        .select("post_id")
-        .eq("user_id", profile.id);
-      const likedIds = new Set((likedData ?? []).map((l: { post_id: string }) => l.post_id));
-
-      let query = supabase
-        .from("posts")
-        .select("*, user_profiles(username, avatar_url), plants(name)")
-        .eq("is_public", true)
-        .order("created_at", { ascending: false })
-        .range(offset, offset + PAGE_SIZE - 1);
-
-      if (activeTab === "following") {
-        // Get followed user IDs
-        const { data: followData } = await supabase
-          .from("follows")
-          .select("following_id")
-          .eq("follower_id", profile.id);
-        const followedIds = (followData ?? []).map((f: { following_id: string }) => f.following_id);
-        if (followedIds.length === 0) {
-          setPosts(reset ? [] : (prev) => prev);
-          setLoading(false);
-          return;
-        }
-        query = query.in("user_id", followedIds);
-      }
-
-      const { data, error } = await query;
+      const { rows, error } = await fetchFeedRows(profile.id, discoverPageRef.current * PAGE_SIZE);
       if (error) throw error;
-
-      const mapped: CommunityPost[] = (data ?? []).map((row: Record<string, unknown>) => ({
-        id: row.id as string,
-        user_id: row.user_id as string,
-        plant_id: row.plant_id as string | null,
-        photo_url: row.photo_url as string,
-        caption: row.caption as string | null,
-        likes_count: row.likes_count as number,
-        comments_count: row.comments_count as number,
-        is_public: row.is_public as boolean,
-        created_at: row.created_at as string,
-        username: (row.user_profiles as Record<string, unknown> | null)?.username as string | undefined,
-        avatar_url: (row.user_profiles as Record<string, unknown> | null)?.avatar_url as string | null | undefined,
-        plant_name: (row.plants as Record<string, unknown> | null)?.name as string | null | undefined,
-        is_liked: likedIds.has(row.id as string),
-      }));
-
-      if (reset) {
-        setPosts(mapped);
-      } else {
-        setPosts((prev) => [...prev, ...mapped]);
-      }
-      setHasMore(mapped.length === PAGE_SIZE);
-      pageRef.current += 1;
+      const mapped = await enrichRows(rows, profile.id);
+      if (reset) setDiscoverPosts(mapped);
+      else setDiscoverPosts((prev) => [...prev, ...mapped]);
+      setDiscoverHasMore(mapped.length === PAGE_SIZE);
+      discoverPageRef.current += 1;
     } catch (err) {
-      console.warn("community: fetch posts failed", err);
+      setDiscoverError(String(err));
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      isFetchingDiscoverRef.current = false;
+      setDiscoverLoading(false);
+      setDiscoverRefreshing(false);
     }
-  }, [profile, activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [profile]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchPosts(true);
-    }, [activeTab]) // eslint-disable-line react-hooks/exhaustive-deps
-  );
+  // ── Fetch Following ──────────────────────────────────────────────────────────
+  const fetchFollowing = useCallback(async (reset = false) => {
+    if (!profile) return;
+    if (isFetchingFollowingRef.current) return;
+    isFetchingFollowingRef.current = true;
+
+    if (reset) {
+      followingPageRef.current = 0;
+      setFollowingHasMore(true);
+      setFollowingError(null);
+    }
+    setFollowingLoading(true);
+    try {
+      const { data: followData } = await supabase
+        .from("follows")
+        .select("following_id")
+        .eq("follower_id", profile.id);
+      const followedIds = (followData ?? []).map((f: { following_id: string }) => f.following_id);
+
+      const { rows, error } = await fetchFeedRows(profile.id, followingPageRef.current * PAGE_SIZE, followedIds);
+      if (error) throw error;
+      const mapped = await enrichRows(rows, profile.id);
+      if (reset) setFollowingPosts(mapped);
+      else setFollowingPosts((prev) => [...prev, ...mapped]);
+      setFollowingHasMore(mapped.length === PAGE_SIZE);
+      followingPageRef.current += 1;
+    } catch (err) {
+      setFollowingError(String(err));
+    } finally {
+      isFetchingFollowingRef.current = false;
+      setFollowingLoading(false);
+      setFollowingRefreshing(false);
+    }
+  }, [profile]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Fetch both feeds once on mount — no useFocusEffect, no tab-switching triggers
+  React.useEffect(() => {
+    if (!profile) return;
+    fetchDiscover(true);
+    fetchFollowing(true);
+  }, [profile?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Handlers ────────────────────────────────────────────────────────────────
 
   const handleRefresh = useCallback(() => {
-    setRefreshing(true);
-    fetchPosts(true);
-  }, [fetchPosts]);
+    if (activeTab === "discover") {
+      setDiscoverRefreshing(true);
+      fetchDiscover(true);
+    } else {
+      setFollowingRefreshing(true);
+      fetchFollowing(true);
+    }
+  }, [activeTab, fetchDiscover, fetchFollowing]);
 
   const handleLoadMore = useCallback(() => {
-    if (!loading && hasMore) {
-      fetchPosts(false);
+    if (activeTab === "discover" && !discoverLoading && discoverHasMore) {
+      fetchDiscover(false);
+    } else if (activeTab === "following" && !followingLoading && followingHasMore) {
+      fetchFollowing(false);
     }
-  }, [loading, hasMore, fetchPosts]);
+  }, [activeTab, discoverLoading, discoverHasMore, followingLoading, followingHasMore, fetchDiscover, fetchFollowing]);
 
   const handleLike = useCallback(async (postId: string, isLiked: boolean) => {
     if (!profile) return;
-    // Optimistic update
-    const updatePost = (prev: CommunityPost[]) =>
+    const update = (prev: CommunityPost[]) =>
       prev.map((p) =>
         p.id === postId
           ? { ...p, is_liked: !isLiked, likes_count: p.likes_count + (isLiked ? -1 : 1) }
           : p
       );
-    if (activeTab === "discover") setDiscoverPosts(updatePost);
-    else setFollowingPosts(updatePost);
-
+    const revert = (prev: CommunityPost[]) =>
+      prev.map((p) =>
+        p.id === postId
+          ? { ...p, is_liked: isLiked, likes_count: p.likes_count + (isLiked ? 1 : -1) }
+          : p
+      );
+    // Optimistic update on both feeds (post may appear in both)
+    setDiscoverPosts(update);
+    setFollowingPosts(update);
     try {
       if (isLiked) {
         await supabase.from("post_likes").delete().eq("user_id", profile.id).eq("post_id", postId);
@@ -267,17 +378,10 @@ export default function CommunityScreen() {
         await supabase.from("post_likes").insert({ user_id: profile.id, post_id: postId });
       }
     } catch {
-      // Revert on error
-      const revert = (prev: CommunityPost[]) =>
-        prev.map((p) =>
-          p.id === postId
-            ? { ...p, is_liked: isLiked, likes_count: p.likes_count + (isLiked ? 1 : -1) }
-            : p
-        );
-      if (activeTab === "discover") setDiscoverPosts(revert);
-      else setFollowingPosts(revert);
+      setDiscoverPosts(revert);
+      setFollowingPosts(revert);
     }
-  }, [profile, activeTab]);
+  }, [profile]);
 
   const handleComment = useCallback((postId: string) => {
     router.push({ pathname: "/community/post/[id]", params: { id: postId } });
@@ -287,8 +391,10 @@ export default function CommunityScreen() {
     router.push({ pathname: "/community/profile/[id]", params: { id: userId } });
   }, [router]);
 
+  const canPost = __DEV__ ? true : isPro;
+
   const handleNewPost = useCallback(() => {
-    if (!isPro) {
+    if (!canPost) {
       Alert.alert(t("community.sharePost"), t("community.proFeaturePost"), [
         { text: t("common.cancel"), style: "cancel" },
         { text: t("paywall.greenThumbPro"), onPress: showPaywall },
@@ -296,41 +402,23 @@ export default function CommunityScreen() {
       return;
     }
     router.push("/community/new-post");
-  }, [isPro, showPaywall, router, t]);
+  }, [canPost, showPaywall, router, t]);
 
   const [fabHeight, setFabHeight] = useState(0);
 
-  return (
-    <View style={styles.screen}>
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <Text style={styles.headerTitle}>{t("community.tab")}</Text>
+  // ── Derived per-tab values for the active feed ───────────────────────────────
+  const isDiscover = activeTab === "discover";
+  const loading = isDiscover ? discoverLoading : followingLoading;
+  const refreshing = isDiscover ? discoverRefreshing : followingRefreshing;
+  const fetchError = isDiscover ? discoverError : followingError;
+  const retryFetch = isDiscover ? () => fetchDiscover(true) : () => fetchFollowing(true);
 
-        {/* Sub-tabs */}
-        <View style={styles.subTabs}>
-          <TouchableOpacity
-            style={[styles.subTab, activeTab === "discover" && styles.subTabActive]}
-            onPress={() => setActiveTab("discover")}
-          >
-            <Text style={[styles.subTabText, activeTab === "discover" && styles.subTabTextActive]}>
-              {t("community.discover")}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.subTab, activeTab === "following" && styles.subTabActive]}
-            onPress={() => setActiveTab("following")}
-          >
-            <Text style={[styles.subTabText, activeTab === "following" && styles.subTabTextActive]}>
-              {t("community.following")}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Feed */}
+  function renderFeed(feed: CommunityPost[], visible: boolean) {
+    return (
       <FlatList
-        data={posts}
+        data={feed}
         keyExtractor={(item) => item.id}
+        style={{ display: visible ? "flex" : "none" }}
         renderItem={({ item }) => (
           <PostCard
             post={item}
@@ -342,25 +430,74 @@ export default function CommunityScreen() {
         )}
         contentContainerStyle={{ paddingBottom: fabHeight + 16 }}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={COLORS.primary} />
+          <RefreshControl
+            refreshing={visible ? refreshing : false}
+            onRefresh={handleRefresh}
+            tintColor={COLORS.primary}
+          />
         }
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.4}
         ListEmptyComponent={
-          !loading ? (
-            <View style={styles.emptyState}>
-              <Users size={48} color={COLORS.textSecondary} />
-              <Text style={styles.emptyTitle}>
-                {activeTab === "discover" ? t("community.noPostsYet") : t("community.followSomeone")}
-              </Text>
-              <Text style={styles.emptySubtitle}>
-                {activeTab === "discover" ? t("community.beFirstToPost") : t("community.noFollowingPosts")}
-              </Text>
-            </View>
+          visible && !loading ? (
+            fetchError ? (
+              <TouchableOpacity style={styles.emptyState} onPress={retryFetch} activeOpacity={0.7}>
+                <Users size={48} color={COLORS.textSecondary} />
+                <Text style={styles.emptyTitle}>{t("community.loadError")}</Text>
+                <Text style={styles.emptySubtitle}>{t("community.tapToRetry")}</Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.emptyState}>
+                <Users size={48} color={COLORS.textSecondary} />
+                <Text style={styles.emptyTitle}>
+                  {isDiscover ? t("community.noPostsYet") : t("community.followSomeone")}
+                </Text>
+                <Text style={styles.emptySubtitle}>
+                  {isDiscover ? t("community.beFirstToPost") : t("community.noFollowingPosts")}
+                </Text>
+              </View>
+            )
           ) : null
         }
-        ListFooterComponent={loading && posts.length > 0 ? <ActivityIndicator color={COLORS.primary} style={{ padding: 20 }} /> : null}
+        ListFooterComponent={
+          visible && loading && feed.length > 0
+            ? <ActivityIndicator color={COLORS.primary} style={{ padding: 20 }} />
+            : null
+        }
       />
+    );
+  }
+
+  return (
+    <View style={styles.screen}>
+      {/* Header */}
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+        <Text style={styles.headerTitle}>{t("community.tab")}</Text>
+
+        {/* Sub-tabs */}
+        <View style={styles.subTabs}>
+          <TouchableOpacity
+            style={[styles.subTab, isDiscover && styles.subTabActive]}
+            onPress={() => setActiveTab("discover")}
+          >
+            <Text style={[styles.subTabText, isDiscover && styles.subTabTextActive]}>
+              {t("community.discover")}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.subTab, !isDiscover && styles.subTabActive]}
+            onPress={() => setActiveTab("following")}
+          >
+            <Text style={[styles.subTabText, !isDiscover && styles.subTabTextActive]}>
+              {t("community.following")}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Both feeds always mounted — show/hide via display style to avoid remounts */}
+      {renderFeed(discoverPosts, isDiscover)}
+      {renderFeed(followingPosts, !isDiscover)}
 
       {/* FAB */}
       <View

@@ -566,6 +566,8 @@
     "postFailed": "分享帖子失败",
     "noFollowingPosts": "您关注的人还没有帖子",
     "tapToExpand": "更多",
+    "loadError": "无法加载帖子。",
+    "tapToRetry": "点击重试",
     "myGarden": "我的花园",
     "viewMyProfile": "查看我的公开资料",
     "myPostsCount": "已分享 {{count}} 条帖子",

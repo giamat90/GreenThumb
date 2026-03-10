@@ -566,6 +566,8 @@
     "postFailed": "Falha ao compartilhar publicação",
     "noFollowingPosts": "Ainda não há publicações de pessoas que você segue",
     "tapToExpand": "mais",
+    "loadError": "Não foi possível carregar as publicações.",
+    "tapToRetry": "Toque para tentar novamente",
     "myGarden": "Meu Jardim",
     "viewMyProfile": "Ver meu perfil público",
     "myPostsCount": "{{count}} publicações compartilhadas",

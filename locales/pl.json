@@ -566,6 +566,8 @@
     "postFailed": "Nie udało się udostępnić posta",
     "noFollowingPosts": "Brak postów od obserwowanych użytkowników",
     "tapToExpand": "więcej",
+    "loadError": "Nie można załadować postów.",
+    "tapToRetry": "Dotknij, aby spróbować ponownie",
     "myGarden": "Mój Ogród",
     "viewMyProfile": "Zobacz mój publiczny profil",
     "myPostsCount": "{{count}} udostępnionych postów",

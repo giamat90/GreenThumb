@@ -566,6 +566,8 @@
     "postFailed": "Failed to share post",
     "noFollowingPosts": "No posts from people you follow yet",
     "tapToExpand": "more",
+    "loadError": "Could not load posts.",
+    "tapToRetry": "Tap to retry",
     "myGarden": "My Garden",
     "viewMyProfile": "View my public profile",
     "myPostsCount": "{{count}} posts shared",

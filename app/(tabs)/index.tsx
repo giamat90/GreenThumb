@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { Droplets, Leaf } from "lucide-react-native";
+import { Droplets, Leaf, User } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
 import { COLORS } from "@/constants";
@@ -327,10 +327,20 @@ export default function HomeScreen() {
     >
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <View style={styles.header}>
-        <Text style={styles.greeting}>
-          {t(greetingKey())}, {firstName}! 🌿
-        </Text>
-        <Text style={styles.date}>{formatToday()}</Text>
+        <View style={styles.headerText}>
+          <Text style={styles.greeting}>
+            {t(greetingKey())}, {firstName}! 🌿
+          </Text>
+          <Text style={styles.date}>{formatToday()}</Text>
+        </View>
+        <TouchableOpacity
+          style={styles.profileButton}
+          onPress={() => router.push("/(tabs)/profile")}
+          accessibilityLabel={t("tabs.profile")}
+          accessibilityRole="button"
+        >
+          <User size={22} color={COLORS.primary} />
+        </TouchableOpacity>
       </View>
 
       {/* ── Weather card ───────────────────────────────────────────────────── */}
@@ -432,9 +442,23 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   header: {
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 12,
+  },
+  headerText: {
+    flex: 1,
+  },
+  profileButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.lightgreen,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 12,
   },
   greeting: {
     fontSize: 24,

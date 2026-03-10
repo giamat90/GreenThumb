@@ -262,6 +262,7 @@ export default function RootLayout() {
   return (
     <Stack>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="(tabs)/profile" options={{ headerShown: false }} />
       <Stack.Screen name="(auth)" options={{ headerShown: false }} />
       <Stack.Screen name="plant/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="diagnosis/[id]" options={{ headerShown: false }} />

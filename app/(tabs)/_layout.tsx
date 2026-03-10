@@ -1,5 +1,5 @@
 import { Tabs, useRouter } from "expo-router";
-import { Home, Leaf, Camera, CalendarDays, User, Users } from "lucide-react-native";
+import { Home, Leaf, Camera, CalendarDays, Users } from "lucide-react-native";
 import { TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { COLORS } from "@/constants";
@@ -127,12 +127,10 @@ export default function TabLayout() {
         }}
       />
 
+      {/* Profile is accessed via the Home header button, not a tab */}
       <Tabs.Screen
         name="profile"
-        options={{
-          title: "Profile",
-          tabBarIcon: ({ color, size }) => <User size={size} color={color} />,
-        }}
+        options={{ href: null }}
       />
     </Tabs>
   );

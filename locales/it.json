@@ -566,6 +566,8 @@
     "postFailed": "Impossibile condividere il post",
     "noFollowingPosts": "Nessun post da persone che segui ancora",
     "tapToExpand": "altro",
+    "loadError": "Impossibile caricare i post.",
+    "tapToRetry": "Tocca per riprovare",
     "myGarden": "Il mio Giardino",
     "viewMyProfile": "Visualizza il mio profilo pubblico",
     "myPostsCount": "{{count}} post condivisi",

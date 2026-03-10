@@ -566,6 +566,8 @@
     "postFailed": "Beitrag konnte nicht geteilt werden",
     "noFollowingPosts": "Noch keine Beiträge von Personen, denen du folgst",
     "tapToExpand": "mehr",
+    "loadError": "Beiträge konnten nicht geladen werden.",
+    "tapToRetry": "Tippen zum Wiederholen",
     "myGarden": "Mein Garten",
     "viewMyProfile": "Mein öffentliches Profil ansehen",
     "myPostsCount": "{{count}} Beiträge geteilt",
