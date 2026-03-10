@@ -6,13 +6,14 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  Linking,
   StyleSheet,
   Modal,
   Platform,
 } from "react-native";
 import type { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Bell, Clock } from "lucide-react-native";
+import { Bell, CalendarDays, Clock, RefreshCw } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
 import { COLORS } from "@/constants";
@@ -22,10 +23,18 @@ import {
   cancelAllReminders,
   sendImmediateNotification,
 } from "@/lib/notifications";
+import {
+  requestCalendarPermission,
+  getOrCreateGreenThumbCalendar,
+  syncPlantEvents,
+  deleteGreenThumbEvents,
+} from "@/lib/calendarSync";
 
 const NOTIFICATIONS_ENABLED_KEY = "notifications_enabled";
 const REMINDER_TIME_KEY = "reminder_time";
 const REMINDER_MINUTES_KEY = "reminder_minutes";
+const CALENDAR_SYNC_ENABLED_KEY = "calendarSyncEnabled";
+const CALENDAR_LAST_SYNCED_KEY = "calendarLastSynced";
 
 function formatTime(hour: number, minute: number): string {
   const period = hour >= 12 ? "PM" : "AM";
@@ -51,17 +60,26 @@ export function NotificationSettings() {
   const [showPicker, setShowPicker] = useState(false);
   const { plants } = usePlantsStore();
 
+  // ── Calendar sync state ────────────────────────────────────────────────────
+  const [calendarEnabled, setCalendarEnabled] = useState(false);
+  const [calendarSyncing, setCalendarSyncing] = useState(false);
+  const [lastSynced, setLastSynced] = useState<string | null>(null);
+
   // Load persisted preferences on mount
   useEffect(() => {
     async function load() {
-      const [enabledRaw, hourRaw, minuteRaw] = await Promise.all([
+      const [enabledRaw, hourRaw, minuteRaw, calRaw, lastRaw] = await Promise.all([
         AsyncStorage.getItem(NOTIFICATIONS_ENABLED_KEY),
         AsyncStorage.getItem(REMINDER_TIME_KEY),
         AsyncStorage.getItem(REMINDER_MINUTES_KEY),
+        AsyncStorage.getItem(CALENDAR_SYNC_ENABLED_KEY),
+        AsyncStorage.getItem(CALENDAR_LAST_SYNCED_KEY),
       ]);
       setEnabled(enabledRaw !== "false");
       if (hourRaw) setReminderHour(parseInt(hourRaw, 10));
       if (minuteRaw) setReminderMinute(parseInt(minuteRaw, 10));
+      setCalendarEnabled(calRaw === "true");
+      setLastSynced(lastRaw);
     }
     load();
   }, []);
@@ -110,6 +128,58 @@ export function NotificationSettings() {
     if (Platform.OS === "android") setShowPicker(false);
     if (selected) {
       applyNewTime(selected.getHours(), selected.getMinutes());
+    }
+  }
+
+  async function runCalendarSync() {
+    setCalendarSyncing(true);
+    try {
+      const count = await syncPlantEvents(plants);
+      const now = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      setLastSynced(now);
+      await AsyncStorage.setItem(CALENDAR_LAST_SYNCED_KEY, now);
+      Alert.alert(t("calendar.calendarSync"), t("calendar.calendarSyncSuccess", { count }));
+    } catch {
+      Alert.alert(t("common.error"), t("calendar.calendarSyncFailed"));
+    } finally {
+      setCalendarSyncing(false);
+    }
+  }
+
+  async function handleCalendarToggle(value: boolean) {
+    if (value) {
+      const granted = await requestCalendarPermission();
+      if (!granted) {
+        Alert.alert(
+          t("calendar.calendarPermission"),
+          t("calendar.calendarPermissionDenied"),
+          [
+            { text: t("common.cancel"), style: "cancel" },
+            { text: t("common.openSettings"), onPress: () => Linking.openSettings() },
+          ]
+        );
+        return; // do not enable
+      }
+      try {
+        await getOrCreateGreenThumbCalendar();
+      } catch {
+        Alert.alert(t("common.error"), t("calendar.calendarSyncFailed"));
+        return;
+      }
+      setCalendarEnabled(true);
+      await AsyncStorage.setItem(CALENDAR_SYNC_ENABLED_KEY, "true");
+      await runCalendarSync();
+    } else {
+      setCalendarEnabled(false);
+      await AsyncStorage.setItem(CALENDAR_SYNC_ENABLED_KEY, "false");
+      setLastSynced(null);
+      await AsyncStorage.removeItem(CALENDAR_LAST_SYNCED_KEY);
+      try {
+        await deleteGreenThumbEvents();
+        Alert.alert(t("calendar.calendarSync"), t("calendar.calendarDisabled"));
+      } catch {
+        // best-effort
+      }
     }
   }
 
@@ -235,6 +305,60 @@ export function NotificationSettings() {
                 </View>
               </Modal>
             )}
+          </>
+        )}
+      </View>
+
+      {/* ── Calendar Sync section ─────────────────────────────────────────── */}
+      <Text style={[styles.sectionTitle, { marginTop: 24 }]}>{t("calendar.calendarSync")}</Text>
+      <View style={styles.card}>
+        <View style={styles.row}>
+          <View style={styles.rowLeft}>
+            <View style={styles.iconWrap}>
+              <CalendarDays size={18} color={COLORS.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.rowLabel}>{t("calendar.calendarSync")}</Text>
+              <Text style={styles.rowSubLabel}>{t("calendar.calendarSyncDesc")}</Text>
+            </View>
+          </View>
+          {calendarSyncing ? (
+            <ActivityIndicator size="small" color={COLORS.primary} />
+          ) : (
+            <Switch
+              value={calendarEnabled}
+              onValueChange={handleCalendarToggle}
+              trackColor={{ false: "#E5E7EB", true: COLORS.secondary }}
+              thumbColor="#fff"
+              accessibilityLabel={t("calendar.calendarSync")}
+            />
+          )}
+        </View>
+
+        {calendarEnabled && (
+          <>
+            <View style={styles.divider} />
+            <TouchableOpacity
+              style={styles.timeRow}
+              onPress={runCalendarSync}
+              disabled={calendarSyncing}
+              accessibilityRole="button"
+              accessibilityLabel={t("calendar.syncNow")}
+            >
+              <View style={styles.rowLeft}>
+                <View style={styles.iconWrap}>
+                  <RefreshCw size={18} color={COLORS.primary} />
+                </View>
+                <View>
+                  <Text style={styles.rowLabel}>{t("calendar.syncNow")}</Text>
+                  {lastSynced && (
+                    <Text style={styles.rowSubLabel}>
+                      {t("calendar.lastSynced", { time: lastSynced })}
+                    </Text>
+                  )}
+                </View>
+              </View>
+            </TouchableOpacity>
           </>
         )}
       </View>

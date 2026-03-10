@@ -20,6 +20,7 @@ import { useUserStore } from "@/store/user";
 import { usePlantsStore } from "@/store/plants";
 import { useNotifications } from "@/hooks/useNotifications";
 import { scheduleAllReminders } from "@/lib/notifications";
+import { syncPlantEvents } from "@/lib/calendarSync";
 import { COLORS } from "@/constants";
 import type { Profile } from "@/types";
 import type { Session } from "@supabase/supabase-js";
@@ -232,19 +233,24 @@ export default function RootLayout() {
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Clear badge count whenever the app comes back to the foreground
+  // Clear badge + auto-sync calendar whenever the app comes back to the foreground
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (state) => {
       if (state === "active") {
-        Notifications.setBadgeCountAsync(0).catch(() => {
-          // Non-fatal — badge clearing is best-effort
+        Notifications.setBadgeCountAsync(0).catch(() => {});
+
+        // Auto-sync calendar if the user has it enabled
+        AsyncStorage.getItem("calendarSyncEnabled").then((val) => {
+          if (val === "true" && plants.length > 0) {
+            syncPlantEvents(plants).catch(() => {});
+          }
         });
       }
     });
     return () => {
       try { subscription?.remove(); } catch {}
     };
-  }, []);
+  }, [plants]);
 
   if (!fontsLoaded || !authReady) {
     return (

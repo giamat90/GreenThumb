@@ -35,7 +35,9 @@
         "android.permission.POST_NOTIFICATIONS",
         "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.VIBRATE",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_CALENDAR",
+        "android.permission.WRITE_CALENDAR"
       ]
     },
     "web": {
@@ -64,7 +66,14 @@
           "photosPermission": "GreenThumb needs photo access to identify plants from your gallery."
         }
       ],
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "GreenThumb needs calendar access to sync your plant care schedule.",
+          "remindersPermission": "GreenThumb needs reminders access to create care event alarms."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
