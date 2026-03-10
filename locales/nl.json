@@ -590,5 +590,28 @@
     "viewMyProfile": "Mijn openbaar profiel bekijken",
     "myPostsCount": "{{count}} berichten gedeeld",
     "shareAPost": "Een bericht delen"
+  },
+  "seasonal": {
+    "seasonalTips": "Seizoenstips",
+    "seasonalTipsDesc": "AI-gestuurde verzorgingstips voor het seizoen",
+    "seasonalTipsTitle": "Seizoensgebonden Verzorgingstips",
+    "seasonalTipsMonthly": "{{season}} — {{month}}",
+    "viewAllTips": "Alle tips bekijken →",
+    "tipForPlant": "Tips voor {{name}}",
+    "seasonalTipsLoading": "Seizoenstips laden...",
+    "seasonalTipsEmpty": "Nog geen tips. Tik op vernieuwen om te laden.",
+    "refreshTips": "Tips Vernieuwen",
+    "lastUpdated": "Laatste update: {{time}}",
+    "spring": "Lente",
+    "summer": "Zomer",
+    "autumn": "Herfst",
+    "winter": "Winter",
+    "seasonalNotificationTitle": "🌱 Maandelijkse Plantenverzorgingstips",
+    "seasonalNotificationBody": "Jouw verzorgingstips voor {{month}} zijn klaar!",
+    "tipUrgent": "Dringend",
+    "tipInfo": "Info",
+    "tipWarning": "Waarschuwing",
+    "generalTipsFor": "Algemene Tips voor {{location}}",
+    "yourPlantsMonth": "Jouw Planten Deze Maand"
   }
 }

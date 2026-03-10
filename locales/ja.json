@@ -590,5 +590,28 @@
     "viewMyProfile": "公開プロフィールを見る",
     "myPostsCount": "{{count}}件の投稿",
     "shareAPost": "投稿をシェア"
+  },
+  "seasonal": {
+    "seasonalTips": "季節のヒント",
+    "seasonalTipsDesc": "AIによる季節の植物ケアアドバイス",
+    "seasonalTipsTitle": "季節のケアヒント",
+    "seasonalTipsMonthly": "{{season}} — {{month}}",
+    "viewAllTips": "すべてのヒントを見る →",
+    "tipForPlant": "{{name}}のヒント",
+    "seasonalTipsLoading": "季節のヒントを読み込み中...",
+    "seasonalTipsEmpty": "まだヒントがありません。更新をタップして読み込んでください。",
+    "refreshTips": "ヒントを更新",
+    "lastUpdated": "最終更新: {{time}}",
+    "spring": "春",
+    "summer": "夏",
+    "autumn": "秋",
+    "winter": "冬",
+    "seasonalNotificationTitle": "🌱 毎月の植物ケアヒント",
+    "seasonalNotificationBody": "{{month}}のケアヒントが準備できました！",
+    "tipUrgent": "緊急",
+    "tipInfo": "情報",
+    "tipWarning": "注意",
+    "generalTipsFor": "{{location}}の一般的なヒント",
+    "yourPlantsMonth": "今月のあなたの植物"
   }
 }

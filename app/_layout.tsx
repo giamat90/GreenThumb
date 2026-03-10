@@ -277,6 +277,7 @@ export default function RootLayout() {
       <Stack.Screen name="growth/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="pruning/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="paywall" options={{ headerShown: false }} />
+      <Stack.Screen name="seasonal-tips" options={{ headerShown: false }} />
       <Stack.Screen name="community/new-post" options={{ headerShown: false }} />
       <Stack.Screen name="community/post/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="community/profile/[id]" options={{ headerShown: false }} />

@@ -590,5 +590,28 @@
     "viewMyProfile": "查看我的公开资料",
     "myPostsCount": "已分享 {{count}} 条帖子",
     "shareAPost": "分享帖子"
+  },
+  "seasonal": {
+    "seasonalTips": "季节建议",
+    "seasonalTipsDesc": "AI驱动的季节性护理建议",
+    "seasonalTipsTitle": "季节护理建议",
+    "seasonalTipsMonthly": "{{season}} — {{month}}",
+    "viewAllTips": "查看所有建议 →",
+    "tipForPlant": "{{name}}的建议",
+    "seasonalTipsLoading": "正在加载季节建议...",
+    "seasonalTipsEmpty": "暂无建议。点击刷新加载。",
+    "refreshTips": "刷新建议",
+    "lastUpdated": "最后更新：{{time}}",
+    "spring": "春季",
+    "summer": "夏季",
+    "autumn": "秋季",
+    "winter": "冬季",
+    "seasonalNotificationTitle": "🌱 每月植物护理建议",
+    "seasonalNotificationBody": "您的{{month}}护理建议已准备好！",
+    "tipUrgent": "紧急",
+    "tipInfo": "信息",
+    "tipWarning": "警告",
+    "generalTipsFor": "{{location}}的一般建议",
+    "yourPlantsMonth": "本月您的植物"
   }
 }

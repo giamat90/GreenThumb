@@ -590,5 +590,28 @@
     "viewMyProfile": "Zobacz mój publiczny profil",
     "myPostsCount": "{{count}} udostępnionych postów",
     "shareAPost": "Udostępnij post"
+  },
+  "seasonal": {
+    "seasonalTips": "Sezonowe Porady",
+    "seasonalTipsDesc": "Porady pielęgnacyjne oparte na AI",
+    "seasonalTipsTitle": "Sezonowe Porady Pielęgnacyjne",
+    "seasonalTipsMonthly": "{{season}} — {{month}}",
+    "viewAllTips": "Zobacz wszystkie porady →",
+    "tipForPlant": "Porady dla {{name}}",
+    "seasonalTipsLoading": "Ładowanie sezonowych porad...",
+    "seasonalTipsEmpty": "Brak porad. Dotknij odśwież, aby załadować.",
+    "refreshTips": "Odśwież Porady",
+    "lastUpdated": "Ostatnia aktualizacja: {{time}}",
+    "spring": "Wiosna",
+    "summer": "Lato",
+    "autumn": "Jesień",
+    "winter": "Zima",
+    "seasonalNotificationTitle": "🌱 Miesięczne Porady dla Roślin",
+    "seasonalNotificationBody": "Twoje porady pielęgnacyjne na {{month}} są gotowe!",
+    "tipUrgent": "Pilne",
+    "tipInfo": "Info",
+    "tipWarning": "Ostrzeżenie",
+    "generalTipsFor": "Ogólne Porady dla {{location}}",
+    "yourPlantsMonth": "Twoje Rośliny W Tym Miesiącu"
   }
 }

@@ -273,6 +273,41 @@ export async function scheduleFollowUpDiagnosisNotification(
 }
 
 /**
+ * Schedules a notification on the 1st of next month reminding the user to
+ * check their seasonal tips. Safe to call every month — cancels any prior
+ * seasonal tips notification before scheduling a new one.
+ */
+export async function scheduleSeasonalTipsNotification(
+  title: string,
+  body: string
+): Promise<void> {
+  const SEASONAL_NOTIF_KEY = "seasonal_tips_notification_id";
+  try {
+    // Cancel previous seasonal tips notification if any
+    const prev = await AsyncStorage.getItem(SEASONAL_NOTIF_KEY);
+    if (prev) {
+      await Notifications.cancelScheduledNotificationAsync(prev).catch(() => {});
+    }
+
+    // Trigger on 1st of next month at 9 AM
+    const now = new Date();
+    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1, 9, 0, 0, 0);
+    if (nextMonth <= now) return;
+
+    const id = await Notifications.scheduleNotificationAsync({
+      content: { title, body, sound: "default", data: { type: "seasonal_tips" } },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: nextMonth,
+      },
+    });
+    await AsyncStorage.setItem(SEASONAL_NOTIF_KEY, id);
+  } catch (err) {
+    console.warn("notifications: scheduleSeasonalTipsNotification failed", err);
+  }
+}
+
+/**
  * Re-schedules the notification for a single plant after it has been watered.
  * Cancels the old notification and creates a new one for the updated next_watering.
  *

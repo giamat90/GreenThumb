@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { Droplets, Leaf, User } from "lucide-react-native";
+import { Droplets, Leaf, RefreshCw, User } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
 import { COLORS } from "@/constants";
@@ -24,8 +24,16 @@ import { syncAllPlantSchedules } from "@/lib/syncWateringSchedules";
 import { calculateFertilizerInterval } from "@/lib/fertilizer";
 import { useProGate } from "@/hooks/useProGate";
 import { UpgradePrompt } from "@/components/ui/UpgradePrompt";
+import {
+  getCachedTips,
+  fetchSeasonalTips,
+  getCurrentSeason,
+  seasonEmoji,
+} from "@/lib/seasonalTips";
+import { scheduleSeasonalTipsNotification } from "@/lib/notifications";
 import type { PlantWithStatus } from "@/hooks/usePlants";
 import type { Plant } from "@/types";
+import type { SeasonalTips } from "@/lib/seasonalTips";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -234,6 +242,108 @@ function FertilizerTaskCard({
   );
 }
 
+// ─── Seasonal Tips Card ───────────────────────────────────────────────────────
+
+function SeasonalTipsCard({
+  userId,
+  location,
+  plants,
+  onViewAll,
+}: {
+  userId: string;
+  location: string;
+  plants: Plant[];
+  onViewAll: (tips: SeasonalTips) => void;
+}) {
+  const { t } = useTranslation();
+  const [tips, setTips] = React.useState<SeasonalTips | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [refreshing, setRefreshing] = React.useState(false);
+
+  const month = new Date().getMonth() + 1;
+  const season = getCurrentSeason(month, true); // northern default; edge fn handles hemisphere
+
+  const load = React.useCallback(async (forceRefresh = false) => {
+    if (!location) { setLoading(false); return; }
+    try {
+      if (!forceRefresh) {
+        const cached = await getCachedTips(userId);
+        if (cached) { setTips(cached); setLoading(false); return; }
+      }
+      const fresh = await fetchSeasonalTips(userId, plants, location, month);
+      setTips(fresh);
+      // Schedule next month's notification
+      scheduleSeasonalTipsNotification(
+        t("seasonal.seasonalNotificationTitle"),
+        t("seasonal.seasonalNotificationBody", { month: fresh.month_name })
+      );
+    } catch {
+      // Silently fail — tips are non-critical
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [userId, location, month, plants, t]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  React.useEffect(() => { load(false); }, [load]);
+
+  const handleRefresh = React.useCallback(() => {
+    setRefreshing(true);
+    load(true);
+  }, [load]);
+
+  if (!location) return null;
+
+  return (
+    <View style={styles.section}>
+      <View style={styles.tipsCardOuter}>
+        {/* Header row */}
+        <View style={styles.tipsCardHeader}>
+          <Text style={styles.tipsCardTitle}>
+            {seasonEmoji(tips?.season ?? season)} {t("seasonal.seasonalTips")}
+            {tips ? ` — ${tips.month_name}` : ""}
+          </Text>
+          <TouchableOpacity
+            onPress={handleRefresh}
+            disabled={loading || refreshing}
+            accessibilityLabel={t("seasonal.refreshTips")}
+            accessibilityRole="button"
+          >
+            {(loading || refreshing)
+              ? <ActivityIndicator size="small" color={COLORS.primary} />
+              : <RefreshCw size={16} color={COLORS.primary} />
+            }
+          </TouchableOpacity>
+        </View>
+
+        {/* Body */}
+        {loading && !tips ? (
+          <Text style={styles.tipsLoadingText}>{t("seasonal.seasonalTipsLoading")}</Text>
+        ) : tips && tips.general_tips.length > 0 ? (
+          <>
+            {tips.general_tips.slice(0, 2).map((tip, i) => (
+              <View key={i} style={styles.tipRow}>
+                <Text style={styles.tipBullet}>🌿</Text>
+                <Text style={styles.tipText}>{tip}</Text>
+              </View>
+            ))}
+            {(tips.general_tips.length > 2 || tips.plant_tips.length > 0) && (
+              <TouchableOpacity
+                onPress={() => onViewAll(tips)}
+                accessibilityRole="button"
+              >
+                <Text style={styles.tipsViewAll}>{t("seasonal.viewAllTips")}</Text>
+              </TouchableOpacity>
+            )}
+          </>
+        ) : (
+          <Text style={styles.tipsLoadingText}>{t("seasonal.seasonalTipsEmpty")}</Text>
+        )}
+      </View>
+    </View>
+  );
+}
+
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function HomeScreen() {
@@ -350,6 +460,21 @@ export default function HomeScreen() {
         error={weatherError}
         isPro={isPro}
       />
+
+      {/* ── Seasonal tips card ─────────────────────────────────────────────── */}
+      {profile && (
+        <SeasonalTipsCard
+          userId={profile.id}
+          location={profile.city ?? weather?.city ?? ""}
+          plants={plants}
+          onViewAll={(tips) =>
+            router.push({
+              pathname: "/seasonal-tips",
+              params: { tipsJson: JSON.stringify(tips) },
+            })
+          }
+        />
+      )}
 
       {/* ── Today's tasks ──────────────────────────────────────────────────── */}
       <View style={styles.section}>
@@ -688,5 +813,52 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: COLORS.primary,
+  },
+
+  // ── Seasonal tips card ──────────────────────────────────────────────────────
+  tipsCardOuter: {
+    backgroundColor: COLORS.lightgreen,
+    borderRadius: 20,
+    padding: 16,
+  },
+  tipsCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  tipsCardTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: COLORS.primary,
+    flex: 1,
+    marginRight: 8,
+  },
+  tipRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    marginBottom: 8,
+  },
+  tipBullet: {
+    fontSize: 14,
+    marginTop: 1,
+  },
+  tipText: {
+    fontSize: 13,
+    color: COLORS.textPrimary,
+    flex: 1,
+    lineHeight: 19,
+  },
+  tipsViewAll: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: COLORS.primary,
+    marginTop: 4,
+  },
+  tipsLoadingText: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    fontStyle: "italic",
   },
 });
