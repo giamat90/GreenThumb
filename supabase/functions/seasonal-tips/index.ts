@@ -106,9 +106,11 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
 
     const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
+    console.log("[seasonal-tips] API key present:", !!apiKey);
     if (!apiKey) {
+      console.error("[seasonal-tips] ANTHROPIC_API_KEY secret is not set");
       return new Response(
-        JSON.stringify({ error: "Seasonal tips service is not configured" }),
+        JSON.stringify({ error: "Seasonal tips service is not configured — ANTHROPIC_API_KEY missing" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -178,8 +180,8 @@ Rules:
 
     if (!response.ok) {
       const err = await response.text();
-      console.error("Anthropic API error:", err);
-      return new Response(JSON.stringify({ error: "AI service error" }), {
+      console.error("[seasonal-tips] Anthropic API error status:", response.status, "body:", err);
+      return new Response(JSON.stringify({ error: "AI service error", detail: err.slice(0, 300) }), {
         status: 502,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -205,8 +207,9 @@ Rules:
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    console.error("seasonal-tips error:", err);
-    return new Response(JSON.stringify({ error: "Internal server error" }), {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[seasonal-tips] unhandled error:", msg);
+    return new Response(JSON.stringify({ error: "Internal server error", detail: msg }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

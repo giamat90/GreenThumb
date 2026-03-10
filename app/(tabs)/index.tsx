@@ -261,29 +261,41 @@ function SeasonalTipsCard({
   const [refreshing, setRefreshing] = React.useState(false);
 
   const month = new Date().getMonth() + 1;
-  const season = getCurrentSeason(month, true); // northern default; edge fn handles hemisphere
+  const season = getCurrentSeason(month, true);
+
+  // Use a ref for plants so `load` doesn't recreate every render (plants array
+  // is a new reference on each render which would cause an infinite effect loop)
+  const plantsRef = React.useRef(plants);
+  React.useEffect(() => { plantsRef.current = plants; }, [plants]);
 
   const load = React.useCallback(async (forceRefresh = false) => {
-    if (!location) { setLoading(false); return; }
+    console.log("[SeasonalTips] load called — forceRefresh:", forceRefresh, "location:", location, "userId:", userId);
+    if (!location) {
+      console.log("[SeasonalTips] no location, aborting");
+      setLoading(false);
+      return;
+    }
     try {
       if (!forceRefresh) {
         const cached = await getCachedTips(userId);
+        console.log("[SeasonalTips] cache result:", cached ? "HIT" : "MISS");
         if (cached) { setTips(cached); setLoading(false); return; }
       }
-      const fresh = await fetchSeasonalTips(userId, plants, location, month);
+      console.log("[SeasonalTips] fetching fresh tips...", "plants:", plantsRef.current.length);
+      const fresh = await fetchSeasonalTips(userId, plantsRef.current, location, month);
+      console.log("[SeasonalTips] fresh tips received:", fresh.season, fresh.general_tips?.length, "general tips");
       setTips(fresh);
-      // Schedule next month's notification
       scheduleSeasonalTipsNotification(
         t("seasonal.seasonalNotificationTitle"),
         t("seasonal.seasonalNotificationBody", { month: fresh.month_name })
       );
-    } catch {
-      // Silently fail — tips are non-critical
+    } catch (err) {
+      console.error("[SeasonalTips] load error:", err);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [userId, location, month, plants, t]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [userId, location, month, t]); // plants intentionally excluded — using plantsRef
 
   React.useEffect(() => { load(false); }, [load]);
 

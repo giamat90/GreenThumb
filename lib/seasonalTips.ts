@@ -113,6 +113,8 @@ export async function fetchSeasonalTips(
 ): Promise<SeasonalTips> {
   const lang = deviceLanguage();
 
+  console.log("[SeasonalTips] fetchSeasonalTips called — location:", location, "month:", month, "plants:", plants.length, "lang:", lang);
+
   const plantPayload = plants.map((p) => ({
     name: p.name,
     species: p.species,
@@ -122,19 +124,37 @@ export async function fetchSeasonalTips(
     last_watered_at: p.last_watered_at,
   }));
 
-  const { data: sessionData } = await supabase.auth.getSession();
-  const token = sessionData.session?.access_token;
+  const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error("Supabase configuration missing");
+  }
 
-  const { data: fnData, error } = await supabase.functions.invoke("seasonal-tips", {
-    body: { plants: plantPayload, location, month, language: lang },
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  const requestBody = { plants: plantPayload, location, month, language: lang };
+  console.log("[SeasonalTips] calling edge function, body:", JSON.stringify(requestBody).slice(0, 200));
+
+  const response = await fetch(`${supabaseUrl}/functions/v1/seasonal-tips`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "apikey": supabaseKey,
+      "Authorization": `Bearer ${supabaseKey}`,
+    },
+    body: JSON.stringify(requestBody),
   });
 
-  if (error || !fnData) {
-    throw new Error(error?.message ?? "Failed to fetch seasonal tips");
+  console.log("[SeasonalTips] response status:", response.status);
+
+  if (!response.ok) {
+    const errText = await response.text();
+    console.error("[SeasonalTips] edge function error:", response.status, errText);
+    throw new Error(`Edge function returned ${response.status}: ${errText.slice(0, 200)}`);
   }
+
+  const fnData = await response.json();
 
   const tips: SeasonalTips = { ...fnData, location };
   await saveTipsToCache(userId, tips, month, new Date().getFullYear());
+  console.log("[SeasonalTips] tips saved to cache, season:", tips.season, "general_tips:", tips.general_tips?.length);
   return tips;
 }
