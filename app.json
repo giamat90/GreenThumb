@@ -36,8 +36,8 @@
         "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.VIBRATE",
         "android.permission.RECORD_AUDIO",
-        "android.permission.READ_CALENDAR",
-        "android.permission.WRITE_CALENDAR"
+        "READ_CALENDAR",
+        "WRITE_CALENDAR"
       ]
     },
     "web": {
@@ -70,8 +70,8 @@
       [
         "expo-calendar",
         {
-          "calendarPermission": "GreenThumb needs calendar access to sync your plant care schedule.",
-          "remindersPermission": "GreenThumb needs reminders access to create care event alarms."
+          "calendarPermission": "GreenThumb needs calendar access to sync your plant care tasks.",
+          "remindersPermission": "GreenThumb needs reminders access to sync your plant care tasks."
         }
       ]
     ],
