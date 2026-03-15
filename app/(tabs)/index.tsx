@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { Droplets, Leaf, RefreshCw, User } from "lucide-react-native";
+import { Droplets, Leaf, User } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
 import { COLORS } from "@/constants";
@@ -259,7 +259,6 @@ function SeasonalTipsCard({
   const { t } = useTranslation();
   const [tips, setTips] = React.useState<SeasonalTips | null>(null);
   const [loading, setLoading] = React.useState(true);
-  const [refreshing, setRefreshing] = React.useState(false);
 
   const month = new Date().getMonth() + 1;
   const season = getCurrentSeason(month, true);
@@ -269,19 +268,19 @@ function SeasonalTipsCard({
   const plantsRef = React.useRef(plants);
   React.useEffect(() => { plantsRef.current = plants; }, [plants]);
 
-  const load = React.useCallback(async (forceRefresh = false) => {
-    console.log("[SeasonalTips] load called — forceRefresh:", forceRefresh, "location:", location, "userId:", userId);
+  const load = React.useCallback(async () => {
+    console.log("[SeasonalTips] load called — location:", location, "userId:", userId);
     if (!location) {
       console.log("[SeasonalTips] no location, aborting");
       setLoading(false);
       return;
     }
     try {
-      if (!forceRefresh) {
-        const cached = await getCachedTips(userId);
-        console.log("[SeasonalTips] cache result:", cached ? "HIT" : "MISS");
-        if (cached) { setTips(cached); setLoading(false); return; }
-      }
+      // Pass current plants so getCachedTips can detect plant set changes
+      const cached = await getCachedTips(userId, plantsRef.current);
+      console.log("[SeasonalTips] cache result:", cached ? "HIT" : "MISS");
+      if (cached) { setTips(cached); setLoading(false); return; }
+
       console.log("[SeasonalTips] fetching fresh tips...", "plants:", plantsRef.current.length);
       const fresh = await fetchSeasonalTips(userId, plantsRef.current, location, month);
       console.log("[SeasonalTips] fresh tips received:", fresh.season, fresh.general_tips?.length, "general tips");
@@ -294,16 +293,10 @@ function SeasonalTipsCard({
       console.error("[SeasonalTips] load error:", err);
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   }, [userId, location, month, t]); // plants intentionally excluded — using plantsRef
 
-  React.useEffect(() => { load(false); }, [load]);
-
-  const handleRefresh = React.useCallback(() => {
-    setRefreshing(true);
-    load(true);
-  }, [load]);
+  React.useEffect(() => { load(); }, [load]);
 
   if (!location) return null;
 
@@ -316,17 +309,9 @@ function SeasonalTipsCard({
             {seasonEmoji(tips?.season ?? season)} {t("seasonal.seasonalTips")}
             {tips ? ` — ${tips.month_name}` : ""}
           </Text>
-          <TouchableOpacity
-            onPress={handleRefresh}
-            disabled={loading || refreshing}
-            accessibilityLabel={t("seasonal.refreshTips")}
-            accessibilityRole="button"
-          >
-            {(loading || refreshing)
-              ? <ActivityIndicator size="small" color={COLORS.primary} />
-              : <RefreshCw size={16} color={COLORS.primary} />
-            }
-          </TouchableOpacity>
+          {loading && !tips && (
+            <ActivityIndicator size="small" color={COLORS.primary} />
+          )}
         </View>
 
         {/* Body */}

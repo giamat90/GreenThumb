@@ -43,6 +43,7 @@ import { deviceLanguage } from "@/lib/i18n";
 import { usePlantsStore } from "@/store/plants";
 import { useUserStore } from "@/store/user";
 import { supabase } from "@/lib/supabase";
+import { invalidateSeasonalTipsCache } from "@/lib/seasonalTips";
 import * as FileSystem from "expo-file-system/legacy";
 import type { PlantLocation, PotSize, Plant } from "@/types";
 
@@ -430,6 +431,11 @@ export default function IdentifyScreen() {
       }
 
       addPlant(savedPlant as Plant);
+      // Invalidate seasonal tips cache so the next home screen load
+      // re-fetches tips tailored to the updated plant set.
+      if (profile?.id) {
+        invalidateSeasonalTipsCache(profile.id).catch(console.warn);
+      }
       closeAddModal();
 
       Alert.alert(

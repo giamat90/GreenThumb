@@ -135,6 +135,17 @@ GreenThumb uses **i18next + react-i18next** with `expo-localization` for device 
 - Technical botanical terms used as both API values and UI labels (e.g. "dormant", "growing") — acceptable to leave in English.
 - Class component hardcoded strings (`ErrorBoundary`).
 
+## Seasonal Tips Rules
+
+Seasonal Tips are **free for all users** — no Pro gate.
+
+They refresh automatically when:
+1. A new month begins (cache key is `user_id + month + year`)
+2. A plant is added (`invalidateSeasonalTipsCache` called in `identify.tsx`)
+3. A plant is removed (`invalidateSeasonalTipsCache` called in `plant/[id].tsx`)
+
+**No manual refresh button.** `getCachedTips(userId, plants)` compares cached `plant_ids` against the current plant set; a mismatch returns null and triggers a fresh fetch. Cache stored in `seasonal_tips_cache` table with `plant_ids jsonb` column (migration 014).
+
 ## Layout Rules
 
 **Never use hardcoded pixel values for layout spacing.** Always use dynamic measurement (`onLayout`), relative values, or safe area insets. This applies especially to sticky bottom bars overlapping scroll content — measure the bar's rendered height via `onLayout` and use that value for the ScrollView's `paddingBottom`.

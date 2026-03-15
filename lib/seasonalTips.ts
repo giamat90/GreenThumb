@@ -49,7 +49,17 @@ export function seasonEmoji(season: SeasonalTips["season"]): string {
 
 // ─── Cache ────────────────────────────────────────────────────────────────────
 
-export async function getCachedTips(userId: string): Promise<SeasonalTips | null> {
+/**
+ * Returns cached tips for the current month/year, or null if:
+ * - No cache row exists
+ * - The cached month/year doesn't match today (new month)
+ * - currentPlants is provided and the cached plant_ids differ from current
+ *   plant IDs (plant added or removed since last fetch)
+ */
+export async function getCachedTips(
+  userId: string,
+  currentPlants?: Plant[]
+): Promise<SeasonalTips | null> {
   try {
     const now = new Date();
     const month = now.getMonth() + 1;
@@ -64,6 +74,17 @@ export async function getCachedTips(userId: string): Promise<SeasonalTips | null
       .single();
 
     if (error || !data) return null;
+
+    // Invalidate if the plant set has changed since the cache was written
+    if (currentPlants !== undefined) {
+      const cachedIds: string[] = Array.isArray(data.plant_ids) ? data.plant_ids : [];
+      const currentIds = currentPlants.map((p) => p.id).sort();
+      const sortedCached = [...cachedIds].sort();
+      if (JSON.stringify(currentIds) !== JSON.stringify(sortedCached)) {
+        console.log("[SeasonalTips] plant set changed — cache invalidated");
+        return null;
+      }
+    }
 
     return {
       season: data.season as SeasonalTips["season"],
@@ -82,7 +103,8 @@ async function saveTipsToCache(
   userId: string,
   tips: SeasonalTips,
   month: number,
-  year: number
+  year: number,
+  plantIds: string[]
 ): Promise<void> {
   try {
     await supabase.from("seasonal_tips_cache").upsert(
@@ -95,12 +117,35 @@ async function saveTipsToCache(
         general_tips: tips.general_tips,
         plant_tips: tips.plant_tips,
         location: tips.location,
+        plant_ids: plantIds,
         created_at: new Date().toISOString(),
       },
       { onConflict: "user_id,month,year" }
     );
   } catch (err) {
     console.warn("seasonalTips: failed to save cache", err);
+  }
+}
+
+/**
+ * Deletes the current month's cache row for the user.
+ * Called after a plant is added or removed so the next app open
+ * automatically re-fetches tips for the updated plant set.
+ */
+export async function invalidateSeasonalTipsCache(userId: string): Promise<void> {
+  const now = new Date();
+  const month = now.getMonth() + 1;
+  const year = now.getFullYear();
+  try {
+    await supabase
+      .from("seasonal_tips_cache")
+      .delete()
+      .eq("user_id", userId)
+      .eq("month", month)
+      .eq("year", year);
+    console.log("[SeasonalTips] cache invalidated for user", userId);
+  } catch (err) {
+    console.warn("seasonalTips: failed to invalidate cache", err);
   }
 }
 
@@ -159,7 +204,8 @@ export async function fetchSeasonalTips(
   }, 2);
 
   const tips: SeasonalTips = { ...fnData, location };
-  await saveTipsToCache(userId, tips, month, new Date().getFullYear());
+  const plantIds = plants.map((p) => p.id);
+  await saveTipsToCache(userId, tips, month, new Date().getFullYear(), plantIds);
   console.log("[SeasonalTips] tips saved to cache, season:", tips.season, "general_tips:", tips.general_tips?.length);
   return tips;
 }

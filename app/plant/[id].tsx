@@ -38,6 +38,7 @@ import { calculateFertilizerInterval } from "@/lib/fertilizer";
 import { usePlantsStore } from "@/store/plants";
 import { useUserStore } from "@/store/user";
 import { useProGate } from "@/hooks/useProGate";
+import { invalidateSeasonalTipsCache } from "@/lib/seasonalTips";
 import type { WateringEvent, Diagnosis, PlacementAnalysis, FertilizerLog, RepottingAnalysis, GrowthLog, PruningAnalysis } from "@/types";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -403,6 +404,8 @@ function PlantDetailScreen() {
 
       // 4. Remove from Zustand store
       removePlant(plant.id);
+      // Invalidate seasonal tips cache — plant set has changed
+      invalidateSeasonalTipsCache(profile.id).catch(console.warn);
 
       // 5. Navigate back, then show confirmation
       navigation.goBack();
