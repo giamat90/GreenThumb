@@ -6,10 +6,22 @@ import Purchases, {
   type CustomerInfo,
 } from "react-native-purchases";
 
+import { supabase } from "@/lib/supabase";
 import type { Subscription } from "@/types";
 
 // The entitlement ID must match exactly what's created in the RevenueCat dashboard.
 const PRO_ENTITLEMENT_ID = "pro";
+
+// Beta testers — add emails here to grant Pro access
+// Remove this list before production release v2.0
+export const BETA_PRO_EMAILS = [
+  "giamat90@gmail.com",
+  "giacominomatzeu@gmail.com",
+  "alessiamagnani@hotmail.it",
+];
+
+export const isBetaEmail = (email: string | null | undefined): boolean =>
+  !!email && BETA_PRO_EMAILS.includes(email);
 
 // ─── Initialisation ───────────────────────────────────────────────────────────
 
@@ -123,6 +135,9 @@ export async function restorePurchases(): Promise<boolean> {
  * Always returns 'free' in production until a real key is configured.
  */
 export async function checkSubscriptionStatus(): Promise<Subscription> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (isBetaEmail(user?.email)) return "pro";
+
   if (!__DEV__) return "free";
 
   try {

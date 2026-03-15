@@ -1,7 +1,10 @@
+import { useEffect, useState } from "react";
 import { useRouter } from "expo-router";
 import { useUserStore } from "@/store/user";
 import { PLANT_LIMITS } from "@/constants";
 import { usePlantsStore } from "@/store/plants";
+import { supabase } from "@/lib/supabase";
+import { isBetaEmail } from "@/lib/revenuecat";
 
 export type ProFeature =
   | "unlimited_plants"
@@ -30,8 +33,15 @@ export function useProGate(): ProGateResult {
   const subscription = useUserStore((s) => s.subscription);
   const plants = usePlantsStore((s) => s.plants);
   const router = useRouter();
+  const [isBeta, setIsBeta] = useState(false);
 
-  const isPro = subscription === "pro";
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setIsBeta(isBetaEmail(user?.email));
+    });
+  }, []);
+
+  const isPro = subscription === "pro" || isBeta;
 
   function showPaywall(): void {
     router.push("/paywall");
