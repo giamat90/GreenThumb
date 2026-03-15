@@ -613,5 +613,23 @@
     "tipWarning": "注意",
     "generalTipsFor": "{{location}}の一般的なヒント",
     "yourPlantsMonth": "今月のあなたの植物"
+  },
+  "errors": {
+    "noInternet": "インターネット接続なし",
+    "noInternetDesc": "接続を確認して、もう一度お試しください。",
+    "aiUnavailable": "AIが利用できません",
+    "aiUnavailableDesc": "AIサービスは一時的に利用できません。しばらくしてから再試行してください。",
+    "photoUploadFailed": "写真のアップロードに失敗しました",
+    "photoUploadFailedDesc": "写真をアップロードできませんでした。接続を確認して、もう一度お試しください。",
+    "sessionExpired": "セッションが期限切れです",
+    "sessionExpiredDesc": "セッションが期限切れになりました。続けるには再度サインインしてください。",
+    "databaseError": "データベースエラー",
+    "databaseErrorDesc": "データを保存できませんでした。もう一度お試しください。",
+    "tryAgain": "再試行",
+    "goBack": "戻る",
+    "signInAgain": "再度サインイン",
+    "checkConnection": "接続を確認",
+    "somethingWentWrong": "問題が発生しました",
+    "somethingWentWrongDesc": "予期しないエラーが発生しました。もう一度お試しください。"
   }
 }

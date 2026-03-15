@@ -613,5 +613,23 @@
     "tipWarning": "Warning",
     "generalTipsFor": "General Tips for {{location}}",
     "yourPlantsMonth": "Your Plants This Month"
+  },
+  "errors": {
+    "noInternet": "No Internet Connection",
+    "noInternetDesc": "Please check your connection and try again.",
+    "aiUnavailable": "AI Unavailable",
+    "aiUnavailableDesc": "The AI service is temporarily unavailable. Please try again in a moment.",
+    "photoUploadFailed": "Photo Upload Failed",
+    "photoUploadFailedDesc": "Could not upload your photo. Please check your connection and try again.",
+    "sessionExpired": "Session Expired",
+    "sessionExpiredDesc": "Your session has expired. Please sign in again to continue.",
+    "databaseError": "Database Error",
+    "databaseErrorDesc": "Could not save your data. Please try again.",
+    "tryAgain": "Try Again",
+    "goBack": "Go Back",
+    "signInAgain": "Sign In Again",
+    "checkConnection": "Check Connection",
+    "somethingWentWrong": "Something Went Wrong",
+    "somethingWentWrongDesc": "An unexpected error occurred. Please try again."
   }
 }

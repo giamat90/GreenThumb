@@ -613,5 +613,23 @@
     "tipWarning": "Attention",
     "generalTipsFor": "Conseils Généraux pour {{location}}",
     "yourPlantsMonth": "Vos Plantes Ce Mois"
+  },
+  "errors": {
+    "noInternet": "Pas de connexion Internet",
+    "noInternetDesc": "Vérifiez votre connexion et réessayez.",
+    "aiUnavailable": "IA indisponible",
+    "aiUnavailableDesc": "Le service IA est temporairement indisponible. Veuillez réessayer dans un instant.",
+    "photoUploadFailed": "Échec du téléchargement de la photo",
+    "photoUploadFailedDesc": "Impossible de télécharger votre photo. Vérifiez votre connexion et réessayez.",
+    "sessionExpired": "Session expirée",
+    "sessionExpiredDesc": "Votre session a expiré. Veuillez vous reconnecter pour continuer.",
+    "databaseError": "Erreur de base de données",
+    "databaseErrorDesc": "Impossible d'enregistrer vos données. Veuillez réessayer.",
+    "tryAgain": "Réessayer",
+    "goBack": "Retour",
+    "signInAgain": "Se reconnecter",
+    "checkConnection": "Vérifier la connexion",
+    "somethingWentWrong": "Une erreur est survenue",
+    "somethingWentWrongDesc": "Une erreur inattendue s'est produite. Veuillez réessayer."
   }
 }

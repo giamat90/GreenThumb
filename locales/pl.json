@@ -613,5 +613,23 @@
     "tipWarning": "Ostrzeżenie",
     "generalTipsFor": "Ogólne Porady dla {{location}}",
     "yourPlantsMonth": "Twoje Rośliny W Tym Miesiącu"
+  },
+  "errors": {
+    "noInternet": "Brak połączenia z Internetem",
+    "noInternetDesc": "Sprawdź połączenie i spróbuj ponownie.",
+    "aiUnavailable": "AI niedostępna",
+    "aiUnavailableDesc": "Usługa AI jest tymczasowo niedostępna. Spróbuj ponownie za chwilę.",
+    "photoUploadFailed": "Przesyłanie zdjęcia nie powiodło się",
+    "photoUploadFailedDesc": "Nie można przesłać zdjęcia. Sprawdź połączenie i spróbuj ponownie.",
+    "sessionExpired": "Sesja wygasła",
+    "sessionExpiredDesc": "Twoja sesja wygasła. Zaloguj się ponownie, aby kontynuować.",
+    "databaseError": "Błąd bazy danych",
+    "databaseErrorDesc": "Nie można zapisać danych. Spróbuj ponownie.",
+    "tryAgain": "Spróbuj ponownie",
+    "goBack": "Wróć",
+    "signInAgain": "Zaloguj się ponownie",
+    "checkConnection": "Sprawdź połączenie",
+    "somethingWentWrong": "Coś poszło nie tak",
+    "somethingWentWrongDesc": "Wystąpił nieoczekiwany błąd. Spróbuj ponownie."
   }
 }

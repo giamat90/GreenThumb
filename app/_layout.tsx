@@ -1,11 +1,13 @@
 import '@/lib/i18n';
 import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, AppState, View } from "react-native";
+import { ActivityIndicator, Animated, AppState, View } from "react-native";
 import { useFonts } from "expo-font";
 import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Notifications from "expo-notifications";
+import NetInfo from "@react-native-community/netinfo";
+import { useTranslation } from "react-i18next";
 import "react-native-reanimated";
 import "../global.css";
 
@@ -18,6 +20,7 @@ import {
 } from "@/lib/revenuecat";
 import { useUserStore } from "@/store/user";
 import { usePlantsStore } from "@/store/plants";
+import { useNetworkStore } from "@/store/networkStore";
 import { useNotifications } from "@/hooks/useNotifications";
 import { scheduleAllReminders } from "@/lib/notifications";
 import { syncPlantEvents } from "@/lib/calendarSync";
@@ -41,6 +44,7 @@ export { ErrorBoundary } from "expo-router";
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  const { t } = useTranslation();
   const [fontsLoaded, fontError] = useFonts({
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
   });
@@ -50,6 +54,10 @@ export default function RootLayout() {
 
   const { setProfile, clearProfile, setSubscription } = useUserStore();
   const { plants } = usePlantsStore();
+  const { isOnline, setIsOnline } = useNetworkStore();
+  const offlineBannerAnim = useRef(new Animated.Value(-40)).current;
+  // Track whether auth was previously established so we can detect unexpected sign-outs
+  const hadSession = useRef(false);
   const segments = useSegments();
   const router = useRouter();
 
@@ -58,7 +66,7 @@ export default function RootLayout() {
   const notificationResponseListener =
     useRef<Notifications.EventSubscription | null>(null);
 
-  // Listen for auth state changes
+  // Listen for auth state changes + session expiry
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
       setSession(currentSession);
@@ -73,14 +81,35 @@ export default function RootLayout() {
     } = supabase.auth.onAuthStateChange((_event, newSession) => {
       setSession(newSession);
       if (newSession) {
+        hadSession.current = true;
         fetchProfile(newSession.user.id);
       } else {
         clearProfile();
         setOnboardingDone(null);
+        // Session ended (user signed out or token expired).
+        // The routing guard in the second useEffect will redirect to login.
+        // Individual screens surface auth errors via ErrorBanner when they
+        // receive 401 / JWT responses from the API.
+        hadSession.current = false;
       }
     });
 
     return () => subscription.unsubscribe();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Monitor network connectivity globally
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      const online = state.isConnected ?? true;
+      setIsOnline(online);
+      // Animate the offline banner in/out
+      Animated.timing(offlineBannerAnim, {
+        toValue: online ? -40 : 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    });
+    return () => unsubscribe();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Re-read the onboarding flag whenever auth state or navigation changes.
@@ -266,21 +295,44 @@ export default function RootLayout() {
   // navigator's state, causing the "Cannot read property 'stale' of undefined"
   // crash when the Android back gesture fires during the tab transition.
   return (
-    <Stack>
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="(tabs)/profile" options={{ headerShown: false }} />
-      <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-      <Stack.Screen name="plant/[id]" options={{ headerShown: false }} />
-      <Stack.Screen name="diagnosis/[id]" options={{ headerShown: false }} />
-      <Stack.Screen name="placement/[id]" options={{ headerShown: false }} />
-      <Stack.Screen name="repotting/[id]" options={{ headerShown: false }} />
-      <Stack.Screen name="growth/[id]" options={{ headerShown: false }} />
-      <Stack.Screen name="pruning/[id]" options={{ headerShown: false }} />
-      <Stack.Screen name="paywall" options={{ headerShown: false }} />
-      <Stack.Screen name="seasonal-tips" options={{ headerShown: false }} />
-      <Stack.Screen name="community/new-post" options={{ headerShown: false }} />
-      <Stack.Screen name="community/post/[id]" options={{ headerShown: false }} />
-      <Stack.Screen name="community/profile/[id]" options={{ headerShown: false }} />
-    </Stack>
+    <View style={{ flex: 1 }}>
+      <Stack>
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="(tabs)/profile" options={{ headerShown: false }} />
+        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+        <Stack.Screen name="plant/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="diagnosis/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="placement/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="repotting/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="growth/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="pruning/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="paywall" options={{ headerShown: false }} />
+        <Stack.Screen name="seasonal-tips" options={{ headerShown: false }} />
+        <Stack.Screen name="community/new-post" options={{ headerShown: false }} />
+        <Stack.Screen name="community/post/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="community/profile/[id]" options={{ headerShown: false }} />
+      </Stack>
+
+      {/* Global offline banner — slides in from the top when connectivity is lost */}
+      <Animated.View
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          backgroundColor: "#EF4444",
+          paddingVertical: 8,
+          paddingHorizontal: 16,
+          alignItems: "center",
+          transform: [{ translateY: offlineBannerAnim }],
+          zIndex: 9999,
+        }}
+        pointerEvents="none"
+      >
+        <Animated.Text style={{ color: "#fff", fontWeight: "600", fontSize: 13 }}>
+          {t("errors.noInternet")} — {t("errors.checkConnection")}
+        </Animated.Text>
+      </Animated.View>
+    </View>
   );
 }

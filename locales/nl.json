@@ -613,5 +613,23 @@
     "tipWarning": "Waarschuwing",
     "generalTipsFor": "Algemene Tips voor {{location}}",
     "yourPlantsMonth": "Jouw Planten Deze Maand"
+  },
+  "errors": {
+    "noInternet": "Geen internetverbinding",
+    "noInternetDesc": "Controleer uw verbinding en probeer het opnieuw.",
+    "aiUnavailable": "AI niet beschikbaar",
+    "aiUnavailableDesc": "De AI-service is tijdelijk niet beschikbaar. Probeer het over een moment opnieuw.",
+    "photoUploadFailed": "Foto uploaden mislukt",
+    "photoUploadFailedDesc": "Kon uw foto niet uploaden. Controleer uw verbinding en probeer het opnieuw.",
+    "sessionExpired": "Sessie verlopen",
+    "sessionExpiredDesc": "Uw sessie is verlopen. Meld u opnieuw aan om door te gaan.",
+    "databaseError": "Databasefout",
+    "databaseErrorDesc": "Kon uw gegevens niet opslaan. Probeer het opnieuw.",
+    "tryAgain": "Opnieuw proberen",
+    "goBack": "Terug",
+    "signInAgain": "Opnieuw aanmelden",
+    "checkConnection": "Verbinding controleren",
+    "somethingWentWrong": "Er is iets misgegaan",
+    "somethingWentWrongDesc": "Er is een onverwachte fout opgetreden. Probeer het opnieuw."
   }
 }

@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { deviceLanguage } from "@/lib/i18n";
+import { fetchWithRetry } from "@/lib/errorHandling";
 import type { Plant } from "@/types";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -133,25 +134,29 @@ export async function fetchSeasonalTips(
   const requestBody = { plants: plantPayload, location, month, language: lang };
   console.log("[SeasonalTips] calling edge function, body:", JSON.stringify(requestBody).slice(0, 200));
 
-  const response = await fetch(`${supabaseUrl}/functions/v1/seasonal-tips`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "apikey": supabaseKey,
-      "Authorization": `Bearer ${supabaseKey}`,
-    },
-    body: JSON.stringify(requestBody),
-  });
+  // Wrap the edge function call with automatic retry (exponential backoff)
+  // to handle transient network blips or cold-start latency on the function.
+  const fnData = await fetchWithRetry(async () => {
+    const response = await fetch(`${supabaseUrl}/functions/v1/seasonal-tips`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": supabaseKey,
+        "Authorization": `Bearer ${supabaseKey}`,
+      },
+      body: JSON.stringify(requestBody),
+    });
 
-  console.log("[SeasonalTips] response status:", response.status);
+    console.log("[SeasonalTips] response status:", response.status);
 
-  if (!response.ok) {
-    const errText = await response.text();
-    console.error("[SeasonalTips] edge function error:", response.status, errText);
-    throw new Error(`Edge function returned ${response.status}: ${errText.slice(0, 200)}`);
-  }
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error("[SeasonalTips] edge function error:", response.status, errText);
+      throw new Error(`Edge function returned ${response.status}: ${errText.slice(0, 200)}`);
+    }
 
-  const fnData = await response.json();
+    return response.json();
+  }, 2);
 
   const tips: SeasonalTips = { ...fnData, location };
   await saveTipsToCache(userId, tips, month, new Date().getFullYear());

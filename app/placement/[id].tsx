@@ -36,6 +36,8 @@ import { compressImage } from "@/lib/imageUtils";
 import { deviceLanguage } from "@/lib/i18n";
 import { usePlantsStore } from "@/store/plants";
 import { useUserStore } from "@/store/user";
+import { classifyError, isConnected, type AppErrorType } from "@/lib/errorHandling";
+import ErrorBanner from "@/components/ui/ErrorBanner";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -282,6 +284,7 @@ export default function PlacementScreen() {
   const [primaryUri, setPrimaryUri] = useState<string | null>(null);
   const [result, setResult] = useState<PlacementResult | null>(null);
   const [isViewingExisting, setIsViewingExisting] = useState(false);
+  const [bannerError, setBannerError] = useState<AppErrorType | null>(null);
 
   // Jump straight to results when viewing an existing analysis from history
   useEffect(() => {
@@ -397,9 +400,16 @@ export default function PlacementScreen() {
   const handleAnalyze = useCallback(async () => {
     if (!plant) return;
 
+    const online = await isConnected();
+    if (!online) {
+      setBannerError("no_internet");
+      return;
+    }
+
     const filledSlots = PHOTO_SLOTS.filter((s) => slotUris[s.key]);
     const bgUri = filledSlots.length > 0 ? (slotUris[filledSlots[0].key] ?? null) : null;
     setPrimaryUri(bgUri);
+    setBannerError(null);
     setScreenState("analyzing");
 
     try {
@@ -474,10 +484,8 @@ export default function PlacementScreen() {
       setResult(data);
       setScreenState("results");
     } catch (err) {
-      Alert.alert(
-        t("common.error"),
-        err instanceof Error ? err.message : t("common.somethingWentWrong")
-      );
+      const errorType = classifyError(err);
+      setBannerError(errorType);
       setScreenState("form");
     }
   }, [plant, windowDirection, roomType, lightLevel, slotUris, profile, plantId]);
@@ -519,6 +527,12 @@ export default function PlacementScreen() {
     return (
       <View style={styles.screen}>
         <Stack.Screen options={{ headerShown: false }} />
+
+        <ErrorBanner
+          error={bannerError}
+          onRetry={bannerError ? handleAnalyze : undefined}
+          onDismiss={() => setBannerError(null)}
+        />
 
         <ScrollView
           style={styles.scroll}

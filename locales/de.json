@@ -613,5 +613,23 @@
     "tipWarning": "Warnung",
     "generalTipsFor": "Allgemeine Tipps für {{location}}",
     "yourPlantsMonth": "Deine Pflanzen diesen Monat"
+  },
+  "errors": {
+    "noInternet": "Keine Internetverbindung",
+    "noInternetDesc": "Bitte überprüfe deine Verbindung und versuche es erneut.",
+    "aiUnavailable": "KI nicht verfügbar",
+    "aiUnavailableDesc": "Der KI-Dienst ist vorübergehend nicht verfügbar. Bitte versuche es gleich erneut.",
+    "photoUploadFailed": "Foto-Upload fehlgeschlagen",
+    "photoUploadFailedDesc": "Das Foto konnte nicht hochgeladen werden. Bitte überprüfe deine Verbindung und versuche es erneut.",
+    "sessionExpired": "Sitzung abgelaufen",
+    "sessionExpiredDesc": "Deine Sitzung ist abgelaufen. Bitte melde dich erneut an, um fortzufahren.",
+    "databaseError": "Datenbankfehler",
+    "databaseErrorDesc": "Deine Daten konnten nicht gespeichert werden. Bitte versuche es erneut.",
+    "tryAgain": "Erneut versuchen",
+    "goBack": "Zurück",
+    "signInAgain": "Erneut anmelden",
+    "checkConnection": "Verbindung prüfen",
+    "somethingWentWrong": "Etwas ist schiefgelaufen",
+    "somethingWentWrongDesc": "Ein unerwarteter Fehler ist aufgetreten. Bitte versuche es erneut."
   }
 }

@@ -613,5 +613,23 @@
     "tipWarning": "Attenzione",
     "generalTipsFor": "Consigli Generali per {{location}}",
     "yourPlantsMonth": "Le Tue Piante Questo Mese"
+  },
+  "errors": {
+    "noInternet": "Nessuna connessione Internet",
+    "noInternetDesc": "Controlla la connessione e riprova.",
+    "aiUnavailable": "AI non disponibile",
+    "aiUnavailableDesc": "Il servizio AI è temporaneamente non disponibile. Riprova tra un momento.",
+    "photoUploadFailed": "Caricamento foto fallito",
+    "photoUploadFailedDesc": "Impossibile caricare la foto. Controlla la connessione e riprova.",
+    "sessionExpired": "Sessione scaduta",
+    "sessionExpiredDesc": "La tua sessione è scaduta. Accedi di nuovo per continuare.",
+    "databaseError": "Errore database",
+    "databaseErrorDesc": "Impossibile salvare i dati. Riprova.",
+    "tryAgain": "Riprova",
+    "goBack": "Indietro",
+    "signInAgain": "Accedi di nuovo",
+    "checkConnection": "Controlla la connessione",
+    "somethingWentWrong": "Qualcosa è andato storto",
+    "somethingWentWrongDesc": "Si è verificato un errore imprevisto. Riprova."
   }
 }
