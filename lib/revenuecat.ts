@@ -17,6 +17,7 @@ const PRO_ENTITLEMENT_ID = "pro";
 export const BETA_PRO_EMAILS = [
   "giacominomatzeu@gmail.com",
   "alessiamagnani@hotmail.it",
+  "alessandra.grassi0@gmail.com",
 ];
 
 export const isBetaEmail = (email: string | null | undefined): boolean =>
