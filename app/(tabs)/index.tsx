@@ -369,10 +369,11 @@ export default function HomeScreen() {
   const { weather, isLoading: weatherLoading, error: weatherError, refresh: refreshWeather } = useWeather();
   const { plants, isLoading: plantsLoading, refetch: refetchPlants } = usePlants();
 
-  // Sync watering schedules when weather arrives
+  // Sync watering schedules when weather arrives.
+  // Weather adjustments are Pro-only; free users get base interval only.
   React.useEffect(() => {
     if (weather && plants.length > 0) {
-      syncAllPlantSchedules(plants, weather, updatePlant);
+      syncAllPlantSchedules(plants, weather, updatePlant, isPro);
     }
   }, [weather]); // eslint-disable-line react-hooks/exhaustive-deps
 

@@ -32,6 +32,7 @@ import { deviceLanguage } from "@/lib/i18n";
 import { scheduleFollowUpDiagnosisNotification } from "@/lib/notifications";
 import { usePlantsStore } from "@/store/plants";
 import { useUserStore } from "@/store/user";
+import { useProGate } from "@/hooks/useProGate";
 import { classifyError, isConnected, type AppErrorType } from "@/lib/errorHandling";
 import ErrorBanner from "@/components/ui/ErrorBanner";
 
@@ -160,8 +161,8 @@ export default function DiagnosisScreen() {
   }));
 
   const { plants, updatePlant } = usePlantsStore();
-  const { profile, subscription } = useUserStore();
-  const isPro = subscription === "pro";
+  const { profile } = useUserStore();
+  const { isPro } = useProGate();
   const plant = plants.find((p) => p.id === plantId) ?? null;
 
   // Gate: redirect free users to paywall every time this screen is focused.
@@ -769,8 +770,8 @@ export default function DiagnosisScreen() {
           </View>
         )}
 
-        {/* ── Watering Adjustment card — fresh diagnoses only ───────────── */}
-        {!isViewingExisting && detectedWateringIssue && (
+        {/* ── Watering Adjustment card — Pro + fresh diagnoses only ────── */}
+        {isPro && !isViewingExisting && detectedWateringIssue && (
           <View style={styles.actionCard}>
             <Text style={styles.actionCardTitle}>{t("diagnosis.wateringAdjustment")}</Text>
             <Text style={styles.actionCardText}>
@@ -807,8 +808,8 @@ export default function DiagnosisScreen() {
           </View>
         )}
 
-        {/* ── Follow-Up Diagnosis card — fresh diagnoses only ──────────── */}
-        {!isViewingExisting && followUpDate && (
+        {/* ── Follow-Up Diagnosis card — Pro + fresh diagnoses only ──────── */}
+        {isPro && !isViewingExisting && followUpDate && (
           <View style={styles.actionCard}>
             <Text style={styles.actionCardTitle}>{t("diagnosis.followUpDiagnosis")}</Text>
             <Text style={styles.actionCardText}>

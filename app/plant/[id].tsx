@@ -25,6 +25,7 @@ import {
   TrendingUp,
   Trash2,
   Scissors,
+  Lock,
 } from "lucide-react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -36,6 +37,7 @@ import { rescheduleReminderForPlant, cancelWateringReminder, rescheduleFertilize
 import { calculateFertilizerInterval } from "@/lib/fertilizer";
 import { usePlantsStore } from "@/store/plants";
 import { useUserStore } from "@/store/user";
+import { useProGate } from "@/hooks/useProGate";
 import type { WateringEvent, Diagnosis, PlacementAnalysis, FertilizerLog, RepottingAnalysis, GrowthLog, PruningAnalysis } from "@/types";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -173,6 +175,8 @@ function PlantDetailScreen() {
   const insets = useSafeAreaInsets();
   const { profile } = useUserStore();
   const { plants, updatePlant, removePlant } = usePlantsStore();
+  const { isPro } = useProGate();
+  const showLock = !isPro && !__DEV__;
 
   const plant = plants.find((p) => p.id === id) ?? null;
 
@@ -973,6 +977,7 @@ function PlantDetailScreen() {
             >
               <Stethoscope size={16} color={COLORS.primary} />
               <Text style={styles.actionButtonSecondaryText}>{t("plantDetail.diagnose")}</Text>
+              {showLock && <Lock size={14} color="#999999" />}
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -984,6 +989,7 @@ function PlantDetailScreen() {
             >
               <MapPin size={16} color={COLORS.primary} />
               <Text style={styles.actionButtonSecondaryText}>{t("plantDetail.placementBtn")}</Text>
+              {showLock && <Lock size={14} color="#999999" />}
             </TouchableOpacity>
           </View>
 
@@ -997,6 +1003,7 @@ function PlantDetailScreen() {
             >
               <Layers size={16} color={COLORS.primary} />
               <Text style={styles.actionButtonSecondaryText}>{t("plantDetail.repotBtn")}</Text>
+              {showLock && <Lock size={14} color="#999999" />}
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -1021,6 +1028,7 @@ function PlantDetailScreen() {
             >
               <Scissors size={16} color={COLORS.primary} />
               <Text style={styles.actionButtonSecondaryText}>{t("plantDetail.pruningBtn")}</Text>
+              {showLock && <Lock size={14} color="#999999" />}
             </TouchableOpacity>
           </View>
         </View>
