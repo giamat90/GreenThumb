@@ -15,7 +15,6 @@ const PRO_ENTITLEMENT_ID = "pro";
 // Beta testers — add emails here to grant Pro access
 // Remove this list before production release v2.0
 export const BETA_PRO_EMAILS = [
-  "giamat90@gmail.com",
   "giacominomatzeu@gmail.com",
   "alessiamagnani@hotmail.it",
 ];
