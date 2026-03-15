@@ -265,7 +265,21 @@
     "noPurchasesFound": "Geen aankopen gevonden",
     "noPurchasesFoundMsg": "We konden geen actief Pro-abonnement vinden om te herstellen.",
     "purchaseFailed": "Aankoop mislukt",
-    "restoreFailed": "Herstel mislukt"
+    "restoreFailed": "Herstel mislukt",
+    "contextualTitle": "Ontgrendel GreenThumb Pro",
+    "contextualDesc": "Deze functie maakt deel uit van GreenThumb Pro. Probeer het 7 dagen gratis.",
+    "trialCTA": "7 dagen gratis proberen",
+    "maybeLater": "Misschien later",
+    "trialNote": "Daarna €4,99/maand. Altijd opzegbaar.",
+    "featureDiagnosis": "AI-ziektendiagnose",
+    "featurePlacement": "Plaatsingsadviseur",
+    "featureRepotting": "Verpottingsadviseur",
+    "featurePruning": "Snoei-adviseur",
+    "featureWeather": "Weersafhankelijke planning",
+    "featureCalendar": "Kalendersynchronisatie",
+    "featureCommunity": "Community berichten",
+    "featureRecovery": "Gesloten herstelcyclus",
+    "allAIAdvisors": "Alle AI-adviseurs"
   },
   "common": {
     "cancel": "Annuleren",

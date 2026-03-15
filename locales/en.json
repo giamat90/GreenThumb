@@ -265,7 +265,21 @@
     "noPurchasesFound": "No purchases found",
     "noPurchasesFoundMsg": "We couldn't find an active Pro subscription to restore.",
     "purchaseFailed": "Purchase Failed",
-    "restoreFailed": "Restore Failed"
+    "restoreFailed": "Restore Failed",
+    "contextualTitle": "Unlock GreenThumb Pro",
+    "contextualDesc": "This feature is part of GreenThumb Pro. Try it free for 7 days.",
+    "trialCTA": "Try 7 days free",
+    "maybeLater": "Maybe later",
+    "trialNote": "Then €4.99/month. Cancel anytime.",
+    "featureDiagnosis": "AI Disease Diagnosis",
+    "featurePlacement": "Placement Advisor",
+    "featureRepotting": "Repotting Advisor",
+    "featurePruning": "Pruning Advisor",
+    "featureWeather": "Weather-aware Scheduling",
+    "featureCalendar": "Calendar Sync",
+    "featureCommunity": "Community Posting",
+    "featureRecovery": "Closed-loop Recovery",
+    "allAIAdvisors": "All AI Advisors"
   },
   "common": {
     "cancel": "Cancel",

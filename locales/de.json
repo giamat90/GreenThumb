@@ -265,7 +265,21 @@
     "noPurchasesFound": "Keine Käufe gefunden",
     "noPurchasesFoundMsg": "Wir konnten kein aktives Pro-Abonnement zum Wiederherstellen finden.",
     "purchaseFailed": "Kauf fehlgeschlagen",
-    "restoreFailed": "Wiederherstellung fehlgeschlagen"
+    "restoreFailed": "Wiederherstellung fehlgeschlagen",
+    "contextualTitle": "GreenThumb Pro freischalten",
+    "contextualDesc": "Diese Funktion ist Teil von GreenThumb Pro. 7 Tage kostenlos testen.",
+    "trialCTA": "7 Tage kostenlos testen",
+    "maybeLater": "Vielleicht später",
+    "trialNote": "Dann 4,99 €/Monat. Jederzeit kündbar.",
+    "featureDiagnosis": "KI-Krankheitsdiagnose",
+    "featurePlacement": "Standortberater",
+    "featureRepotting": "Umtopfberater",
+    "featurePruning": "Schnittberater",
+    "featureWeather": "Wetterangepasste Planung",
+    "featureCalendar": "Kalendersynchronisation",
+    "featureCommunity": "Community-Beiträge",
+    "featureRecovery": "Geschlossener Erholungskreis",
+    "allAIAdvisors": "Alle KI-Berater"
   },
   "common": {
     "cancel": "Abbrechen",

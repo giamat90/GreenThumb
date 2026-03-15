@@ -265,7 +265,21 @@
     "noPurchasesFound": "購入が見つかりません",
     "noPurchasesFoundMsg": "復元できる有効なProサブスクリプションが見つかりませんでした。",
     "purchaseFailed": "購入失敗",
-    "restoreFailed": "復元失敗"
+    "restoreFailed": "復元失敗",
+    "contextualTitle": "GreenThumb Proを解放する",
+    "contextualDesc": "この機能はGreenThumb Proの一部です。7日間無料でお試しください。",
+    "trialCTA": "7日間無料で試す",
+    "maybeLater": "あとで",
+    "trialNote": "その後は月額€4.99。いつでもキャンセル可能。",
+    "featureDiagnosis": "AI病気診断",
+    "featurePlacement": "配置アドバイザー",
+    "featureRepotting": "植え替えアドバイザー",
+    "featurePruning": "剪定アドバイザー",
+    "featureWeather": "天気対応スケジュール",
+    "featureCalendar": "カレンダー同期",
+    "featureCommunity": "コミュニティ投稿",
+    "featureRecovery": "クローズドループ回復",
+    "allAIAdvisors": "全AIアドバイザー"
   },
   "common": {
     "cancel": "キャンセル",

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useRouter } from "expo-router";
 import {
   View,
   Text,
@@ -17,6 +18,8 @@ import { Bell, CalendarDays, Clock, RefreshCw } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
 import { COLORS } from "@/constants";
+import { useProGate } from "@/hooks/useProGate";
+import { UpgradeModal } from "@/components/ui/UpgradeModal";
 import { usePlantsStore } from "@/store/plants";
 import {
   scheduleAllReminders,
@@ -52,6 +55,8 @@ function buildPickerDate(hour: number, minute: number): Date {
 
 export function NotificationSettings() {
   const { t } = useTranslation();
+  const router = useRouter();
+  const { requirePro, upgradeModalVisible, lockedFeatureName, closeUpgradeModal } = useProGate();
   const [enabled, setEnabled] = useState(true);
   const [reminderHour, setReminderHour] = useState(9);
   const [reminderMinute, setReminderMinute] = useState(0);
@@ -147,6 +152,8 @@ export function NotificationSettings() {
   }
 
   async function handleCalendarToggle(value: boolean) {
+    if (value && !requirePro(t("paywall.featureCalendar"))) return;
+
     if (value) {
       const granted = await requestCalendarPermission();
       if (!granted) {
@@ -374,6 +381,16 @@ export function NotificationSettings() {
           <Text style={styles.testButtonText}>{t("notifications.sendTest")}</Text>
         </TouchableOpacity>
       )}
+
+      <UpgradeModal
+        visible={upgradeModalVisible}
+        featureName={lockedFeatureName}
+        onClose={closeUpgradeModal}
+        onUpgrade={() => {
+          closeUpgradeModal();
+          router.push("/paywall");
+        }}
+      />
     </View>
   );
 }

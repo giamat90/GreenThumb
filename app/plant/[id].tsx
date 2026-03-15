@@ -25,7 +25,6 @@ import {
   TrendingUp,
   Trash2,
   Scissors,
-  Lock,
 } from "lucide-react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -38,6 +37,7 @@ import { calculateFertilizerInterval } from "@/lib/fertilizer";
 import { usePlantsStore } from "@/store/plants";
 import { useUserStore } from "@/store/user";
 import { useProGate } from "@/hooks/useProGate";
+import { UpgradeModal } from "@/components/ui/UpgradeModal";
 import { invalidateSeasonalTipsCache } from "@/lib/seasonalTips";
 import type { WateringEvent, Diagnosis, PlacementAnalysis, FertilizerLog, RepottingAnalysis, GrowthLog, PruningAnalysis } from "@/types";
 
@@ -176,8 +176,7 @@ function PlantDetailScreen() {
   const insets = useSafeAreaInsets();
   const { profile } = useUserStore();
   const { plants, updatePlant, removePlant } = usePlantsStore();
-  const { isPro } = useProGate();
-  const showLock = !isPro && !__DEV__;
+  const { requirePro, upgradeModalVisible, lockedFeatureName, closeUpgradeModal } = useProGate();
 
   const plant = plants.find((p) => p.id === id) ?? null;
 
@@ -974,25 +973,29 @@ function PlantDetailScreen() {
             <TouchableOpacity
               style={styles.actionButtonSecondary}
               activeOpacity={0.8}
-              onPress={() => router.push(`/diagnosis/${plant.id}`)}
+              onPress={() => {
+                if (!requirePro(t("paywall.featureDiagnosis"))) return;
+                router.push(`/diagnosis/${plant.id}`);
+              }}
               accessibilityLabel="Diagnose plant health"
               accessibilityRole="button"
             >
               <Stethoscope size={16} color={COLORS.primary} />
               <Text style={styles.actionButtonSecondaryText}>{t("plantDetail.diagnose")}</Text>
-              {showLock && <Lock size={14} color="#999999" />}
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.actionButtonSecondary}
               activeOpacity={0.8}
-              onPress={() => router.push({ pathname: "/placement/[id]", params: { id: plant.id } })}
+              onPress={() => {
+                if (!requirePro(t("paywall.featurePlacement"))) return;
+                router.push({ pathname: "/placement/[id]", params: { id: plant.id } });
+              }}
               accessibilityLabel="Check plant placement"
               accessibilityRole="button"
             >
               <MapPin size={16} color={COLORS.primary} />
               <Text style={styles.actionButtonSecondaryText}>{t("plantDetail.placementBtn")}</Text>
-              {showLock && <Lock size={14} color="#999999" />}
             </TouchableOpacity>
           </View>
 
@@ -1000,13 +1003,15 @@ function PlantDetailScreen() {
             <TouchableOpacity
               style={styles.actionButtonSecondary}
               activeOpacity={0.8}
-              onPress={() => router.push({ pathname: "/repotting/[id]", params: { id: plant.id } })}
+              onPress={() => {
+                if (!requirePro(t("paywall.featureRepotting"))) return;
+                router.push({ pathname: "/repotting/[id]", params: { id: plant.id } });
+              }}
               accessibilityLabel="Repotting advisor"
               accessibilityRole="button"
             >
               <Layers size={16} color={COLORS.primary} />
               <Text style={styles.actionButtonSecondaryText}>{t("plantDetail.repotBtn")}</Text>
-              {showLock && <Lock size={14} color="#999999" />}
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -1025,13 +1030,15 @@ function PlantDetailScreen() {
             <TouchableOpacity
               style={[styles.actionButtonSecondary, { flex: 1 }]}
               activeOpacity={0.8}
-              onPress={() => router.push({ pathname: "/pruning/[id]", params: { id: plant.id } })}
+              onPress={() => {
+                if (!requirePro(t("paywall.featurePruning"))) return;
+                router.push({ pathname: "/pruning/[id]", params: { id: plant.id } });
+              }}
               accessibilityLabel="Pruning advisor"
               accessibilityRole="button"
             >
               <Scissors size={16} color={COLORS.primary} />
               <Text style={styles.actionButtonSecondaryText}>{t("plantDetail.pruningBtn")}</Text>
-              {showLock && <Lock size={14} color="#999999" />}
             </TouchableOpacity>
           </View>
         </View>
@@ -1052,6 +1059,16 @@ function PlantDetailScreen() {
           )}
         </TouchableOpacity>
       </View>
+
+      <UpgradeModal
+        visible={upgradeModalVisible}
+        featureName={lockedFeatureName}
+        onClose={closeUpgradeModal}
+        onUpgrade={() => {
+          closeUpgradeModal();
+          router.push("/paywall");
+        }}
+      />
     </View>
   );
 }

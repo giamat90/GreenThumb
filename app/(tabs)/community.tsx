@@ -8,7 +8,6 @@ import {
   ActivityIndicator,
   StyleSheet,
   RefreshControl,
-  Alert,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -21,6 +20,7 @@ import { useResponsive } from "@/hooks/useResponsive";
 import { supabase } from "@/lib/supabase";
 import { useUserStore } from "@/store/user";
 import { useProGate } from "@/hooks/useProGate";
+import { UpgradeModal } from "@/components/ui/UpgradeModal";
 import type { CommunityPost } from "@/types";
 
 const PAGE_SIZE = 20;
@@ -231,7 +231,7 @@ export default function CommunityScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { profile } = useUserStore();
-  const { isPro, showPaywall } = useProGate();
+  const { requirePro, upgradeModalVisible, lockedFeatureName, closeUpgradeModal } = useProGate();
   const { isMobile, isDesktop } = useResponsive();
   const numColumns = isDesktop ? 2 : 1;
 
@@ -395,18 +395,10 @@ export default function CommunityScreen() {
     router.push({ pathname: "/community/profile/[id]", params: { id: userId } });
   }, [router]);
 
-  const canPost = __DEV__ ? true : isPro;
-
   const handleNewPost = useCallback(() => {
-    if (!canPost) {
-      Alert.alert(t("community.sharePost"), t("community.proFeaturePost"), [
-        { text: t("common.cancel"), style: "cancel" },
-        { text: t("paywall.greenThumbPro"), onPress: showPaywall },
-      ]);
-      return;
-    }
+    if (!requirePro(t("paywall.featureCommunity"))) return;
     router.push("/community/new-post");
-  }, [canPost, showPaywall, router, t]);
+  }, [requirePro, router, t]);
 
   const [fabHeight, setFabHeight] = useState(0);
 
@@ -527,6 +519,16 @@ export default function CommunityScreen() {
           <Plus size={26} color="#fff" />
         </TouchableOpacity>
       </View>
+
+      <UpgradeModal
+        visible={upgradeModalVisible}
+        featureName={lockedFeatureName}
+        onClose={closeUpgradeModal}
+        onUpgrade={() => {
+          closeUpgradeModal();
+          router.push("/paywall");
+        }}
+      />
     </View>
     </ResponsiveContainer>
   );

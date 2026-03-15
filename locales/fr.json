@@ -265,7 +265,21 @@
     "noPurchasesFound": "Aucun achat trouvé",
     "noPurchasesFoundMsg": "Nous n'avons pas trouvé d'abonnement Pro actif à restaurer.",
     "purchaseFailed": "Achat échoué",
-    "restoreFailed": "Restauration échouée"
+    "restoreFailed": "Restauration échouée",
+    "contextualTitle": "Débloquez GreenThumb Pro",
+    "contextualDesc": "Cette fonctionnalité fait partie de GreenThumb Pro. Essayez-la gratuitement pendant 7 jours.",
+    "trialCTA": "Essayer 7 jours gratuits",
+    "maybeLater": "Peut-être plus tard",
+    "trialNote": "Ensuite €4,99/mois. Annulez à tout moment.",
+    "featureDiagnosis": "Diagnostic de maladie IA",
+    "featurePlacement": "Conseiller en emplacement",
+    "featureRepotting": "Conseiller en rempotage",
+    "featurePruning": "Conseiller en taille",
+    "featureWeather": "Planification météo adaptée",
+    "featureCalendar": "Synchronisation de calendrier",
+    "featureCommunity": "Publications communautaires",
+    "featureRecovery": "Récupération en boucle fermée",
+    "allAIAdvisors": "Tous les conseillers IA"
   },
   "common": {
     "cancel": "Annuler",

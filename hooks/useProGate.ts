@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "expo-router";
 import { useUserStore } from "@/store/user";
 import { PLANT_LIMITS } from "@/constants";
@@ -19,6 +19,15 @@ export interface ProGateResult {
   showPaywall: () => void;
   /** Returns true if the user can access the feature right now. */
   checkGate: (feature: ProFeature) => boolean;
+  /**
+   * Returns true if user is Pro (allowed). If not Pro, shows the UpgradeModal
+   * for the given feature name and returns false.
+   * Always returns true for __DEV__ and beta email users.
+   */
+  requirePro: (featureName: string) => boolean;
+  upgradeModalVisible: boolean;
+  lockedFeatureName: string;
+  closeUpgradeModal: () => void;
 }
 
 /**
@@ -34,6 +43,8 @@ export function useProGate(): ProGateResult {
   const plants = usePlantsStore((s) => s.plants);
   const router = useRouter();
   const [isBeta, setIsBeta] = useState(false);
+  const [upgradeModalVisible, setUpgradeModalVisible] = useState(false);
+  const [lockedFeatureName, setLockedFeatureName] = useState("");
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -75,5 +86,27 @@ export function useProGate(): ProGateResult {
     }
   }
 
-  return { isPro, showPaywall, checkGate };
+  const requirePro = useCallback(
+    (featureName: string): boolean => {
+      if (isPro) return true;
+      setLockedFeatureName(featureName);
+      setUpgradeModalVisible(true);
+      return false;
+    },
+    [isPro]
+  );
+
+  const closeUpgradeModal = useCallback(() => {
+    setUpgradeModalVisible(false);
+  }, []);
+
+  return {
+    isPro,
+    showPaywall,
+    checkGate,
+    requirePro,
+    upgradeModalVisible,
+    lockedFeatureName,
+    closeUpgradeModal,
+  };
 }

@@ -265,7 +265,21 @@
     "noPurchasesFound": "Nie znaleziono zakupów",
     "noPurchasesFoundMsg": "Nie mogliśmy znaleźć aktywnej subskrypcji Pro do przywrócenia.",
     "purchaseFailed": "Zakup nieudany",
-    "restoreFailed": "Przywracanie nieudane"
+    "restoreFailed": "Przywracanie nieudane",
+    "contextualTitle": "Odblokuj GreenThumb Pro",
+    "contextualDesc": "Ta funkcja jest częścią GreenThumb Pro. Wypróbuj za darmo przez 7 dni.",
+    "trialCTA": "Wypróbuj 7 dni za darmo",
+    "maybeLater": "Może później",
+    "trialNote": "Potem 4,99 €/miesiąc. Anuluj w dowolnym momencie.",
+    "featureDiagnosis": "Diagnoza chorób AI",
+    "featurePlacement": "Doradca ustawienia",
+    "featureRepotting": "Doradca przesadzania",
+    "featurePruning": "Doradca przycinania",
+    "featureWeather": "Planowanie z uwzględnieniem pogody",
+    "featureCalendar": "Synchronizacja kalendarza",
+    "featureCommunity": "Posty społeczności",
+    "featureRecovery": "Odzyskiwanie w zamkniętej pętli",
+    "allAIAdvisors": "Wszyscy doradcy AI"
   },
   "common": {
     "cancel": "Anuluj",

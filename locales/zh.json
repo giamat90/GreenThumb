@@ -265,7 +265,21 @@
     "noPurchasesFound": "未找到购买记录",
     "noPurchasesFoundMsg": "我们未找到可恢复的有效Pro订阅。",
     "purchaseFailed": "购买失败",
-    "restoreFailed": "恢复失败"
+    "restoreFailed": "恢复失败",
+    "contextualTitle": "解锁 GreenThumb Pro",
+    "contextualDesc": "此功能是 GreenThumb Pro 的一部分。免费试用 7 天。",
+    "trialCTA": "免费试用 7 天",
+    "maybeLater": "也许以后",
+    "trialNote": "之后每月 €4.99。随时取消。",
+    "featureDiagnosis": "AI 疾病诊断",
+    "featurePlacement": "摆放顾问",
+    "featureRepotting": "换盆顾问",
+    "featurePruning": "修剪顾问",
+    "featureWeather": "天气感知规划",
+    "featureCalendar": "日历同步",
+    "featureCommunity": "社区发帖",
+    "featureRecovery": "闭环康复",
+    "allAIAdvisors": "全部AI顾问"
   },
   "common": {
     "cancel": "取消",

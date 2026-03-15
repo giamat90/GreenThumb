@@ -265,7 +265,21 @@
     "noPurchasesFound": "Nessun acquisto trovato",
     "noPurchasesFoundMsg": "Non abbiamo trovato un abbonamento Pro attivo da ripristinare.",
     "purchaseFailed": "Acquisto non riuscito",
-    "restoreFailed": "Ripristino non riuscito"
+    "restoreFailed": "Ripristino non riuscito",
+    "contextualTitle": "Sblocca GreenThumb Pro",
+    "contextualDesc": "Questa funzione fa parte di GreenThumb Pro. Provala gratis per 7 giorni.",
+    "trialCTA": "Prova 7 giorni gratis",
+    "maybeLater": "Forse dopo",
+    "trialNote": "Poi €4,99/mese. Annulla in qualsiasi momento.",
+    "featureDiagnosis": "Diagnosi malattie AI",
+    "featurePlacement": "Consulente posizionamento",
+    "featureRepotting": "Consulente rinvaso",
+    "featurePruning": "Consulente potatura",
+    "featureWeather": "Pianificazione meteo-consapevole",
+    "featureCalendar": "Sincronizzazione calendario",
+    "featureCommunity": "Post nella community",
+    "featureRecovery": "Recupero a ciclo chiuso",
+    "allAIAdvisors": "Tutti i consulenti AI"
   },
   "common": {
     "cancel": "Annulla",
