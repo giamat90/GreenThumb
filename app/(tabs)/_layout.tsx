@@ -3,7 +3,6 @@ import { Home, Leaf, Camera, CalendarDays, Users } from "lucide-react-native";
 import { TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { COLORS } from "@/constants";
-import { useProGate } from "@/hooks/useProGate";
 
 // ─── Custom center tab button for the Identify CTA ────────────────────────────
 
@@ -17,13 +16,8 @@ import { useProGate } from "@/hooks/useProGate";
  */
 function IdentifyTabButton() {
   const router = useRouter();
-  const { checkGate, showPaywall } = useProGate();
 
   function handlePress() {
-    if (!checkGate("unlimited_plants")) {
-      showPaywall();
-      return;
-    }
     router.push("/(tabs)/identify");
   }
 

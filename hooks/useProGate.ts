@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "expo-router";
 import { useUserStore } from "@/store/user";
-import { PLANT_LIMITS } from "@/constants";
-import { usePlantsStore } from "@/store/plants";
 import { supabase } from "@/lib/supabase";
 import { isBetaEmail } from "@/lib/revenuecat";
 
@@ -40,7 +38,6 @@ export interface ProGateResult {
  */
 export function useProGate(): ProGateResult {
   const subscription = useUserStore((s) => s.subscription);
-  const plants = usePlantsStore((s) => s.plants);
   const router = useRouter();
   const [isBeta, setIsBeta] = useState(false);
   const [upgradeModalVisible, setUpgradeModalVisible] = useState(false);
@@ -63,8 +60,8 @@ export function useProGate(): ProGateResult {
 
     switch (feature) {
       case "unlimited_plants":
-        // Free users are capped at 3 plants
-        return plants.length < PLANT_LIMITS.free.plants;
+        // All users have unlimited plants
+        return true;
 
       case "unlimited_identification":
         // Identification monthly limit is enforced separately in

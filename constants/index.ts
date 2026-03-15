@@ -19,11 +19,9 @@ export const CONFIG = {
 
 export const PLANT_LIMITS = {
   free: {
-    plants: 3,
     identifications_per_month: 5,
   },
   pro: {
-    plants: Infinity,
     identifications_per_month: Infinity,
   },
 } as const;

@@ -127,7 +127,7 @@ export default function PaywallScreen() {
 
   const FEATURES: FeatureRow[] = [
     { name: t("paywall.plantIdentification"), free: t("paywall.perMonth"), pro: t("paywall.unlimited") },
-    { name: t("paywall.myPlants"), free: t("paywall.perMonthFree"), pro: t("paywall.unlimited") },
+    { name: t("paywall.myPlants"), free: t("paywall.unlimited"), pro: t("paywall.unlimited") },
     { name: t("paywall.wateringReminders"), free: true, pro: true },
     { name: t("paywall.weatherAwareScheduling"), free: false, pro: true },
     { name: t("paywall.aiDiseaseDiagnosis"), free: false, pro: true },
