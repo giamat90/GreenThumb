@@ -1,6 +1,6 @@
 import { Tabs, useRouter } from "expo-router";
 import { Home, Leaf, Camera, CalendarDays, Users } from "lucide-react-native";
-import { TouchableOpacity, View, Text, useWindowDimensions } from "react-native";
+import { TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { COLORS } from "@/constants";
 import { useProGate } from "@/hooks/useProGate";
@@ -18,8 +18,6 @@ import { useProGate } from "@/hooks/useProGate";
 function IdentifyTabButton() {
   const router = useRouter();
   const { checkGate, showPaywall } = useProGate();
-  const { width } = useWindowDimensions();
-  const isDesktop = width >= 1024;
 
   function handlePress() {
     if (!checkGate("unlimited_plants")) {
@@ -29,30 +27,6 @@ function IdentifyTabButton() {
     router.push("/(tabs)/identify");
   }
 
-  // On desktop sidebar: render as a regular tab-like button (no floating circle)
-  if (isDesktop) {
-    return (
-      <TouchableOpacity
-        onPress={handlePress}
-        accessibilityLabel="Identify a plant with your camera"
-        accessibilityRole="button"
-        style={{
-          flex: 1,
-          alignItems: "center",
-          justifyContent: "center",
-          paddingVertical: 12,
-          gap: 4,
-        }}
-      >
-        <Camera size={24} color={COLORS.textSecondary} />
-        <Text style={{ fontSize: 12, color: COLORS.textSecondary, fontWeight: "500" }}>
-          Identify
-        </Text>
-      </TouchableOpacity>
-    );
-  }
-
-  // On mobile: raised circular green button that sits above the tab bar
   return (
     <TouchableOpacity
       onPress={handlePress}
@@ -92,32 +66,22 @@ function IdentifyTabButton() {
 
 export default function TabLayout() {
   const { bottom } = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
-  const isDesktop = width >= 1024;
 
   return (
     <Tabs
-      tabBarPosition={isDesktop ? "left" : "bottom"}
       screenOptions={{
         tabBarActiveTintColor: COLORS.primary,
         tabBarInactiveTintColor: COLORS.textSecondary,
         headerShown: false,
-        tabBarShowLabel: isDesktop,
-        tabBarStyle: isDesktop
-          ? {
-              width: 220,
-              paddingTop: 24,
-              height: "100%",
-            }
-          : {
-              borderTopWidth: 1,
-              borderTopColor: "#EFEFEF",
-              elevation: 0,
-              shadowOpacity: 0,
-              // Account for Android system navigation bar (gesture or button nav)
-              height: 60 + bottom,
-              paddingBottom: bottom + 8,
-            },
+        tabBarStyle: {
+          borderTopWidth: 1,
+          borderTopColor: "#EFEFEF",
+          elevation: 0,
+          shadowOpacity: 0,
+          // Account for Android system navigation bar (gesture or button nav)
+          height: 60 + bottom,
+          paddingBottom: bottom + 8,
+        },
       }}
     >
       <Tabs.Screen
