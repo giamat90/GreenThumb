@@ -11,6 +11,7 @@ import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { CalendarDays, Droplets, Leaf } from "lucide-react-native";
 import { COLORS } from "@/constants";
+import { ResponsiveContainer } from "@/components/ui/ResponsiveContainer";
 import { usePlantsStore } from "@/store/plants";
 import type { Plant } from "@/types";
 
@@ -179,58 +180,64 @@ export default function CalendarScreen() {
   // Empty state: no plants at all
   if (plants.length === 0) {
     return (
-      <View style={styles.emptyContainer}>
-        <View style={styles.emptyIconBg}>
-          <CalendarDays size={36} color={COLORS.primary} />
+      <ResponsiveContainer>
+        <View style={styles.emptyContainer}>
+          <View style={styles.emptyIconBg}>
+            <CalendarDays size={36} color={COLORS.primary} />
+          </View>
+          <Text style={styles.emptyTitle}>{t("calendar.careCalendar")}</Text>
+          <Text style={styles.emptySubtitle}>
+            {t("calendar.noPlants")}
+          </Text>
         </View>
-        <Text style={styles.emptyTitle}>{t("calendar.careCalendar")}</Text>
-        <Text style={styles.emptySubtitle}>
-          {t("calendar.noPlants")}
-        </Text>
-      </View>
+      </ResponsiveContainer>
     );
   }
 
   // All caught up: plants exist but none have a watering date
   if (sections.length === 0) {
     return (
-      <View style={styles.emptyContainer}>
-        <Text style={styles.caughtUpEmoji}>🎉</Text>
-        <Text style={styles.emptyTitle}>{t("calendar.allCaughtUp")}</Text>
-        <Text style={styles.emptySubtitle}>
-          {t("calendar.noUpcomingTasks")}
-        </Text>
-      </View>
+      <ResponsiveContainer>
+        <View style={styles.emptyContainer}>
+          <Text style={styles.caughtUpEmoji}>🎉</Text>
+          <Text style={styles.emptyTitle}>{t("calendar.allCaughtUp")}</Text>
+          <Text style={styles.emptySubtitle}>
+            {t("calendar.noUpcomingTasks")}
+          </Text>
+        </View>
+      </ResponsiveContainer>
     );
   }
 
   return (
-    <View style={styles.screen}>
-      <Text style={styles.heading}>{t("calendar.careCalendar")}</Text>
-      <SectionList
-        sections={sections}
-        keyExtractor={(item) => `${item.plant.id}-${item.type}`}
-        contentContainerStyle={styles.list}
-        stickySectionHeadersEnabled={false}
-        renderSectionHeader={({ section }) => (
-          <SectionHeader
-            title={section.title}
-            danger={section.key === "overdue"}
-          />
-        )}
-        renderItem={({ item }) => (
-          <CareEntry
-            entry={item}
-            onPress={() => router.push(`/plant/${item.plant.id}`)}
-          />
-        )}
-        ListFooterComponent={
-          <View style={styles.listFooter}>
-            <Text style={styles.listFooterText}>{t("calendar.allCareTasksShown")}</Text>
-          </View>
-        }
-      />
-    </View>
+    <ResponsiveContainer>
+      <View style={styles.screen}>
+        <Text style={styles.heading}>{t("calendar.careCalendar")}</Text>
+        <SectionList
+          sections={sections}
+          keyExtractor={(item) => `${item.plant.id}-${item.type}`}
+          contentContainerStyle={styles.list}
+          stickySectionHeadersEnabled={false}
+          renderSectionHeader={({ section }) => (
+            <SectionHeader
+              title={section.title}
+              danger={section.key === "overdue"}
+            />
+          )}
+          renderItem={({ item }) => (
+            <CareEntry
+              entry={item}
+              onPress={() => router.push(`/plant/${item.plant.id}`)}
+            />
+          )}
+          ListFooterComponent={
+            <View style={styles.listFooter}>
+              <Text style={styles.listFooterText}>{t("calendar.allCareTasksShown")}</Text>
+            </View>
+          }
+        />
+      </View>
+    </ResponsiveContainer>
   );
 }
 

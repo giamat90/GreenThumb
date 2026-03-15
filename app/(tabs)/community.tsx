@@ -16,6 +16,8 @@ import { Heart, MessageCircle, Plus, Users } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
 import { COLORS } from "@/constants";
+import { ResponsiveContainer } from "@/components/ui/ResponsiveContainer";
+import { useResponsive } from "@/hooks/useResponsive";
 import { supabase } from "@/lib/supabase";
 import { useUserStore } from "@/store/user";
 import { useProGate } from "@/hooks/useProGate";
@@ -230,6 +232,8 @@ export default function CommunityScreen() {
   const router = useRouter();
   const { profile } = useUserStore();
   const { isPro, showPaywall } = useProGate();
+  const { isMobile, isDesktop } = useResponsive();
+  const numColumns = isDesktop ? 2 : 1;
 
   const [activeTab, setActiveTab] = useState<"discover" | "following">("discover");
 
@@ -413,21 +417,29 @@ export default function CommunityScreen() {
   const fetchError = isDiscover ? discoverError : followingError;
   const retryFetch = isDiscover ? () => fetchDiscover(true) : () => fetchFollowing(true);
 
-  function renderFeed(feed: CommunityPost[], visible: boolean) {
+  function renderFeed(feed: CommunityPost[], visible: boolean, feedId: string) {
     return (
       <FlatList
         data={feed}
         keyExtractor={(item) => item.id}
+        key={`${feedId}-${numColumns}`}
+        numColumns={numColumns}
+        columnWrapperStyle={isDesktop ? { gap: 8, paddingHorizontal: 8 } : undefined}
         style={{ display: visible ? "flex" : "none" }}
-        renderItem={({ item }) => (
-          <PostCard
-            post={item}
-            currentUserId={profile?.id ?? ""}
-            onLike={handleLike}
-            onComment={handleComment}
-            onProfile={handleProfile}
-          />
-        )}
+        renderItem={({ item }) => {
+          const card = (
+            <PostCard
+              post={item}
+              currentUserId={profile?.id ?? ""}
+              onLike={handleLike}
+              onComment={handleComment}
+              onProfile={handleProfile}
+            />
+          );
+          return isDesktop
+            ? <View style={{ flex: 1, maxWidth: "49%" }}>{card}</View>
+            : card;
+        }}
         contentContainerStyle={{ paddingBottom: fabHeight + 16 }}
         refreshControl={
           <RefreshControl
@@ -469,6 +481,7 @@ export default function CommunityScreen() {
   }
 
   return (
+    <ResponsiveContainer>
     <View style={styles.screen}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
@@ -496,8 +509,8 @@ export default function CommunityScreen() {
       </View>
 
       {/* Both feeds always mounted — show/hide via display style to avoid remounts */}
-      {renderFeed(discoverPosts, isDiscover)}
-      {renderFeed(followingPosts, !isDiscover)}
+      {renderFeed(discoverPosts, isDiscover, "discover")}
+      {renderFeed(followingPosts, !isDiscover, "following")}
 
       {/* FAB */}
       <View
@@ -515,6 +528,7 @@ export default function CommunityScreen() {
         </TouchableOpacity>
       </View>
     </View>
+    </ResponsiveContainer>
   );
 }
 

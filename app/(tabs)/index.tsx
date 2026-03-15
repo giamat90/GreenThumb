@@ -15,6 +15,7 @@ import { Droplets, Leaf, RefreshCw, User } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
 import { COLORS } from "@/constants";
+import { ResponsiveContainer } from "@/components/ui/ResponsiveContainer";
 import { useWeather } from "@/hooks/useWeather";
 import { usePlants } from "@/hooks/usePlants";
 import { useUserStore } from "@/store/user";
@@ -434,6 +435,7 @@ export default function HomeScreen() {
   const firstName = profile?.display_name?.split(" ")[0] ?? "there";
 
   return (
+    <ResponsiveContainer>
     <ScrollView
       style={[styles.screen, { paddingTop: insets.top }]}
       contentContainerStyle={styles.content}
@@ -565,6 +567,7 @@ export default function HomeScreen() {
         </View>
       )}
     </ScrollView>
+    </ResponsiveContainer>
   );
 }
 

@@ -17,6 +17,8 @@ import { SlidersHorizontal, Droplets, Heart, Leaf, X, Check } from "lucide-react
 import { useTranslation } from "react-i18next";
 
 import { COLORS } from "@/constants";
+import { ResponsiveContainer } from "@/components/ui/ResponsiveContainer";
+import { useResponsive } from "@/hooks/useResponsive";
 import { usePlants } from "@/hooks/usePlants";
 import { usePlantsStore } from "@/store/plants";
 import { useUserStore } from "@/store/user";
@@ -124,6 +126,8 @@ export default function MyPlantsScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { isDesktop } = useResponsive();
+  const numColumns = isDesktop ? 2 : 1;
   const { profile } = useUserStore();
   const { updatePlant } = usePlantsStore();
   const { plants, isLoading, refetch } = usePlants();
@@ -285,18 +289,21 @@ export default function MyPlantsScreen() {
 
   const renderItem = useCallback(
     ({ item }: { item: PlantWithStatus }) => (
-      <PlantCard
-        plant={item}
-        onPress={() => router.push(`/plant/${item.id}`)}
-        onWaterPress={() => handleWaterPress(item)}
-      />
+      <View style={isDesktop ? { flex: 1, margin: 4 } : undefined}>
+        <PlantCard
+          plant={item}
+          onPress={() => router.push(`/plant/${item.id}`)}
+          onWaterPress={() => handleWaterPress(item)}
+        />
+      </View>
     ),
-    [router, handleWaterPress]
+    [router, handleWaterPress, isDesktop]
   );
 
   const keyExtractor = useCallback((item: PlantWithStatus) => item.id, []);
 
   return (
+    <ResponsiveContainer>
     <View style={[styles.screen, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
@@ -361,6 +368,9 @@ export default function MyPlantsScreen() {
           data={displayedPlants}
           keyExtractor={keyExtractor}
           renderItem={renderItem}
+          numColumns={numColumns}
+          key={String(numColumns)}
+          columnWrapperStyle={isDesktop ? { gap: 0 } : undefined}
           contentContainerStyle={[
             styles.listContent,
             displayedPlants.length === 0 && styles.listContentEmpty,
@@ -463,6 +473,7 @@ export default function MyPlantsScreen() {
         </View>
       </Modal>
     </View>
+    </ResponsiveContainer>
   );
 }
 
