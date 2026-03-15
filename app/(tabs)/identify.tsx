@@ -434,7 +434,7 @@ export default function IdentifyScreen() {
       // Invalidate seasonal tips cache so the next home screen load
       // re-fetches tips tailored to the updated plant set.
       if (profile?.id) {
-        invalidateSeasonalTipsCache(profile.id).catch(console.warn);
+        await invalidateSeasonalTipsCache(profile.id);
       }
       closeAddModal();
 

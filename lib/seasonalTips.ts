@@ -149,6 +149,26 @@ export async function invalidateSeasonalTipsCache(userId: string): Promise<void>
   }
 }
 
+// ─── Shared load helper ───────────────────────────────────────────────────────
+
+/**
+ * Single entry-point used by both SeasonalTipsCard (index.tsx) and
+ * SeasonalTipsScreen.  Checks cache with plant-set comparison; if the
+ * cache is stale or missing, calls the edge function and returns fresh tips.
+ * Returns null when location is missing (can't generate location-aware tips).
+ */
+export async function loadSeasonalTips(
+  userId: string,
+  plants: Plant[],
+  location: string
+): Promise<SeasonalTips | null> {
+  if (!location) return null;
+  const month = new Date().getMonth() + 1;
+  const cached = await getCachedTips(userId, plants);
+  if (cached) return cached;
+  return fetchSeasonalTips(userId, plants, location, month);
+}
+
 // ─── Fetch ────────────────────────────────────────────────────────────────────
 
 export async function fetchSeasonalTips(

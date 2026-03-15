@@ -6,11 +6,10 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   StyleSheet,
-  RefreshControl,
 } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ArrowLeft, RefreshCw } from "lucide-react-native";
+import { ArrowLeft } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
 import { COLORS } from "@/constants";
@@ -18,8 +17,7 @@ import { useUserStore } from "@/store/user";
 import { useWeather } from "@/hooks/useWeather";
 import { usePlantsStore } from "@/store/plants";
 import {
-  getCachedTips,
-  fetchSeasonalTips,
+  loadSeasonalTips,
   seasonEmoji,
 } from "@/lib/seasonalTips";
 import type { SeasonalTips, PlantTip } from "@/lib/seasonalTips";
@@ -60,36 +58,29 @@ export default function SeasonalTipsScreen() {
   const parsedInitial = tipsJson ? (JSON.parse(tipsJson) as SeasonalTips) : null;
   const [tips, setTips] = useState<SeasonalTips | null>(parsedInitial);
   const [loading, setLoading] = useState(!parsedInitial);
-  const [refreshing, setRefreshing] = useState(false);
 
   const location = profile?.city ?? weather?.city ?? "";
-  const month = new Date().getMonth() + 1;
 
-  const load = useCallback(async (forceRefresh = false) => {
+  const loadTips = useCallback(async () => {
     if (!profile) { setLoading(false); return; }
+    setLoading(true);
     try {
-      if (!forceRefresh) {
-        const cached = await getCachedTips(profile.id);
-        if (cached) { setTips(cached); return; }
-      }
-      const fresh = await fetchSeasonalTips(profile.id, plants, location, month);
-      setTips(fresh);
+      const result = await loadSeasonalTips(profile.id, plants, location);
+      if (result) setTips(result);
     } catch (err) {
       console.warn("SeasonalTipsScreen: load failed", err);
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
-  }, [profile, plants, location, month]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [profile, plants, location]);
 
-  React.useEffect(() => {
-    if (!parsedInitial) load(false);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const handleRefresh = useCallback(() => {
-    setRefreshing(true);
-    load(true);
-  }, [load]);
+  // Re-check cache on every focus so a just-invalidated cache triggers a
+  // fresh fetch immediately when the user navigates to this screen.
+  useFocusEffect(
+    useCallback(() => {
+      loadTips();
+    }, [loadTips])
+  );
 
   const lastUpdated = tips?.cached_at
     ? new Date(tips.cached_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
@@ -110,18 +101,10 @@ export default function SeasonalTipsScreen() {
         <Text style={styles.headerTitle}>
           {tips ? `${seasonEmoji(tips.season)} ${tips.month_name}` : t("seasonal.seasonalTipsTitle")}
         </Text>
-        <TouchableOpacity
-          onPress={handleRefresh}
-          disabled={loading || refreshing}
-          style={styles.refreshBtn}
-          accessibilityLabel={t("seasonal.refreshTips")}
-          accessibilityRole="button"
-        >
-          <RefreshCw size={20} color={COLORS.primary} />
-        </TouchableOpacity>
+        {loading && <ActivityIndicator size="small" color={COLORS.primary} style={styles.headerSpinner} />}
       </View>
 
-      {loading ? (
+      {loading && !tips ? (
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={COLORS.primary} />
           <Text style={styles.loadingText}>{t("seasonal.seasonalTipsLoading")}</Text>
@@ -129,17 +112,11 @@ export default function SeasonalTipsScreen() {
       ) : !tips ? (
         <View style={styles.centered}>
           <Text style={styles.emptyText}>{t("seasonal.seasonalTipsEmpty")}</Text>
-          <TouchableOpacity style={styles.refreshButton} onPress={handleRefresh}>
-            <Text style={styles.refreshButtonText}>{t("seasonal.refreshTips")}</Text>
-          </TouchableOpacity>
         </View>
       ) : (
         <ScrollView
           contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
           showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={COLORS.primary} />
-          }
         >
           {/* Season label */}
           <Text style={styles.seasonLabel}>
@@ -188,12 +165,6 @@ export default function SeasonalTipsScreen() {
               ))}
             </View>
           )}
-
-          {/* Refresh button */}
-          <TouchableOpacity style={styles.refreshButton} onPress={handleRefresh} disabled={refreshing}>
-            <RefreshCw size={16} color={COLORS.primary} style={{ marginRight: 6 }} />
-            <Text style={styles.refreshButtonText}>{t("seasonal.refreshTips")}</Text>
-          </TouchableOpacity>
         </ScrollView>
       )}
     </View>
@@ -226,8 +197,8 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: COLORS.textPrimary,
   },
-  refreshBtn: {
-    padding: 4,
+  headerSpinner: {
+    marginLeft: 8,
   },
   centered: {
     flex: 1,
@@ -322,19 +293,5 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: 11,
     fontWeight: "700",
-  },
-  refreshButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: COLORS.lightgreen,
-    borderRadius: 16,
-    paddingVertical: 14,
-    marginTop: 20,
-  },
-  refreshButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: COLORS.primary,
   },
 });

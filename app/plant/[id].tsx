@@ -405,7 +405,7 @@ function PlantDetailScreen() {
       // 4. Remove from Zustand store
       removePlant(plant.id);
       // Invalidate seasonal tips cache — plant set has changed
-      invalidateSeasonalTipsCache(profile.id).catch(console.warn);
+      await invalidateSeasonalTipsCache(profile.id);
 
       // 5. Navigate back, then show confirmation
       navigation.goBack();

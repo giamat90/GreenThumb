@@ -26,8 +26,7 @@ import { calculateFertilizerInterval } from "@/lib/fertilizer";
 import { useProGate } from "@/hooks/useProGate";
 import { UpgradePrompt } from "@/components/ui/UpgradePrompt";
 import {
-  getCachedTips,
-  fetchSeasonalTips,
+  loadSeasonalTips,
   getCurrentSeason,
   seasonEmoji,
 } from "@/lib/seasonalTips";
@@ -269,32 +268,22 @@ function SeasonalTipsCard({
   React.useEffect(() => { plantsRef.current = plants; }, [plants]);
 
   const load = React.useCallback(async () => {
-    console.log("[SeasonalTips] load called — location:", location, "userId:", userId);
-    if (!location) {
-      console.log("[SeasonalTips] no location, aborting");
-      setLoading(false);
-      return;
-    }
+    if (!location) { setLoading(false); return; }
     try {
-      // Pass current plants so getCachedTips can detect plant set changes
-      const cached = await getCachedTips(userId, plantsRef.current);
-      console.log("[SeasonalTips] cache result:", cached ? "HIT" : "MISS");
-      if (cached) { setTips(cached); setLoading(false); return; }
-
-      console.log("[SeasonalTips] fetching fresh tips...", "plants:", plantsRef.current.length);
-      const fresh = await fetchSeasonalTips(userId, plantsRef.current, location, month);
-      console.log("[SeasonalTips] fresh tips received:", fresh.season, fresh.general_tips?.length, "general tips");
-      setTips(fresh);
-      scheduleSeasonalTipsNotification(
-        t("seasonal.seasonalNotificationTitle"),
-        t("seasonal.seasonalNotificationBody", { month: fresh.month_name })
-      );
+      const result = await loadSeasonalTips(userId, plantsRef.current, location);
+      if (result) {
+        setTips(result);
+        scheduleSeasonalTipsNotification(
+          t("seasonal.seasonalNotificationTitle"),
+          t("seasonal.seasonalNotificationBody", { month: result.month_name })
+        );
+      }
     } catch (err) {
       console.error("[SeasonalTips] load error:", err);
     } finally {
       setLoading(false);
     }
-  }, [userId, location, month, t]); // plants intentionally excluded — using plantsRef
+  }, [userId, location, t]); // plants intentionally excluded — using plantsRef
 
   React.useEffect(() => { load(); }, [load]);
 
