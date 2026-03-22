@@ -68,7 +68,7 @@ export default function TabLayout() {
         tabBarInactiveTintColor: COLORS.textSecondary,
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: COLORS.cream,
+          backgroundColor: COLORS.white,
           borderTopWidth: 1,
           borderTopColor: COLORS.border,
           elevation: 0,
