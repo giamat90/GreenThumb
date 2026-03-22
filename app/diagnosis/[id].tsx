@@ -86,7 +86,7 @@ const SEVERITY_EMOJI: Record<DiagnosisResult["severity"], string> = {
 };
 
 const SEVERITY_BG: Record<DiagnosisResult["severity"], string> = {
-  healthy: "#D8F3DC",
+  healthy: COLORS.lightgreen,
   warning: "#FEF3C7",
   critical: "#FEE2E2",
 };

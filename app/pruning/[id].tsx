@@ -95,7 +95,7 @@ const OBSERVED_SIGNS = [
 const REC_CONFIG: Record<Recommendation, { label: string; bg: string; text: string }> = {
   prune_now:  { label: "Prune Now ✂️", bg: "#FEE2E2", text: "#991B1B"       },
   prune_soon: { label: "Prune Soon ⚠️", bg: "#FEF3C7", text: "#92400E"      },
-  wait:       { label: "All Good ✅",   bg: "#D8F3DC", text: COLORS.primary  },
+  wait:       { label: "All Good ✅",   bg: COLORS.lightgreen, text: COLORS.primary  },
 };
 
 // ─── Scan line animation ──────────────────────────────────────────────────────

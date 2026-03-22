@@ -116,7 +116,7 @@ const STATUS_EMOJI: Record<FactorStatus, string> = {
 };
 
 const OVERALL_BG: Record<FactorStatus, string> = {
-  good: "#D8F3DC",
+  good: COLORS.lightgreen,
   warning: "#FEF3C7",
   poor: "#FEE2E2",
 };
@@ -206,7 +206,7 @@ function FactorCard({
   factor: PlacementFactor;
 }) {
   const statusBg: Record<FactorStatus, string> = {
-    good: "#D8F3DC",
+    good: COLORS.lightgreen,
     warning: "#FEF3C7",
     poor: "#FEE2E2",
   };

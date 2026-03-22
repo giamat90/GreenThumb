@@ -85,7 +85,7 @@ const OBSERVED_SIGNS = [
 const REC_CONFIG: Record<Recommendation, { label: string; bg: string; text: string }> = {
   repot_now: { label: "Repot Now 🚨", bg: "#FEE2E2", text: "#991B1B" },
   repot_soon: { label: "Repot Soon ⚠️", bg: "#FEF3C7", text: "#92400E" },
-  wait: { label: "All Good ✅", bg: "#D8F3DC", text: COLORS.primary },
+  wait: { label: "All Good ✅", bg: COLORS.lightgreen, text: COLORS.primary },
 };
 
 // ─── Scan line animation ──────────────────────────────────────────────────────

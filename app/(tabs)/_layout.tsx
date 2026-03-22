@@ -68,8 +68,9 @@ export default function TabLayout() {
         tabBarInactiveTintColor: COLORS.textSecondary,
         headerShown: false,
         tabBarStyle: {
+          backgroundColor: COLORS.cream,
           borderTopWidth: 1,
-          borderTopColor: "#EFEFEF",
+          borderTopColor: COLORS.border,
           elevation: 0,
           shadowOpacity: 0,
           // Account for Android system navigation bar (gesture or button nav)

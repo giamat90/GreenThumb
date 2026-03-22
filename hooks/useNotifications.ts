@@ -54,7 +54,7 @@ export function useNotifications(): UseNotificationsResult {
           name: "Watering Reminders",
           importance: Notifications.AndroidImportance.HIGH,
           vibrationPattern: [0, 250, 250, 250],
-          lightColor: "#52B788",
+          lightColor: "#6BA83A",
           sound: "default",
         });
       } catch (err) {

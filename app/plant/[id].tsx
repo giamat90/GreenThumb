@@ -154,10 +154,10 @@ class PlantDetailErrorBoundary extends React.Component<
   render() {
     if (this.state.hasError) {
       return (
-        <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#F8F9FA" }}>
-          <Text style={{ fontSize: 16, color: "#6B7280", marginBottom: 16 }}>Something went wrong</Text>
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: COLORS.cream }}>
+          <Text style={{ fontSize: 16, color: COLORS.textSecondary, marginBottom: 16 }}>Something went wrong</Text>
           <TouchableOpacity onPress={this.props.onBack}>
-            <Text style={{ fontSize: 16, color: "#2D6A4F", fontWeight: "600" }}>Go Back</Text>
+            <Text style={{ fontSize: 16, color: COLORS.primary, fontWeight: "600" }}>Go Back</Text>
           </TouchableOpacity>
         </View>
       );

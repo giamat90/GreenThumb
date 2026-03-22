@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase";
 import type { Plant } from "@/types";
 
 const CALENDAR_TITLE = "GreenThumb 🌿";
-const CALENDAR_COLOR = "#2D6A4F";
+const CALENDAR_COLOR = "#3E7428";
 
 // ─── Permissions ──────────────────────────────────────────────────────────────
 
