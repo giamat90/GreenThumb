@@ -37,6 +37,12 @@ export async function identifyPlant(
   const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? "";
   const edgeFunctionUrl = `${CONFIG.supabaseUrl}/functions/v1/identify-plant`;
 
+  const requestBody = JSON.stringify({ image: base64Image, language });
+  const requestBodyKb = Math.round(requestBody.length / 1024);
+  console.log("[PlantID] calling identify...");
+  console.log("[PlantID] request body size:", requestBodyKb, "KB");
+  console.log("[PlantID] edge function url:", edgeFunctionUrl);
+
   const response = await fetch(edgeFunctionUrl, {
     method: "POST",
     headers: {
@@ -44,10 +50,14 @@ export async function identifyPlant(
       apikey: anonKey,
       Authorization: `Bearer ${anonKey}`,
     },
-    body: JSON.stringify({ image: base64Image, language }),
+    body: requestBody,
   });
 
+  console.log("[PlantID] response status:", response.status);
+  console.log("[PlantID] response ok:", response.ok);
+
   const data: unknown = await response.json();
+  console.log("[PlantID] response data:", JSON.stringify(data).slice(0, 500));
 
   if (!response.ok) {
     const errorData = data as { error?: string };

@@ -17,8 +17,10 @@ import {
   StatusBar,
   Image,
   ActivityIndicator,
+  Linking,
   type GestureResponderEvent,
 } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 import { CameraView } from "expo-camera";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -58,21 +60,15 @@ function generateUUID(): string {
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const VIEWFINDER_SIZE = Math.floor(SCREEN_WIDTH * 0.75);
 
+const CONFIDENCE = {
+  HIGH: 0.70,
+  MEDIUM: 0.40,
+} as const;
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-type ScreenState = "camera" | "loading" | "results";
+type ScreenState = "source" | "camera" | "loading" | "results";
 
-function getConfidence(probability: number): {
-  labelKey: string;
-  color: string;
-  bgColor: string;
-} {
-  if (probability >= 0.8)
-    return { labelKey: "identify.highConfidence", color: COLORS.success, bgColor: "#D1FAE5" };
-  if (probability >= 0.5)
-    return { labelKey: "identify.mediumConfidence", color: COLORS.warning, bgColor: "#FEF3C7" };
-  return { labelKey: "identify.lowConfidence", color: COLORS.danger, bgColor: "#FEE2E2" };
-}
 
 function calculateNextWatering(
   watering: "frequent" | "average" | "minimum"
@@ -86,8 +82,9 @@ function calculateNextWatering(
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-/** Semi-transparent viewfinder overlay — 4 panels + corner brackets. */
+/** Semi-transparent viewfinder overlay — 4 panels + green corner brackets + hint text. */
 function ViewfinderOverlay() {
+  const { t } = useTranslation();
   const sideMargin = (SCREEN_WIDTH - VIEWFINDER_SIZE) / 2;
   // Position the viewfinder slightly above center for ergonomics
   const topOffset = (SCREEN_HEIGHT - VIEWFINDER_SIZE) / 2 - 60;
@@ -95,7 +92,10 @@ function ViewfinderOverlay() {
   const BORDER = 3;
 
   return (
-    <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}>
+    <View
+      pointerEvents="none"
+      style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
+    >
       {/* Top panel */}
       <View
         style={{
@@ -161,8 +161,8 @@ function ViewfinderOverlay() {
             height: CORNER,
             borderTopWidth: BORDER,
             borderLeftWidth: BORDER,
-            borderColor: "white",
-            borderTopLeftRadius: 4,
+            borderColor: COLORS.primary,
+            borderTopLeftRadius: 16,
           }}
         />
         {/* Top-right */}
@@ -175,8 +175,8 @@ function ViewfinderOverlay() {
             height: CORNER,
             borderTopWidth: BORDER,
             borderRightWidth: BORDER,
-            borderColor: "white",
-            borderTopRightRadius: 4,
+            borderColor: COLORS.primary,
+            borderTopRightRadius: 16,
           }}
         />
         {/* Bottom-left */}
@@ -189,8 +189,8 @@ function ViewfinderOverlay() {
             height: CORNER,
             borderBottomWidth: BORDER,
             borderLeftWidth: BORDER,
-            borderColor: "white",
-            borderBottomLeftRadius: 4,
+            borderColor: COLORS.primary,
+            borderBottomLeftRadius: 16,
           }}
         />
         {/* Bottom-right */}
@@ -203,10 +203,45 @@ function ViewfinderOverlay() {
             height: CORNER,
             borderBottomWidth: BORDER,
             borderRightWidth: BORDER,
-            borderColor: "white",
-            borderBottomRightRadius: 4,
+            borderColor: COLORS.primary,
+            borderBottomRightRadius: 16,
           }}
         />
+      </View>
+
+      {/* Hint text below frame */}
+      <View
+        style={{
+          position: "absolute",
+          top: topOffset + VIEWFINDER_SIZE + 16,
+          left: sideMargin,
+          right: sideMargin,
+          alignItems: "center",
+        }}
+      >
+        <Text
+          style={{
+            color: "white",
+            fontSize: 14,
+            fontWeight: "500",
+            textAlign: "center",
+            textShadowColor: "rgba(0,0,0,0.6)",
+            textShadowOffset: { width: 0, height: 1 },
+            textShadowRadius: 3,
+          }}
+        >
+          {t("identify.frameGuide")}
+        </Text>
+        <Text
+          style={{
+            color: "rgba(255,255,255,0.65)",
+            fontSize: 12,
+            textAlign: "center",
+            marginTop: 4,
+          }}
+        >
+          {t("identify.holdSteady")}
+        </Text>
       </View>
     </View>
   );
@@ -222,13 +257,12 @@ export default function IdentifyScreen() {
   const spinAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
 
-  const { hasPermission, isLoading: permissionLoading, requestPermission } =
-    useCamera();
+  const { hasPermission, requestPermission } = useCamera();
   const { canIdentify, isLoading: limitLoading } = useIdentificationLimit();
   const { addPlant } = usePlantsStore();
   const { profile } = useUserStore();
 
-  const [screenState, setScreenState] = useState<ScreenState>("camera");
+  const [screenState, setScreenState] = useState<ScreenState>("source");
   const [isFlashOn, setIsFlashOn] = useState(false);
   const [capturedUri, setCapturedUri] = useState<string | null>(null);
   const [identificationResult, setIdentificationResult] =
@@ -244,6 +278,9 @@ export default function IdentifyScreen() {
   const [selectedLocation, setSelectedLocation] =
     useState<PlantLocation>("indoor");
   const [isSaving, setIsSaving] = useState(false);
+  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(0);
+  const [isManualAdd, setIsManualAdd] = useState(false);
+  const [manualSpecies, setManualSpecies] = useState("");
 
   // Show paywall when limit check completes and user is over quota
   useEffect(() => {
@@ -270,6 +307,7 @@ export default function IdentifyScreen() {
 
   const openAddModal = useCallback(
     (topSuggestion: PlantSuggestion) => {
+      setIsManualAdd(false);
       const name = topSuggestion.commonNames[0] ?? topSuggestion.name;
       setPlantNickname(name);
       setShowAddModal(true);
@@ -288,8 +326,89 @@ export default function IdentifyScreen() {
       toValue: SCREEN_HEIGHT,
       duration: 260,
       useNativeDriver: true,
-    }).start(() => setShowAddModal(false));
+    }).start(() => {
+      setShowAddModal(false);
+      setIsManualAdd(false);
+    });
   }, [slideAnim]);
+
+  const handleManualAdd = useCallback(() => {
+    setIsManualAdd(true);
+    setPlantNickname("");
+    setManualSpecies("");
+    setShowAddModal(true);
+    Animated.spring(slideAnim, {
+      toValue: 0,
+      useNativeDriver: true,
+      tension: 65,
+      friction: 11,
+    }).start();
+  }, [slideAnim]);
+
+  const handleTakePhoto = useCallback(async () => {
+    if (!hasPermission) {
+      const result = await requestPermission();
+      if (!result.granted) return;
+    }
+    setScreenState("camera");
+  }, [hasPermission, requestPermission]);
+
+  const handleGalleryPick = useCallback(async () => {
+    if (!canIdentify && !limitLoading) {
+      setShowPaywallModal(true);
+      return;
+    }
+
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert(
+        t("identify.galleryPermissionTitle"),
+        t("identify.galleryPermissionMessage"),
+        [
+          { text: t("common.cancel"), style: "cancel" },
+          {
+            text: t("identify.openSettings"),
+            onPress: () => Linking.openSettings(),
+          },
+        ]
+      );
+      return;
+    }
+
+    const pickerResult = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: false,
+      quality: 1,
+    });
+
+    if (pickerResult.canceled || !pickerResult.assets[0]) return;
+
+    const asset = pickerResult.assets[0];
+    setCapturedUri(asset.uri);
+    setScreenState("loading");
+
+    try {
+      let base64Image: string;
+      try {
+        base64Image = await compressImage(asset.uri);
+      } catch {
+        base64Image = await FileSystem.readAsStringAsync(asset.uri, {
+          encoding: "base64",
+        });
+      }
+
+      if (!base64Image) throw new Error("Could not encode image.");
+
+      const identResult = await identifyPlant(base64Image, deviceLanguage());
+      setIdentificationResult(identResult);
+      setScreenState("results");
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : t("common.somethingWentWrong");
+      Alert.alert(t("identify.identificationFailed"), message);
+      setScreenState("source");
+    }
+  }, [canIdentify, limitLoading, t]);
 
   const handleCapture = useCallback(async () => {
     if (!cameraRef.current) return;
@@ -334,16 +453,20 @@ export default function IdentifyScreen() {
   }, [canIdentify, limitLoading, t]);
 
   const handleTryAgain = useCallback(() => {
-    setScreenState("camera");
+    setScreenState("source");
     setCapturedUri(null);
     setIdentificationResult(null);
+    setSelectedSuggestionIndex(0);
   }, []);
 
   const handleSavePlant = useCallback(async () => {
     if (!capturedUri || !identificationResult || !profile) return;
 
-    const topSuggestion = identificationResult.suggestions[0];
-    if (!topSuggestion) return;
+    const topSuggestion = isManualAdd
+      ? null
+      : (identificationResult.suggestions[selectedSuggestionIndex] ??
+          identificationResult.suggestions[0]);
+    if (!isManualAdd && !topSuggestion) return;
 
     setIsSaving(true);
     console.log("Supabase URL:", process.env.EXPO_PUBLIC_SUPABASE_URL);
@@ -383,21 +506,23 @@ export default function IdentifyScreen() {
       }
 
       // Calculate next watering from care profile
-      const nextWatering = calculateNextWatering(
-        topSuggestion.careProfile.watering
-      );
+      const watering = topSuggestion?.careProfile.watering ?? "average";
+      const nextWatering = calculateNextWatering(watering);
 
       const finalName =
         plantNickname.trim() ||
-        topSuggestion.commonNames[0] ||
-        topSuggestion.name;
+        (!isManualAdd
+          ? topSuggestion?.commonNames[0] ?? topSuggestion?.name ?? ""
+          : "");
 
       const newPlantData = {
         id: plantId,
         user_id: profile.id,
         name: finalName,
-        species: topSuggestion.name,
-        common_name: topSuggestion.commonNames[0] ?? null,
+        species: isManualAdd
+          ? manualSpecies.trim() || null
+          : topSuggestion?.name ?? null,
+        common_name: isManualAdd ? null : topSuggestion?.commonNames[0] ?? null,
         photo_url: photoUrl,
         pot_size: selectedPotSize,
         location: selectedLocation,
@@ -406,9 +531,9 @@ export default function IdentifyScreen() {
         next_watering: nextWatering,
         health_score: 100,
         care_profile: {
-          watering: topSuggestion.careProfile.watering,
-          light: topSuggestion.careProfile.light,
-          soilType: topSuggestion.careProfile.soilType,
+          watering: watering,
+          light: topSuggestion?.careProfile.light ?? "indirect light",
+          soilType: topSuggestion?.careProfile.soilType ?? "well-draining",
         },
         notes: null,
       };
@@ -462,6 +587,9 @@ export default function IdentifyScreen() {
     plantNickname,
     selectedPotSize,
     selectedLocation,
+    selectedSuggestionIndex,
+    isManualAdd,
+    manualSpecies,
     addPlant,
     closeAddModal,
     router,
@@ -473,8 +601,8 @@ export default function IdentifyScreen() {
     outputRange: ["0deg", "360deg"],
   });
 
-  // ── Loading gate (limit check + permission check) ──────────────────────────
-  if (permissionLoading || limitLoading) {
+  // ── Loading gate (limit check) ──────────────────────────────────────────────
+  if (limitLoading) {
     return (
       <View
         style={{ flex: 1, backgroundColor: "black", alignItems: "center", justifyContent: "center" }}
@@ -485,40 +613,184 @@ export default function IdentifyScreen() {
     );
   }
 
-  // ── No camera permission ────────────────────────────────────────────────────
-  if (!hasPermission) {
-    return (
-      <View className="flex-1 items-center justify-center bg-cream px-8">
-        <StatusBar barStyle="dark-content" />
-        <View className="bg-lightgreen rounded-full p-6 mb-6">
-          <Leaf size={40} color={COLORS.primary} />
-        </View>
-        <Text className="text-2xl font-bold text-primary text-center mb-3">
-          {t("identify.cameraAccessNeeded")}
-        </Text>
-        <Text className="text-base text-gray-500 text-center mb-8 leading-6">
-          {t("identify.cameraAccessDescription")}
-        </Text>
-        <TouchableOpacity
-          onPress={requestPermission}
-          className="bg-primary rounded-2xl px-8 py-4"
-          accessibilityLabel={t("identify.allowCamera")}
-        >
-          <Text className="text-white font-semibold text-base">
-            {t("identify.allowCamera")}
-          </Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
   // ── Main render ─────────────────────────────────────────────────────────────
   return (
     <View style={{ flex: 1, backgroundColor: "black" }}>
       <StatusBar barStyle="light-content" />
 
+      {/* ── State 0: Source choice ── */}
+      {screenState === "source" && (
+        <View style={{ flex: 1, backgroundColor: COLORS.cream }}>
+          <StatusBar barStyle="dark-content" />
+
+          {/* Close button */}
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={{
+              position: "absolute",
+              top: insets.top + 12,
+              right: 20,
+              zIndex: 10,
+              backgroundColor: "#F3F4F6",
+              borderRadius: 999,
+              padding: 8,
+            }}
+            accessibilityLabel="Close"
+          >
+            <X size={22} color={COLORS.textSecondary} />
+          </TouchableOpacity>
+
+          {/* Centered content */}
+          <View
+            style={{
+              flex: 1,
+              justifyContent: "center",
+              paddingHorizontal: 28,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 28,
+                fontWeight: "700",
+                color: COLORS.primary,
+                textAlign: "center",
+                marginBottom: 10,
+              }}
+            >
+              {t("identify.chooseSource")}
+            </Text>
+            <Text
+              style={{
+                fontSize: 15,
+                color: COLORS.textSecondary,
+                textAlign: "center",
+                marginBottom: 40,
+                lineHeight: 22,
+              }}
+            >
+              {t("identify.sourceSubtitle")}
+            </Text>
+
+            {/* Take a photo card */}
+            <TouchableOpacity
+              onPress={handleTakePhoto}
+              style={{
+                backgroundColor: COLORS.primary,
+                borderRadius: 24,
+                paddingVertical: 36,
+                alignItems: "center",
+                marginBottom: 16,
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.12,
+                shadowRadius: 12,
+                elevation: 4,
+              }}
+              accessibilityLabel={t("identify.takePhoto")}
+            >
+              <Text style={{ fontSize: 44, marginBottom: 12 }}>📷</Text>
+              <Text
+                style={{ fontSize: 18, fontWeight: "700", color: "white" }}
+              >
+                {t("identify.takePhoto")}
+              </Text>
+            </TouchableOpacity>
+
+            {/* Choose from gallery card */}
+            <TouchableOpacity
+              onPress={handleGalleryPick}
+              style={{
+                backgroundColor: "white",
+                borderRadius: 24,
+                paddingVertical: 36,
+                alignItems: "center",
+                borderWidth: 2,
+                borderColor: COLORS.primary,
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.06,
+                shadowRadius: 8,
+                elevation: 2,
+              }}
+              accessibilityLabel={t("identify.chooseFromGallery")}
+            >
+              <Text style={{ fontSize: 44, marginBottom: 12 }}>🖼️</Text>
+              <Text
+                style={{
+                  fontSize: 18,
+                  fontWeight: "700",
+                  color: COLORS.primary,
+                }}
+              >
+                {t("identify.chooseFromGallery")}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
       {/* ── State 1: Camera ── */}
-      {screenState === "camera" && (
+      {screenState === "camera" && !hasPermission && (
+        <View
+          style={{
+            flex: 1,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: COLORS.cream,
+            paddingHorizontal: 32,
+          }}
+        >
+          <StatusBar barStyle="dark-content" />
+          <View
+            style={{
+              backgroundColor: COLORS.lightgreen,
+              borderRadius: 999,
+              padding: 24,
+              marginBottom: 24,
+            }}
+          >
+            <Leaf size={40} color={COLORS.primary} />
+          </View>
+          <Text
+            style={{
+              fontSize: 22,
+              fontWeight: "700",
+              color: COLORS.primary,
+              textAlign: "center",
+              marginBottom: 12,
+            }}
+          >
+            {t("identify.cameraAccessNeeded")}
+          </Text>
+          <Text
+            style={{
+              fontSize: 15,
+              color: COLORS.textSecondary,
+              textAlign: "center",
+              marginBottom: 32,
+              lineHeight: 22,
+            }}
+          >
+            {t("identify.cameraAccessDescription")}
+          </Text>
+          <TouchableOpacity
+            onPress={requestPermission}
+            style={{
+              backgroundColor: COLORS.primary,
+              borderRadius: 18,
+              paddingHorizontal: 32,
+              paddingVertical: 14,
+            }}
+            accessibilityLabel={t("identify.allowCamera")}
+          >
+            <Text style={{ color: "white", fontWeight: "600", fontSize: 16 }}>
+              {t("identify.allowCamera")}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {screenState === "camera" && hasPermission && (
         <>
           <CameraView
             ref={cameraRef}
@@ -545,13 +817,13 @@ export default function IdentifyScreen() {
             }}
           >
             <TouchableOpacity
-              onPress={() => router.back()}
+              onPress={() => setScreenState("source")}
               style={{
                 backgroundColor: "rgba(0,0,0,0.4)",
                 borderRadius: 999,
                 padding: 8,
               }}
-              accessibilityLabel="Close camera"
+              accessibilityLabel="Go back"
             >
               <X size={24} color="white" />
             </TouchableOpacity>
@@ -748,315 +1020,507 @@ export default function IdentifyScreen() {
                 </Text>
               </TouchableOpacity>
             </View>
-          ) : (
-            // Plant identified — show results
-            <ScrollView
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ paddingBottom: 40 }}
-            >
-              {/* Captured photo */}
-              {capturedUri && (
-                <Image
-                  source={{ uri: capturedUri }}
-                  style={{ width: SCREEN_WIDTH, height: 240 }}
-                  resizeMode="cover"
-                />
-              )}
+          ) : (() => {
+            const activeSuggestion =
+              identificationResult.suggestions[selectedSuggestionIndex] ??
+              identificationResult.suggestions[0];
+            if (!activeSuggestion) return null;
+            const prob = activeSuggestion.probability;
 
-              <View style={{ paddingHorizontal: 20, paddingTop: 20 }}>
-                {(() => {
-                  const top = identificationResult.suggestions[0];
-                  if (!top) return null;
-                  const confidence = getConfidence(top.probability);
+            // LOW confidence — failure screen
+            if (prob < CONFIDENCE.MEDIUM) {
+              return (
+                <ScrollView
+                  showsVerticalScrollIndicator={false}
+                  contentContainerStyle={{ flexGrow: 1 }}
+                >
+                  <View
+                    style={{
+                      flex: 1,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      paddingHorizontal: 32,
+                      paddingTop: 80,
+                      paddingBottom: 40,
+                    }}
+                  >
+                    <Text style={{ fontSize: 64, marginBottom: 20 }}>🔍</Text>
+                    <Text
+                      style={{
+                        fontSize: 22,
+                        fontWeight: "700",
+                        color: COLORS.primary,
+                        textAlign: "center",
+                        marginBottom: 10,
+                      }}
+                    >
+                      {t("identify.lowConfidence")}
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: 15,
+                        color: COLORS.textSecondary,
+                        textAlign: "center",
+                        marginBottom: 32,
+                        lineHeight: 22,
+                      }}
+                    >
+                      {t("identify.lowConfidenceSubtitle")}
+                    </Text>
 
-                  return (
-                    <>
-                      {/* Confidence pill */}
-                      <View style={{ alignItems: "center", marginBottom: 16 }}>
+                    {/* Photo tips card */}
+                    <View
+                      style={{
+                        backgroundColor: "white",
+                        borderRadius: 20,
+                        padding: 20,
+                        width: "100%",
+                        marginBottom: 28,
+                        shadowColor: "#000",
+                        shadowOffset: { width: 0, height: 1 },
+                        shadowOpacity: 0.05,
+                        shadowRadius: 4,
+                        elevation: 2,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 15,
+                          fontWeight: "700",
+                          color: COLORS.primary,
+                          marginBottom: 16,
+                        }}
+                      >
+                        {t("identify.photoTipsTitle")}
+                      </Text>
+                      {(
+                        [
+                          { emoji: "📸", tipKey: "identify.photoTip1" },
+                          { emoji: "💡", tipKey: "identify.photoTip2" },
+                          { emoji: "🍃", tipKey: "identify.photoTip3" },
+                          { emoji: "🔍", tipKey: "identify.photoTip4" },
+                        ] as { emoji: string; tipKey: string }[]
+                      ).map(({ emoji, tipKey }) => (
                         <View
+                          key={tipKey}
                           style={{
-                            backgroundColor: confidence.bgColor,
-                            paddingHorizontal: 16,
-                            paddingVertical: 6,
-                            borderRadius: 999,
+                            flexDirection: "row",
+                            alignItems: "center",
+                            marginBottom: 12,
                           }}
                         >
+                          <Text style={{ fontSize: 18, marginRight: 12 }}>
+                            {emoji}
+                          </Text>
                           <Text
                             style={{
-                              color: confidence.color,
-                              fontWeight: "600",
-                              fontSize: 13,
+                              fontSize: 14,
+                              color: COLORS.textPrimary,
+                              flex: 1,
                             }}
                           >
-                            {t(confidence.labelKey)}
+                            {t(tipKey)}
                           </Text>
                         </View>
-                      </View>
+                      ))}
+                    </View>
 
-                      {/* Primary plant name */}
-                      <View style={{ alignItems: "center", marginBottom: 20 }}>
+                    {/* Try Again button */}
+                    <TouchableOpacity
+                      onPress={handleTryAgain}
+                      style={{
+                        backgroundColor: COLORS.primary,
+                        borderRadius: 18,
+                        paddingVertical: 16,
+                        alignItems: "center",
+                        width: "100%",
+                        marginBottom: 16,
+                      }}
+                      accessibilityLabel={t("identify.tryAgain")}
+                    >
+                      <Text
+                        style={{ color: "white", fontWeight: "600", fontSize: 16 }}
+                      >
+                        {t("identify.tryAgain")}
+                      </Text>
+                    </TouchableOpacity>
+
+                    {/* Add manually link */}
+                    <TouchableOpacity
+                      onPress={handleManualAdd}
+                      style={{ paddingVertical: 12, alignItems: "center" }}
+                      accessibilityLabel={t("identify.addManually")}
+                    >
+                      <Text
+                        style={{
+                          color: COLORS.primary,
+                          fontWeight: "500",
+                          fontSize: 15,
+                        }}
+                      >
+                        {t("identify.addManually")}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </ScrollView>
+              );
+            }
+
+            // MEDIUM or HIGH confidence — show result
+            return (
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingBottom: 40 }}
+              >
+                {/* Captured photo */}
+                {capturedUri && (
+                  <Image
+                    source={{ uri: capturedUri }}
+                    style={{ width: SCREEN_WIDTH, height: 240 }}
+                    resizeMode="cover"
+                  />
+                )}
+
+                <View style={{ paddingHorizontal: 20, paddingTop: 20 }}>
+                  {/* MEDIUM confidence: amber warning banner */}
+                  {prob < CONFIDENCE.HIGH && (
+                    <View
+                      style={{
+                        backgroundColor: "#FFF8E1",
+                        borderWidth: 1,
+                        borderColor: "#F57C00",
+                        borderRadius: 16,
+                        padding: 16,
+                        marginBottom: 16,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 15,
+                          fontWeight: "700",
+                          color: "#F57C00",
+                          marginBottom: 4,
+                        }}
+                      >
+                        {"⚠️ " + t("identify.mediumConfidence")}
+                      </Text>
+                      <Text
+                        style={{
+                          fontSize: 13,
+                          color: "#E65100",
+                          lineHeight: 20,
+                        }}
+                      >
+                        {t("identify.confidenceWarning")}
+                      </Text>
+                    </View>
+                  )}
+
+                  {/* Plant name + confidence */}
+                  <View style={{ alignItems: "center", marginBottom: 20 }}>
+                    {/* HIGH confidence: green title badge */}
+                    {prob >= CONFIDENCE.HIGH && (
+                      <View
+                        style={{
+                          backgroundColor: "#D1FAE5",
+                          paddingHorizontal: 16,
+                          paddingVertical: 6,
+                          borderRadius: 999,
+                          marginBottom: 12,
+                        }}
+                      >
                         <Text
                           style={{
-                            fontSize: 28,
-                            fontWeight: "700",
-                            color: COLORS.primary,
+                            color: COLORS.success,
+                            fontWeight: "600",
+                            fontSize: 13,
+                          }}
+                        >
+                          {t("identify.highConfidence")}
+                        </Text>
+                      </View>
+                    )}
+
+                    <Text
+                      style={{
+                        fontSize: 28,
+                        fontWeight: "700",
+                        color: COLORS.primary,
+                        textAlign: "center",
+                        marginBottom: 4,
+                      }}
+                    >
+                      {activeSuggestion.commonNames[0] ?? activeSuggestion.name}
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: 15,
+                        color: COLORS.textSecondary,
+                        fontStyle: "italic",
+                        marginBottom: 6,
+                      }}
+                    >
+                      {activeSuggestion.name}
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: 13,
+                        color: prob >= CONFIDENCE.HIGH ? "#9CA3AF" : "#F57C00",
+                        fontWeight: prob >= CONFIDENCE.HIGH ? "400" : "600",
+                      }}
+                    >
+                      {t("identify.confidenceScore", {
+                        score: Math.round(prob * 100),
+                      })}
+                    </Text>
+                  </View>
+
+                  {/* Care profile card */}
+                  <View
+                    style={{
+                      backgroundColor: "white",
+                      borderRadius: 24,
+                      padding: 20,
+                      marginBottom: 16,
+                      shadowColor: "#000",
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.06,
+                      shadowRadius: 8,
+                      elevation: 3,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 15,
+                        fontWeight: "600",
+                        color: COLORS.primary,
+                        marginBottom: 16,
+                      }}
+                    >
+                      {t("identify.careGuide")}
+                    </Text>
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        justifyContent: "space-around",
+                      }}
+                    >
+                      {/* Watering */}
+                      <View style={{ alignItems: "center", flex: 1 }}>
+                        <Text style={{ fontSize: 24, marginBottom: 4 }}>
+                          💧
+                        </Text>
+                        <Text
+                          style={{
+                            fontSize: 12,
+                            fontWeight: "600",
+                            color: COLORS.textPrimary,
+                            textTransform: "capitalize",
                             textAlign: "center",
-                            marginBottom: 4,
                           }}
                         >
-                          {top.commonNames[0] ?? top.name}
+                          {activeSuggestion.careProfile.watering}
                         </Text>
                         <Text
-                          style={{
-                            fontSize: 15,
-                            color: COLORS.textSecondary,
-                            fontStyle: "italic",
-                            marginBottom: 6,
-                          }}
+                          style={{ fontSize: 11, color: COLORS.textSecondary }}
                         >
-                          {top.name}
-                        </Text>
-                        <Text style={{ fontSize: 13, color: "#9CA3AF" }}>
-                          {t("identify.matchPercent", { pct: Math.round(top.probability * 100) })}
+                          {t("identify.watering")}
                         </Text>
                       </View>
 
-                      {/* Care profile card */}
+                      {/* Light */}
+                      <View style={{ alignItems: "center", flex: 1 }}>
+                        <Text style={{ fontSize: 24, marginBottom: 4 }}>
+                          ☀️
+                        </Text>
+                        <Text
+                          style={{
+                            fontSize: 12,
+                            fontWeight: "600",
+                            color: COLORS.textPrimary,
+                            textAlign: "center",
+                          }}
+                          numberOfLines={2}
+                        >
+                          {activeSuggestion.careProfile.light ||
+                            t("identify.brightLight")}
+                        </Text>
+                        <Text
+                          style={{ fontSize: 11, color: COLORS.textSecondary }}
+                        >
+                          {t("identify.light")}
+                        </Text>
+                      </View>
+
+                      {/* Soil */}
+                      <View style={{ alignItems: "center", flex: 1 }}>
+                        <Text style={{ fontSize: 24, marginBottom: 4 }}>
+                          🌱
+                        </Text>
+                        <Text
+                          style={{
+                            fontSize: 12,
+                            fontWeight: "600",
+                            color: COLORS.textPrimary,
+                            textAlign: "center",
+                          }}
+                          numberOfLines={2}
+                        >
+                          {activeSuggestion.careProfile.soilType ||
+                            t("identify.wellDraining")}
+                        </Text>
+                        <Text
+                          style={{ fontSize: 11, color: COLORS.textSecondary }}
+                        >
+                          {t("identify.soil")}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* MEDIUM confidence: alternative matches */}
+                  {prob < CONFIDENCE.HIGH &&
+                    identificationResult.suggestions.length > 1 && (
                       <View
                         style={{
                           backgroundColor: "white",
-                          borderRadius: 24,
-                          padding: 20,
-                          marginBottom: 16,
+                          borderRadius: 20,
+                          padding: 16,
+                          marginBottom: 20,
                           shadowColor: "#000",
-                          shadowOffset: { width: 0, height: 2 },
-                          shadowOpacity: 0.06,
-                          shadowRadius: 8,
-                          elevation: 3,
+                          shadowOffset: { width: 0, height: 1 },
+                          shadowOpacity: 0.05,
+                          shadowRadius: 4,
+                          elevation: 2,
                         }}
                       >
                         <Text
                           style={{
-                            fontSize: 15,
+                            fontSize: 14,
                             fontWeight: "600",
-                            color: COLORS.primary,
-                            marginBottom: 16,
+                            color: COLORS.textSecondary,
+                            marginBottom: 12,
                           }}
                         >
-                          {t("identify.careGuide")}
+                          {t("identify.alternativeMatches")}
                         </Text>
-                        <View
-                          style={{
-                            flexDirection: "row",
-                            justifyContent: "space-around",
-                          }}
-                        >
-                          {/* Watering */}
-                          <View style={{ alignItems: "center", flex: 1 }}>
-                            <Text style={{ fontSize: 24, marginBottom: 4 }}>
-                              💧
-                            </Text>
-                            <Text
+                        {identificationResult.suggestions
+                          .map((sug, idx) => ({ sug, idx }))
+                          .filter(({ idx }) => idx !== selectedSuggestionIndex)
+                          .slice(0, 3)
+                          .map(({ sug, idx }) => (
+                            <View
+                              key={sug.id}
                               style={{
-                                fontSize: 12,
-                                fontWeight: "600",
-                                color: COLORS.textPrimary,
-                                textTransform: "capitalize",
-                                textAlign: "center",
+                                flexDirection: "row",
+                                alignItems: "center",
+                                paddingVertical: 10,
+                                borderTopWidth: 1,
+                                borderTopColor: "#F3F4F6",
                               }}
                             >
-                              {top.careProfile.watering}
-                            </Text>
-                            <Text
-                              style={{ fontSize: 11, color: COLORS.textSecondary }}
-                            >
-                              {t("identify.watering")}
-                            </Text>
-                          </View>
-
-                          {/* Light */}
-                          <View style={{ alignItems: "center", flex: 1 }}>
-                            <Text style={{ fontSize: 24, marginBottom: 4 }}>
-                              ☀️
-                            </Text>
-                            <Text
-                              style={{
-                                fontSize: 12,
-                                fontWeight: "600",
-                                color: COLORS.textPrimary,
-                                textAlign: "center",
-                              }}
-                              numberOfLines={2}
-                            >
-                              {top.careProfile.light || t("identify.brightLight")}
-                            </Text>
-                            <Text
-                              style={{ fontSize: 11, color: COLORS.textSecondary }}
-                            >
-                              {t("identify.light")}
-                            </Text>
-                          </View>
-
-                          {/* Soil */}
-                          <View style={{ alignItems: "center", flex: 1 }}>
-                            <Text style={{ fontSize: 24, marginBottom: 4 }}>
-                              🌱
-                            </Text>
-                            <Text
-                              style={{
-                                fontSize: 12,
-                                fontWeight: "600",
-                                color: COLORS.textPrimary,
-                                textAlign: "center",
-                              }}
-                              numberOfLines={2}
-                            >
-                              {top.careProfile.soilType || t("identify.wellDraining")}
-                            </Text>
-                            <Text
-                              style={{ fontSize: 11, color: COLORS.textSecondary }}
-                            >
-                              {t("identify.soil")}
-                            </Text>
-                          </View>
-                        </View>
-                      </View>
-
-                      {/* Other possibilities */}
-                      {top.probability < 0.9 &&
-                        identificationResult.suggestions.length > 1 && (
-                          <View
-                            style={{
-                              backgroundColor: "white",
-                              borderRadius: 20,
-                              padding: 16,
-                              marginBottom: 20,
-                              shadowColor: "#000",
-                              shadowOffset: { width: 0, height: 1 },
-                              shadowOpacity: 0.05,
-                              shadowRadius: 4,
-                              elevation: 2,
-                            }}
-                          >
-                            <Text
-                              style={{
-                                fontSize: 14,
-                                fontWeight: "600",
-                                color: COLORS.textSecondary,
-                                marginBottom: 12,
-                              }}
-                            >
-                              {t("identify.otherPossibilities")}
-                            </Text>
-                            {identificationResult.suggestions
-                              .slice(1)
-                              .map((s) => (
-                                <View
-                                  key={s.id}
+                              <View style={{ flex: 1 }}>
+                                <Text
                                   style={{
-                                    flexDirection: "row",
-                                    alignItems: "center",
-                                    paddingVertical: 8,
+                                    fontSize: 14,
+                                    fontWeight: "500",
+                                    color: COLORS.textPrimary,
                                   }}
                                 >
-                                  <View style={{ flex: 1 }}>
-                                    <Text
-                                      style={{
-                                        fontSize: 14,
-                                        fontWeight: "500",
-                                        color: COLORS.textPrimary,
-                                      }}
-                                    >
-                                      {s.commonNames[0] ?? s.name}
-                                    </Text>
-                                    <Text
-                                      style={{
-                                        fontSize: 12,
-                                        color: COLORS.textSecondary,
-                                        fontStyle: "italic",
-                                      }}
-                                    >
-                                      {s.name}
-                                    </Text>
-                                  </View>
-                                  <View style={{ alignItems: "flex-end" }}>
-                                    <Text
-                                      style={{
-                                        fontSize: 13,
-                                        fontWeight: "600",
-                                        color: COLORS.textSecondary,
-                                        marginBottom: 4,
-                                      }}
-                                    >
-                                      {Math.round(s.probability * 100)}%
-                                    </Text>
-                                    <View
-                                      style={{
-                                        width: 64,
-                                        height: 6,
-                                        backgroundColor: "#F3F4F6",
-                                        borderRadius: 3,
-                                      }}
-                                    >
-                                      <View
-                                        style={{
-                                          width: s.probability * 64,
-                                          height: 6,
-                                          backgroundColor: COLORS.secondary,
-                                          borderRadius: 3,
-                                        }}
-                                      />
-                                    </View>
-                                  </View>
-                                </View>
-                              ))}
-                          </View>
-                        )}
+                                  {sug.commonNames[0] ?? sug.name}
+                                </Text>
+                                <Text
+                                  style={{
+                                    fontSize: 12,
+                                    color: COLORS.textSecondary,
+                                    fontStyle: "italic",
+                                  }}
+                                >
+                                  {sug.name}
+                                </Text>
+                                <Text
+                                  style={{
+                                    fontSize: 12,
+                                    color: COLORS.textSecondary,
+                                  }}
+                                >
+                                  {Math.round(sug.probability * 100)}%
+                                </Text>
+                              </View>
+                              <TouchableOpacity
+                                onPress={() => setSelectedSuggestionIndex(idx)}
+                                style={{
+                                  backgroundColor: COLORS.lightgreen,
+                                  borderRadius: 10,
+                                  paddingHorizontal: 12,
+                                  paddingVertical: 8,
+                                  marginLeft: 12,
+                                }}
+                                accessibilityLabel={t("identify.useThisInstead")}
+                              >
+                                <Text
+                                  style={{
+                                    fontSize: 12,
+                                    fontWeight: "600",
+                                    color: COLORS.primary,
+                                  }}
+                                >
+                                  {t("identify.useThisInstead")}
+                                </Text>
+                              </TouchableOpacity>
+                            </View>
+                          ))}
+                      </View>
+                    )}
 
-                      {/* Action buttons */}
-                      <TouchableOpacity
-                        onPress={() => openAddModal(top)}
-                        style={{
-                          backgroundColor: COLORS.primary,
-                          borderRadius: 18,
-                          paddingVertical: 16,
-                          alignItems: "center",
-                          marginBottom: 12,
-                        }}
-                        accessibilityLabel={t("identify.addToMyPlants")}
-                      >
-                        <Text
-                          style={{
-                            color: "white",
-                            fontWeight: "600",
-                            fontSize: 16,
-                          }}
-                        >
-                          {t("identify.addToMyPlants")}
-                        </Text>
-                      </TouchableOpacity>
+                  {/* Add to collection button */}
+                  <TouchableOpacity
+                    onPress={() => openAddModal(activeSuggestion)}
+                    style={{
+                      backgroundColor: COLORS.primary,
+                      borderRadius: 18,
+                      paddingVertical: 16,
+                      alignItems: "center",
+                      marginBottom: 12,
+                    }}
+                    accessibilityLabel={t("identify.addToMyPlants")}
+                  >
+                    <Text
+                      style={{
+                        color: "white",
+                        fontWeight: "600",
+                        fontSize: 16,
+                      }}
+                    >
+                      {t("identify.addToMyPlants")}
+                    </Text>
+                  </TouchableOpacity>
 
-                      <TouchableOpacity
-                        onPress={handleTryAgain}
-                        style={{ paddingVertical: 12, alignItems: "center" }}
-                        accessibilityLabel={t("identify.tryAgain")}
-                      >
-                        <Text
-                          style={{
-                            color: COLORS.textSecondary,
-                            fontWeight: "500",
-                            fontSize: 15,
-                          }}
-                        >
-                          {t("identify.tryAgain")}
-                        </Text>
-                      </TouchableOpacity>
-                    </>
-                  );
-                })()}
-              </View>
-            </ScrollView>
-          )}
+                  <TouchableOpacity
+                    onPress={handleTryAgain}
+                    style={{ paddingVertical: 12, alignItems: "center" }}
+                    accessibilityLabel={
+                      prob < CONFIDENCE.HIGH
+                        ? t("identify.tryBetterPhoto")
+                        : t("identify.tryAgain")
+                    }
+                  >
+                    <Text
+                      style={{
+                        color: COLORS.textSecondary,
+                        fontWeight: "500",
+                        fontSize: 15,
+                      }}
+                    >
+                      {prob < CONFIDENCE.HIGH
+                        ? t("identify.tryBetterPhoto")
+                        : t("identify.tryAgain")}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
+            );
+          })()}
         </View>
       )}
 
@@ -1217,6 +1681,40 @@ export default function IdentifyScreen() {
                   }}
                   accessibilityLabel="Plant nickname"
                 />
+
+                {/* Species input — manual add only */}
+                {isManualAdd && (
+                  <>
+                    <Text
+                      style={{
+                        fontSize: 14,
+                        fontWeight: "600",
+                        color: COLORS.textSecondary,
+                        marginBottom: 10,
+                      }}
+                    >
+                      {t("identify.speciesOptional")}
+                    </Text>
+                    <TextInput
+                      value={manualSpecies}
+                      onChangeText={setManualSpecies}
+                      placeholder={t("identify.speciesPlaceholder")}
+                      placeholderTextColor="#9CA3AF"
+                      style={{
+                        backgroundColor: "#F9FAFB",
+                        borderRadius: 14,
+                        paddingHorizontal: 16,
+                        paddingVertical: 14,
+                        fontSize: 16,
+                        color: COLORS.textPrimary,
+                        marginBottom: 20,
+                        borderWidth: 1,
+                        borderColor: "#E5E7EB",
+                      }}
+                      accessibilityLabel="Plant species"
+                    />
+                  </>
+                )}
 
                 {/* Pot size selector */}
                 <Text
