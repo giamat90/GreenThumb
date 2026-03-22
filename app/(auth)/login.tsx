@@ -8,9 +8,10 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Image,
 } from "react-native";
 import { Link } from "expo-router";
-import { Eye, EyeOff, Leaf } from "lucide-react-native";
+import { Eye, EyeOff } from "lucide-react-native";
 
 import { supabase } from "@/lib/supabase";
 import { COLORS } from "@/constants";
@@ -60,9 +61,11 @@ export default function LoginScreen() {
         <View className="px-8 py-12">
           {/* Header */}
           <View className="items-center mb-10">
-            <View className="bg-lightgreen rounded-full p-5 mb-4">
-              <Leaf size={40} color={COLORS.primary} />
-            </View>
+            <Image
+              source={require("@/assets/images/logo.png")}
+              style={{ width: 120, height: 120 }}
+              resizeMode="contain"
+            />
             <Text className="text-3xl font-bold text-primary mb-2">
               GreenThumb
             </Text>

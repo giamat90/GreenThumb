@@ -9,6 +9,7 @@ import {
   Alert,
   Animated,
   Linking,
+  Image,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useNavigation } from "@react-navigation/native";
@@ -254,7 +255,11 @@ export default function PaywallScreen() {
       >
         {/* ── Header ──────────────────────────────────────────────────────── */}
         <View style={styles.header}>
-          <Text style={styles.headerEmoji}>🌿</Text>
+          <Image
+            source={require("@/assets/images/logo.png")}
+            style={{ width: 120, height: 120 }}
+            resizeMode="contain"
+          />
           <Text style={styles.headerTitle}>{t("paywall.greenThumbPro")}</Text>
           <Text style={styles.headerSubtitle}>{t("paywall.personalAIBotanist")}</Text>
         </View>
@@ -433,10 +438,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 8,
     gap: 6,
-  },
-  headerEmoji: {
-    fontSize: 72,
-    lineHeight: 84,
   },
   headerTitle: {
     fontSize: 30,
