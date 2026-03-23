@@ -31,6 +31,7 @@ import {
   AlertCircle,
   Leaf,
   ChevronLeft,
+  Image as ImageIcon,
 } from "lucide-react-native";
 
 import { useTranslation } from "react-i18next";
@@ -67,7 +68,7 @@ const CONFIDENCE = {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-type ScreenState = "source" | "camera" | "loading" | "results";
+type ScreenState = "camera" | "loading" | "results";
 
 
 function calculateNextWatering(
@@ -262,7 +263,7 @@ export default function IdentifyScreen() {
   const { addPlant } = usePlantsStore();
   const { profile } = useUserStore();
 
-  const [screenState, setScreenState] = useState<ScreenState>("source");
+  const [screenState, setScreenState] = useState<ScreenState>("camera");
   const [isFlashOn, setIsFlashOn] = useState(false);
   const [capturedUri, setCapturedUri] = useState<string | null>(null);
   const [identificationResult, setIdentificationResult] =
@@ -406,7 +407,7 @@ export default function IdentifyScreen() {
       const message =
         error instanceof Error ? error.message : t("common.somethingWentWrong");
       Alert.alert(t("identify.identificationFailed"), message);
-      setScreenState("source");
+      setScreenState("camera");
     }
   }, [canIdentify, limitLoading, t]);
 
@@ -453,7 +454,7 @@ export default function IdentifyScreen() {
   }, [canIdentify, limitLoading, t]);
 
   const handleTryAgain = useCallback(() => {
-    setScreenState("source");
+    setScreenState("camera");
     setCapturedUri(null);
     setIdentificationResult(null);
     setSelectedSuggestionIndex(0);
@@ -618,117 +619,6 @@ export default function IdentifyScreen() {
     <View style={{ flex: 1, backgroundColor: "black" }}>
       <StatusBar barStyle="light-content" />
 
-      {/* ── State 0: Source choice ── */}
-      {screenState === "source" && (
-        <View style={{ flex: 1, backgroundColor: COLORS.cream }}>
-          <StatusBar barStyle="dark-content" />
-
-          {/* Close button */}
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={{
-              position: "absolute",
-              top: insets.top + 12,
-              right: 20,
-              zIndex: 10,
-              backgroundColor: "#F3F4F6",
-              borderRadius: 999,
-              padding: 8,
-            }}
-            accessibilityLabel="Close"
-          >
-            <X size={22} color={COLORS.textSecondary} />
-          </TouchableOpacity>
-
-          {/* Centered content */}
-          <View
-            style={{
-              flex: 1,
-              justifyContent: "center",
-              paddingHorizontal: 28,
-            }}
-          >
-            <Text
-              style={{
-                fontSize: 28,
-                fontWeight: "700",
-                color: COLORS.primary,
-                textAlign: "center",
-                marginBottom: 10,
-              }}
-            >
-              {t("identify.chooseSource")}
-            </Text>
-            <Text
-              style={{
-                fontSize: 15,
-                color: COLORS.textSecondary,
-                textAlign: "center",
-                marginBottom: 40,
-                lineHeight: 22,
-              }}
-            >
-              {t("identify.sourceSubtitle")}
-            </Text>
-
-            {/* Take a photo card */}
-            <TouchableOpacity
-              onPress={handleTakePhoto}
-              style={{
-                backgroundColor: COLORS.primary,
-                borderRadius: 24,
-                paddingVertical: 36,
-                alignItems: "center",
-                marginBottom: 16,
-                shadowColor: "#000",
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.12,
-                shadowRadius: 12,
-                elevation: 4,
-              }}
-              accessibilityLabel={t("identify.takePhoto")}
-            >
-              <Text style={{ fontSize: 44, marginBottom: 12 }}>📷</Text>
-              <Text
-                style={{ fontSize: 18, fontWeight: "700", color: "white" }}
-              >
-                {t("identify.takePhoto")}
-              </Text>
-            </TouchableOpacity>
-
-            {/* Choose from gallery card */}
-            <TouchableOpacity
-              onPress={handleGalleryPick}
-              style={{
-                backgroundColor: "white",
-                borderRadius: 24,
-                paddingVertical: 36,
-                alignItems: "center",
-                borderWidth: 2,
-                borderColor: COLORS.primary,
-                shadowColor: "#000",
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.06,
-                shadowRadius: 8,
-                elevation: 2,
-              }}
-              accessibilityLabel={t("identify.chooseFromGallery")}
-            >
-              <Text style={{ fontSize: 44, marginBottom: 12 }}>🖼️</Text>
-              <Text
-                style={{
-                  fontSize: 18,
-                  fontWeight: "700",
-                  color: COLORS.primary,
-                }}
-              >
-                {t("identify.chooseFromGallery")}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
-
       {/* ── State 1: Camera ── */}
       {screenState === "camera" && !hasPermission && (
         <View
@@ -817,7 +707,7 @@ export default function IdentifyScreen() {
             }}
           >
             <TouchableOpacity
-              onPress={() => setScreenState("source")}
+              onPress={() => router.back()}
               style={{
                 backgroundColor: "rgba(0,0,0,0.4)",
                 borderRadius: 999,
@@ -845,52 +735,90 @@ export default function IdentifyScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Bottom bar: hint + capture button */}
+          {/* Bottom bar: hint + [gallery] [capture] [spacer] */}
           <View
             style={{
               position: "absolute",
               bottom: 0,
               left: 0,
               right: 0,
-              alignItems: "center",
               paddingBottom: insets.bottom + 28,
+              paddingHorizontal: 32,
             }}
           >
             <Text
-              style={{ color: "rgba(255,255,255,0.75)", fontSize: 13, marginBottom: 20 }}
+              style={{
+                color: "rgba(255,255,255,0.75)",
+                fontSize: 13,
+                marginBottom: 20,
+                textAlign: "center",
+              }}
             >
               {t("identify.centerInFrame")}
             </Text>
 
-            {/* Capture button — outer ring + inner fill */}
-            <TouchableOpacity
-              onPress={handleCapture}
-              accessibilityLabel="Take photo to identify plant"
+            {/* Three-button row — space-between so spacing is dynamic */}
+            <View
               style={{
-                width: 76,
-                height: 76,
-                borderRadius: 38,
-                backgroundColor: "white",
-                borderWidth: 4,
-                borderColor: COLORS.primary,
+                flexDirection: "row",
                 alignItems: "center",
-                justifyContent: "center",
-                shadowColor: "#000",
-                shadowOffset: { width: 0, height: 3 },
-                shadowOpacity: 0.35,
-                shadowRadius: 6,
-                elevation: 8,
+                justifyContent: "space-between",
               }}
             >
-              <View
+              {/* Gallery button (left) */}
+              <TouchableOpacity
+                onPress={handleGalleryPick}
+                accessibilityLabel={t("identify.chooseFromGallery")}
                 style={{
-                  width: 56,
-                  height: 56,
-                  borderRadius: 28,
-                  backgroundColor: COLORS.primary,
+                  width: 48,
+                  height: 48,
+                  borderRadius: 24,
+                  backgroundColor: "white",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  shadowColor: "#000",
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.25,
+                  shadowRadius: 4,
+                  elevation: 4,
                 }}
-              />
-            </TouchableOpacity>
+              >
+                <ImageIcon size={22} color={COLORS.primary} />
+              </TouchableOpacity>
+
+              {/* Capture button (center) — outer ring + inner fill */}
+              <TouchableOpacity
+                onPress={handleCapture}
+                accessibilityLabel="Take photo to identify plant"
+                style={{
+                  width: 76,
+                  height: 76,
+                  borderRadius: 38,
+                  backgroundColor: "white",
+                  borderWidth: 4,
+                  borderColor: COLORS.primary,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  shadowColor: "#000",
+                  shadowOffset: { width: 0, height: 3 },
+                  shadowOpacity: 0.35,
+                  shadowRadius: 6,
+                  elevation: 8,
+                }}
+              >
+                <View
+                  style={{
+                    width: 56,
+                    height: 56,
+                    borderRadius: 28,
+                    backgroundColor: COLORS.primary,
+                  }}
+                />
+              </TouchableOpacity>
+
+              {/* Spacer (right) — mirrors gallery button width for visual balance */}
+              <View style={{ width: 48, height: 48 }} />
+            </View>
           </View>
         </>
       )}
