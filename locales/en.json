@@ -92,7 +92,8 @@
     "fertilizerEvent": "🌱 Fertilize {{name}}",
     "diagnosisFollowUp": "🔬 Check {{name}} health",
     "calendarEventAdded": "Event added to calendar",
-    "calendarEventsCount": "{{count}} calendar events"
+    "calendarEventsCount": "{{count}} calendar events",
+    "diagnosis": "Follow-up"
   },
   "plantDetail": {
     "careProfile": "Care Profile",
@@ -195,10 +196,17 @@
     "every2days": "Every 2 days",
     "every5days": "Every 5 days",
     "every10days": "Every 10 days",
+    "everyNDays": "Every {{n}} days",
     "placementBtn": "Placement",
     "repotBtn": "Repot",
     "growthBtn": "Growth",
-    "pruningBtn": "Pruning"
+    "pruningBtn": "Pruning",
+    "newDiagnosis": "New diagnosis",
+    "newPlacement": "New placement check",
+    "newFertilizer": "Log fertilizer",
+    "newRepotting": "New repotting check",
+    "newPruning": "New pruning check",
+    "newGrowth": "Log growth"
   },
   "profile": {
     "profile": "Profile",
@@ -279,7 +287,8 @@
     "featureCalendar": "Calendar Sync",
     "featureCommunity": "Community Posting",
     "featureRecovery": "Closed-loop Recovery",
-    "allAIAdvisors": "All AI Advisors"
+    "allAIAdvisors": "All AI Advisors",
+    "featureFertilizer": "Fertilizer Tracking"
   },
   "common": {
     "cancel": "Cancel",
@@ -626,7 +635,11 @@
     "myGarden": "My Garden",
     "viewMyProfile": "View my public profile",
     "myPostsCount": "{{count}} posts shared",
-    "shareAPost": "Share a post"
+    "shareAPost": "Share a post",
+    "inviteFriends": "Invite Friends",
+    "inviteSubtitle": "Select contacts to invite to GreenThumb",
+    "inviteMessage": "Join me on GreenThumb, the AI plant care app! Download it here: https://play.google.com/store/apps/details?id=com.giamat90.greenthumb",
+    "sharedVia": "Shared from GreenThumb - AI Plant Care\nhttps://play.google.com/store/apps/details?id=com.giamat90.greenthumb"
   },
   "seasonal": {
     "seasonalTips": "Seasonal Tips",
@@ -650,6 +663,11 @@
     "tipWarning": "Warning",
     "generalTipsFor": "General Tips for {{location}}",
     "yourPlantsMonth": "Your Plants This Month"
+  },
+  "fertilizer": {
+    "title": "Log Fertilizer",
+    "selectType": "Select fertilizer type",
+    "confirm": "Confirm Fertilization"
   },
   "errors": {
     "noInternet": "No Internet Connection",

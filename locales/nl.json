@@ -92,7 +92,8 @@
     "fertilizerEvent": "🌱 {{name}} bemesten",
     "diagnosisFollowUp": "🔬 Gezondheid van {{name}} controleren",
     "calendarEventAdded": "Gebeurtenis toegevoegd aan kalender",
-    "calendarEventsCount": "{{count}} kalendergebeurtenissen"
+    "calendarEventsCount": "{{count}} kalendergebeurtenissen",
+    "diagnosis": "Controle"
   },
   "plantDetail": {
     "careProfile": "Verzorgingsprofiel",
@@ -195,10 +196,17 @@
     "every2days": "Elke 2 dagen",
     "every5days": "Elke 5 dagen",
     "every10days": "Elke 10 dagen",
+    "everyNDays": "Elke {{n}} dagen",
     "placementBtn": "Plaatsing",
     "repotBtn": "Verpotten",
     "growthBtn": "Groei",
-    "pruningBtn": "Snoeien"
+    "pruningBtn": "Snoeien",
+    "newDiagnosis": "Nieuwe diagnose",
+    "newPlacement": "Nieuwe plaatsingscheck",
+    "newFertilizer": "Bemesting registreren",
+    "newRepotting": "Nieuwe verpotcheck",
+    "newPruning": "Nieuwe snoeicheck",
+    "newGrowth": "Groei registreren"
   },
   "profile": {
     "profile": "Profiel",
@@ -279,7 +287,8 @@
     "featureCalendar": "Kalendersynchronisatie",
     "featureCommunity": "Community berichten",
     "featureRecovery": "Gesloten herstelcyclus",
-    "allAIAdvisors": "Alle AI-adviseurs"
+    "allAIAdvisors": "Alle AI-adviseurs",
+    "featureFertilizer": "Bemesting Bijhouden"
   },
   "common": {
     "cancel": "Annuleren",
@@ -626,7 +635,11 @@
     "myGarden": "Mijn Tuin",
     "viewMyProfile": "Mijn openbaar profiel bekijken",
     "myPostsCount": "{{count}} berichten gedeeld",
-    "shareAPost": "Een bericht delen"
+    "shareAPost": "Een bericht delen",
+    "inviteFriends": "Vrienden Uitnodigen",
+    "inviteSubtitle": "Selecteer contacten om uit te nodigen voor GreenThumb",
+    "inviteMessage": "Doe mee met mij op GreenThumb, de AI-aangedreven plantverzorgingsapp! Download het hier: https://play.google.com/store/apps/details?id=com.giamat90.greenthumb",
+    "sharedVia": "Gedeeld via GreenThumb - AI Plantenverzorging\nhttps://play.google.com/store/apps/details?id=com.giamat90.greenthumb"
   },
   "seasonal": {
     "seasonalTips": "Seizoenstips",
@@ -650,6 +663,11 @@
     "tipWarning": "Waarschuwing",
     "generalTipsFor": "Algemene Tips voor {{location}}",
     "yourPlantsMonth": "Jouw Planten Deze Maand"
+  },
+  "fertilizer": {
+    "title": "Bemesting Vastleggen",
+    "selectType": "Selecteer type meststof",
+    "confirm": "Bemesting Bevestigen"
   },
   "errors": {
     "noInternet": "Geen internetverbinding",

@@ -92,7 +92,8 @@
     "fertilizerEvent": "🌱 {{name}} düngen",
     "diagnosisFollowUp": "🔬 Gesundheit von {{name}} prüfen",
     "calendarEventAdded": "Ereignis zum Kalender hinzugefügt",
-    "calendarEventsCount": "{{count}} Kalenderereignisse"
+    "calendarEventsCount": "{{count}} Kalenderereignisse",
+    "diagnosis": "Nachkontrolle"
   },
   "plantDetail": {
     "careProfile": "Pflegeprofil",
@@ -195,10 +196,17 @@
     "every2days": "Alle 2 Tage",
     "every5days": "Alle 5 Tage",
     "every10days": "Alle 10 Tage",
+    "everyNDays": "Alle {{n}} Tage",
     "placementBtn": "Standort",
     "repotBtn": "Umtopfen",
     "growthBtn": "Wachstum",
-    "pruningBtn": "Schneiden"
+    "pruningBtn": "Schneiden",
+    "newDiagnosis": "Neue Diagnose",
+    "newPlacement": "Neuer Standort-Check",
+    "newFertilizer": "Düngung erfassen",
+    "newRepotting": "Neuer Umtopf-Check",
+    "newPruning": "Neuer Schnitt-Check",
+    "newGrowth": "Wachstum erfassen"
   },
   "profile": {
     "profile": "Profil",
@@ -279,7 +287,8 @@
     "featureCalendar": "Kalendersynchronisation",
     "featureCommunity": "Community-Beiträge",
     "featureRecovery": "Geschlossener Erholungskreis",
-    "allAIAdvisors": "Alle KI-Berater"
+    "allAIAdvisors": "Alle KI-Berater",
+    "featureFertilizer": "Düngung-Tracking"
   },
   "common": {
     "cancel": "Abbrechen",
@@ -626,7 +635,11 @@
     "myGarden": "Mein Garten",
     "viewMyProfile": "Mein öffentliches Profil ansehen",
     "myPostsCount": "{{count}} Beiträge geteilt",
-    "shareAPost": "Einen Beitrag teilen"
+    "shareAPost": "Einen Beitrag teilen",
+    "inviteFriends": "Freunde Einladen",
+    "inviteSubtitle": "Kontakte auswählen, um sie zu GreenThumb einzuladen",
+    "inviteMessage": "Komm zu mir auf GreenThumb, die KI-gestützte Pflanzenpflege-App! Lade sie hier herunter: https://play.google.com/store/apps/details?id=com.giamat90.greenthumb",
+    "sharedVia": "Geteilt von GreenThumb - KI-Pflanzenpflege\nhttps://play.google.com/store/apps/details?id=com.giamat90.greenthumb"
   },
   "seasonal": {
     "seasonalTips": "Saisonale Tipps",
@@ -650,6 +663,11 @@
     "tipWarning": "Warnung",
     "generalTipsFor": "Allgemeine Tipps für {{location}}",
     "yourPlantsMonth": "Deine Pflanzen diesen Monat"
+  },
+  "fertilizer": {
+    "title": "Düngung Protokollieren",
+    "selectType": "Düngerart auswählen",
+    "confirm": "Düngung Bestätigen"
   },
   "errors": {
     "noInternet": "Keine Internetverbindung",

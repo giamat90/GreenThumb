@@ -19,12 +19,8 @@ import {
   Sun,
   Leaf,
   Calendar,
-  Stethoscope,
-  MapPin,
-  Layers,
-  TrendingUp,
   Trash2,
-  Scissors,
+  Plus,
 } from "lucide-react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -32,7 +28,7 @@ import { useTranslation } from "react-i18next";
 
 import { COLORS } from "@/constants";
 import { supabase } from "@/lib/supabase";
-import { rescheduleReminderForPlant, cancelWateringReminder, rescheduleFertilizerReminderForPlant } from "@/lib/notifications";
+import { rescheduleReminderForPlant, cancelWateringReminder } from "@/lib/notifications";
 import { calculateFertilizerInterval } from "@/lib/fertilizer";
 import { usePlantsStore } from "@/store/plants";
 import { useUserStore } from "@/store/user";
@@ -91,10 +87,19 @@ function healthColor(score: number): string {
   return COLORS.danger;
 }
 
-function wateringLabelKey(watering: string | undefined): string {
-  if (watering === "frequent") return "plantDetail.every2days";
-  if (watering === "minimum") return "plantDetail.every10days";
-  return "plantDetail.every5days";
+function wateringLabel(
+  careProfile: Record<string, unknown> | null | undefined,
+  t: (key: string, opts?: Record<string, unknown>) => string
+): string {
+  // Diagnosis-adjusted interval takes priority
+  if (careProfile?.watering_interval_days != null) {
+    const days = careProfile.watering_interval_days as number;
+    return t("plantDetail.everyNDays", { n: days });
+  }
+  const watering = careProfile?.watering as string | undefined;
+  if (watering === "frequent") return t("plantDetail.every2days");
+  if (watering === "minimum") return t("plantDetail.every10days");
+  return t("plantDetail.every5days");
 }
 
 // ─── Care stat tile ───────────────────────────────────────────────────────────
@@ -190,7 +195,6 @@ function PlantDetailScreen() {
   const [placementLoading, setPlacementLoading] = useState(true);
   const [fertilizerHistory, setFertilizerHistory] = useState<FertilizerLog[]>([]);
   const [fertilizerLoading, setFertilizerLoading] = useState(true);
-  const [isFertilizing, setIsFertilizing] = useState(false);
   const [repottingHistory, setRepottingHistory] = useState<RepottingAnalysis[]>([]);
   const [repottingLoading, setRepottingLoading] = useState(true);
   const [pruningHistory, setPruningHistory] = useState<PruningAnalysis[]>([]);
@@ -422,77 +426,6 @@ function PlantDetailScreen() {
     }
   }, [plant, profile, removePlant, navigation, t]);
 
-  // ── Fertilize now ─────────────────────────────────────────────────────────
-
-  const handleFertilizeNow = useCallback(async () => {
-    if (!plant || !profile) return;
-    setIsFertilizing(true);
-    try {
-      const now = new Date().toISOString();
-      const intervalDays = plant.fertilizer_interval_days ?? calculateFertilizerInterval(plant.species, new Date().getMonth());
-      const nextDate = new Date();
-      nextDate.setDate(nextDate.getDate() + intervalDays);
-      const nextFertilizerAt = nextDate.toISOString();
-
-      await supabase.from("fertilizer_logs").insert({
-        plant_id: plant.id,
-        user_id: profile.id,
-        fertilized_at: now,
-        fertilizer_type: plant.fertilizer_type ?? "liquid",
-      });
-
-      const { error } = await supabase
-        .from("plants")
-        .update({ last_fertilized_at: now, next_fertilizer_at: nextFertilizerAt })
-        .eq("id", plant.id);
-      if (error) throw error;
-
-      updatePlant(plant.id, { last_fertilized_at: now, next_fertilizer_at: nextFertilizerAt });
-
-      rescheduleFertilizerReminderForPlant({ ...plant, last_fertilized_at: now, next_fertilizer_at: nextFertilizerAt }).catch(console.warn);
-
-      setFertilizerHistory((prev) => [
-        { id: now, plant_id: plant.id, user_id: profile.id, fertilized_at: now, fertilizer_type: plant.fertilizer_type ?? "liquid", notes: null },
-        ...prev.slice(0, 2),
-      ]);
-
-      const nextDateStr = nextDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-      Alert.alert(t("plantDetail.fertilizedTitle"), t("plantDetail.fertilizedMessage", { date: nextDateStr }));
-    } catch (err) {
-      Alert.alert(t("common.error"), err instanceof Error ? err.message : t("plantDetail.failedRecordFertilization"));
-    } finally {
-      setIsFertilizing(false);
-    }
-  }, [plant, profile, updatePlant, t]);
-
-  const handleChangeFertilizerType = useCallback(() => {
-    if (!plant || !profile) return;
-    Alert.alert(t("plantDetail.fertilizerType"), t("plantDetail.chooseFertilizerType"), [
-      {
-        text: t("plantDetail.liquid"),
-        onPress: async () => {
-          await supabase.from("plants").update({ fertilizer_type: "liquid" }).eq("id", plant.id);
-          updatePlant(plant.id, { fertilizer_type: "liquid" });
-        },
-      },
-      {
-        text: t("plantDetail.granular"),
-        onPress: async () => {
-          await supabase.from("plants").update({ fertilizer_type: "granular" }).eq("id", plant.id);
-          updatePlant(plant.id, { fertilizer_type: "granular" });
-        },
-      },
-      {
-        text: t("plantDetail.slowRelease"),
-        onPress: async () => {
-          await supabase.from("plants").update({ fertilizer_type: "slow-release" }).eq("id", plant.id);
-          updatePlant(plant.id, { fertilizer_type: "slow-release" });
-        },
-      },
-      { text: t("common.cancel"), style: "cancel" },
-    ]);
-  }, [plant, profile, updatePlant, t]);
-
   // ── Render ────────────────────────────────────────────────────────────────
 
   if (!plant) {
@@ -584,7 +517,7 @@ function PlantDetailScreen() {
             <CareTile
               icon={<Droplets size={20} color={COLORS.secondary} />}
               label={t("plantDetail.watering")}
-              value={t(wateringLabelKey(careProfile?.watering))}
+              value={wateringLabel(careProfile, t)}
             />
             <CareTile
               icon={<Sun size={20} color={COLORS.warning} />}
@@ -603,68 +536,6 @@ function PlantDetailScreen() {
             />
           </View>
         </View>
-
-        {/* ── Fertilizer ───────────────────────────────────────────────────── */}
-        {(() => {
-          const intervalDays = plant.fertilizer_interval_days ?? calculateFertilizerInterval(plant.species, new Date().getMonth());
-          const nextFertDate = plant.next_fertilizer_at
-            ? new Date(plant.next_fertilizer_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })
-            : t("plantDetail.notSet");
-          const fertType = plant.fertilizer_type ?? "liquid";
-          const isOverdue = plant.next_fertilizer_at && new Date(plant.next_fertilizer_at) <= new Date();
-          return (
-            <View style={styles.card}>
-              <View style={styles.fertCardHeader}>
-                <Text style={styles.cardTitle}>{t("plantDetail.fertilizer")}</Text>
-                {isOverdue && (
-                  <View style={styles.fertDueBadge}>
-                    <Text style={styles.fertDueBadgeText}>{t("plantDetail.due")}</Text>
-                  </View>
-                )}
-              </View>
-
-              <View style={styles.fertInfoRow}>
-                <View style={styles.fertInfoItem}>
-                  <Text style={styles.fertInfoLabel}>{t("plantDetail.next")}</Text>
-                  <Text style={styles.fertInfoValue}>{nextFertDate}</Text>
-                </View>
-                <View style={styles.fertInfoItem}>
-                  <Text style={styles.fertInfoLabel}>{t("plantDetail.interval")}</Text>
-                  <Text style={styles.fertInfoValue}>{t("plantDetail.everyNDays", { n: intervalDays })}</Text>
-                </View>
-              </View>
-
-              <Text style={styles.fertTypeLabel}>{t("plantDetail.type")}</Text>
-              <View style={styles.fertTypeRow}>
-                {(["liquid", "granular", "slow-release"] as const).map((fType) => (
-                  <TouchableOpacity
-                    key={fType}
-                    style={[styles.fertTypePill, fertType === fType && styles.fertTypePillSelected]}
-                    onPress={handleChangeFertilizerType}
-                    accessibilityLabel={`Set fertilizer type to ${fType}`}
-                  >
-                    <Text style={[styles.fertTypePillText, fertType === fType && styles.fertTypePillTextSelected]}>
-                      {fType.charAt(0).toUpperCase() + fType.slice(1)}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              <TouchableOpacity
-                style={styles.fertilizeButton}
-                onPress={handleFertilizeNow}
-                disabled={isFertilizing}
-                activeOpacity={0.85}
-              >
-                {isFertilizing ? (
-                  <ActivityIndicator color="#fff" size="small" />
-                ) : (
-                  <Text style={styles.fertilizeButtonText}>{t("plantDetail.fertilizeNow")}</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          );
-        })()}
 
         {/* ── Health ──────────────────────────────────────────────────────── */}
         <View style={styles.card}>
@@ -700,7 +571,20 @@ function PlantDetailScreen() {
 
         {/* ── Diagnosis history ─────────────────────────────────────────────── */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>{t("plantDetail.diagnosisHistory")}</Text>
+          <View style={styles.cardHeaderRow}>
+            <Text style={[styles.cardTitle, { marginBottom: 0 }]}>{t("plantDetail.diagnosisHistory")}</Text>
+            <TouchableOpacity
+              style={styles.cardAddButton}
+              onPress={() => {
+                if (!requirePro(t("paywall.featureDiagnosis"))) return;
+                router.push(`/diagnosis/${plant.id}`);
+              }}
+              accessibilityLabel={t("plantDetail.newDiagnosis")}
+              accessibilityRole="button"
+            >
+              <Plus size={18} color={COLORS.primary} />
+            </TouchableOpacity>
+          </View>
           {diagnosisLoading ? (
             <ActivityIndicator color={COLORS.secondary} style={{ marginTop: 12 }} />
           ) : diagnosisHistory.length === 0 ? (
@@ -746,7 +630,20 @@ function PlantDetailScreen() {
 
         {/* ── Placement history ─────────────────────────────────────────────── */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>{t("plantDetail.placementHistory")}</Text>
+          <View style={styles.cardHeaderRow}>
+            <Text style={[styles.cardTitle, { marginBottom: 0 }]}>{t("plantDetail.placementHistory")}</Text>
+            <TouchableOpacity
+              style={styles.cardAddButton}
+              onPress={() => {
+                if (!requirePro(t("paywall.featurePlacement"))) return;
+                router.push({ pathname: "/placement/[id]", params: { id: plant.id } });
+              }}
+              accessibilityLabel={t("plantDetail.newPlacement")}
+              accessibilityRole="button"
+            >
+              <Plus size={18} color={COLORS.primary} />
+            </TouchableOpacity>
+          </View>
           {placementLoading ? (
             <ActivityIndicator color={COLORS.secondary} style={{ marginTop: 12 }} />
           ) : placementHistory.length === 0 ? (
@@ -791,8 +688,49 @@ function PlantDetailScreen() {
           )}
         </View>
         {/* ── Fertilizer logs ───────────────────────────────────────────────── */}
+        {(() => {
+          const intervalDays = plant.fertilizer_interval_days ?? calculateFertilizerInterval(plant.species, new Date().getMonth());
+          const nextFertDate = plant.next_fertilizer_at
+            ? new Date(plant.next_fertilizer_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+            : t("plantDetail.notSet");
+          const isOverdue = plant.next_fertilizer_at && new Date(plant.next_fertilizer_at) <= new Date();
+          return (
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>{t("plantDetail.fertilizerHistory")}</Text>
+          <View style={styles.cardHeaderRow}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <Text style={[styles.cardTitle, { marginBottom: 0 }]}>{t("plantDetail.fertilizerHistory")}</Text>
+              {isOverdue && (
+                <View style={styles.fertDueBadge}>
+                  <Text style={styles.fertDueBadgeText}>{t("plantDetail.due")}</Text>
+                </View>
+              )}
+            </View>
+            <TouchableOpacity
+              style={styles.cardAddButton}
+              onPress={() => {
+                if (!requirePro(t("paywall.featureFertilizer"))) return;
+                router.push({ pathname: "/fertilizer/[id]", params: { id: plant.id } });
+              }}
+              accessibilityLabel={t("plantDetail.newFertilizer")}
+              accessibilityRole="button"
+            >
+              <Plus size={18} color={COLORS.primary} />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.fertInfoRow}>
+            <View style={styles.fertInfoItem}>
+              <Text style={styles.fertInfoLabel}>{t("plantDetail.next")}</Text>
+              <Text style={styles.fertInfoValue}>{nextFertDate}</Text>
+            </View>
+            <View style={styles.fertInfoItem}>
+              <Text style={styles.fertInfoLabel}>{t("plantDetail.interval")}</Text>
+              <Text style={styles.fertInfoValue}>{t("plantDetail.everyNDays", { n: intervalDays })}</Text>
+            </View>
+          </View>
+
+          <View style={{ height: 1, backgroundColor: COLORS.cream, marginVertical: 12 }} />
+
           {fertilizerLoading ? (
             <ActivityIndicator color={COLORS.secondary} style={{ marginTop: 12 }} />
           ) : fertilizerHistory.length === 0 ? (
@@ -813,10 +751,25 @@ function PlantDetailScreen() {
             ))
           )}
         </View>
+          );
+        })()}
 
         {/* ── Repotting history ─────────────────────────────────────────────── */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>{t("plantDetail.repottingHistory")}</Text>
+          <View style={styles.cardHeaderRow}>
+            <Text style={[styles.cardTitle, { marginBottom: 0 }]}>{t("plantDetail.repottingHistory")}</Text>
+            <TouchableOpacity
+              style={styles.cardAddButton}
+              onPress={() => {
+                if (!requirePro(t("paywall.featureRepotting"))) return;
+                router.push({ pathname: "/repotting/[id]", params: { id: plant.id } });
+              }}
+              accessibilityLabel={t("plantDetail.newRepotting")}
+              accessibilityRole="button"
+            >
+              <Plus size={18} color={COLORS.primary} />
+            </TouchableOpacity>
+          </View>
           {repottingLoading ? (
             <ActivityIndicator color={COLORS.secondary} style={{ marginTop: 12 }} />
           ) : repottingHistory.length === 0 ? (
@@ -861,7 +814,20 @@ function PlantDetailScreen() {
         </View>
         {/* ── Pruning history ───────────────────────────────────────────────── */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>{t("plantDetail.pruningHistory")}</Text>
+          <View style={styles.cardHeaderRow}>
+            <Text style={[styles.cardTitle, { marginBottom: 0 }]}>{t("plantDetail.pruningHistory")}</Text>
+            <TouchableOpacity
+              style={styles.cardAddButton}
+              onPress={() => {
+                if (!requirePro(t("paywall.featurePruning"))) return;
+                router.push({ pathname: "/pruning/[id]", params: { id: plant.id } });
+              }}
+              accessibilityLabel={t("plantDetail.newPruning")}
+              accessibilityRole="button"
+            >
+              <Plus size={18} color={COLORS.primary} />
+            </TouchableOpacity>
+          </View>
           {pruningLoading ? (
             <ActivityIndicator color={COLORS.secondary} style={{ marginTop: 12 }} />
           ) : pruningHistory.length === 0 ? (
@@ -909,13 +875,23 @@ function PlantDetailScreen() {
         <View style={styles.card}>
           <View style={styles.growthPreviewHeader}>
             <Text style={[styles.cardTitle, { marginBottom: 0 }]}>{t("plantDetail.growthTimeline")}</Text>
-            <TouchableOpacity
-              onPress={() => router.push({ pathname: "/growth/[id]", params: { id: plant.id } })}
-              accessibilityLabel={t("plantDetail.viewAllGrowth")}
-              accessibilityRole="button"
-            >
-              <Text style={styles.viewAllText}>{t("plantDetail.viewAll")} →</Text>
-            </TouchableOpacity>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <TouchableOpacity
+                style={styles.cardAddButton}
+                onPress={() => router.push({ pathname: "/growth/[id]", params: { id: plant.id } })}
+                accessibilityLabel={t("plantDetail.newGrowth")}
+                accessibilityRole="button"
+              >
+                <Plus size={18} color={COLORS.primary} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => router.push({ pathname: "/growth/[id]", params: { id: plant.id } })}
+                accessibilityLabel={t("plantDetail.viewAllGrowth")}
+                accessibilityRole="button"
+              >
+                <Text style={styles.viewAllText}>{t("plantDetail.viewAll")} →</Text>
+              </TouchableOpacity>
+            </View>
           </View>
           {growthLoading ? (
             <ActivityIndicator color={COLORS.secondary} style={{ marginTop: 12 }} />
@@ -967,82 +943,6 @@ function PlantDetailScreen() {
         ]}
         onLayout={(e) => setActionBarHeight(e.nativeEvent.layout.height)}
       >
-        {/* Secondary actions: 2×2 grid */}
-        <View style={styles.actionButtonGrid}>
-          <View style={styles.actionButtonRow}>
-            <TouchableOpacity
-              style={styles.actionButtonSecondary}
-              activeOpacity={0.8}
-              onPress={() => {
-                if (!requirePro(t("paywall.featureDiagnosis"))) return;
-                router.push(`/diagnosis/${plant.id}`);
-              }}
-              accessibilityLabel="Diagnose plant health"
-              accessibilityRole="button"
-            >
-              <Stethoscope size={16} color={COLORS.primary} />
-              <Text style={styles.actionButtonSecondaryText}>{t("plantDetail.diagnose")}</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.actionButtonSecondary}
-              activeOpacity={0.8}
-              onPress={() => {
-                if (!requirePro(t("paywall.featurePlacement"))) return;
-                router.push({ pathname: "/placement/[id]", params: { id: plant.id } });
-              }}
-              accessibilityLabel="Check plant placement"
-              accessibilityRole="button"
-            >
-              <MapPin size={16} color={COLORS.primary} />
-              <Text style={styles.actionButtonSecondaryText}>{t("plantDetail.placementBtn")}</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.actionButtonRow}>
-            <TouchableOpacity
-              style={styles.actionButtonSecondary}
-              activeOpacity={0.8}
-              onPress={() => {
-                if (!requirePro(t("paywall.featureRepotting"))) return;
-                router.push({ pathname: "/repotting/[id]", params: { id: plant.id } });
-              }}
-              accessibilityLabel="Repotting advisor"
-              accessibilityRole="button"
-            >
-              <Layers size={16} color={COLORS.primary} />
-              <Text style={styles.actionButtonSecondaryText}>{t("plantDetail.repotBtn")}</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.actionButtonSecondary}
-              activeOpacity={0.8}
-              onPress={() => router.push({ pathname: "/growth/[id]", params: { id: plant.id } })}
-              accessibilityLabel="Track plant growth"
-              accessibilityRole="button"
-            >
-              <TrendingUp size={16} color={COLORS.primary} />
-              <Text style={styles.actionButtonSecondaryText}>{t("plantDetail.growthBtn")}</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.actionButtonRow}>
-            <TouchableOpacity
-              style={[styles.actionButtonSecondary, { flex: 1 }]}
-              activeOpacity={0.8}
-              onPress={() => {
-                if (!requirePro(t("paywall.featurePruning"))) return;
-                router.push({ pathname: "/pruning/[id]", params: { id: plant.id } });
-              }}
-              accessibilityLabel="Pruning advisor"
-              accessibilityRole="button"
-            >
-              <Scissors size={16} color={COLORS.primary} />
-              <Text style={styles.actionButtonSecondaryText}>{t("plantDetail.pruningBtn")}</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
         <TouchableOpacity
           style={styles.actionButtonPrimary}
           onPress={handleWaterNow}
@@ -1192,6 +1092,21 @@ const styles = StyleSheet.create({
     color: COLORS.textPrimary,
     marginBottom: 16,
   },
+  cardHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  cardAddButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: COLORS.primary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 
   // ── Care grid ────────────────────────────────────────────────────────────
   careGrid: {
@@ -1315,37 +1230,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#fff",
   },
-  actionButtonGrid: {
-    gap: 8,
-  },
-  actionButtonRow: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  actionButtonSecondary: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 2,
-    borderColor: COLORS.primary,
-    borderRadius: 16,
-    paddingVertical: 13,
-    gap: 6,
-  },
-  actionButtonSecondaryText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: COLORS.primary,
-  },
-
   // ── Fertilizer card ───────────────────────────────────────────────────────
-  fertCardHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 16,
-  },
   fertDueBadge: {
     backgroundColor: "#FEE2E2",
     borderRadius: 10,
@@ -1416,18 +1301,6 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     fontWeight: "700",
   },
-  fertilizeButton: {
-    backgroundColor: COLORS.primary,
-    borderRadius: 14,
-    paddingVertical: 14,
-    alignItems: "center",
-  },
-  fertilizeButtonText: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#fff",
-  },
-
   // ── Growth preview ────────────────────────────────────────────────────────
   growthPreviewHeader: {
     flexDirection: "row",

@@ -92,7 +92,8 @@
     "fertilizerEvent": "🌱 Fertilizar {{name}}",
     "diagnosisFollowUp": "🔬 Verificar salud de {{name}}",
     "calendarEventAdded": "Evento añadido al calendario",
-    "calendarEventsCount": "{{count}} eventos en el calendario"
+    "calendarEventsCount": "{{count}} eventos en el calendario",
+    "diagnosis": "Seguimiento"
   },
   "plantDetail": {
     "careProfile": "Perfil de cuidados",
@@ -195,10 +196,17 @@
     "every2days": "Cada 2 días",
     "every5days": "Cada 5 días",
     "every10days": "Cada 10 días",
+    "everyNDays": "Cada {{n}} días",
     "placementBtn": "Ubicación",
     "repotBtn": "Trasplantar",
     "growthBtn": "Crecimiento",
-    "pruningBtn": "Poda"
+    "pruningBtn": "Poda",
+    "newDiagnosis": "Nuevo diagnóstico",
+    "newPlacement": "Nueva comprobación de ubicación",
+    "newFertilizer": "Registrar fertilización",
+    "newRepotting": "Nueva comprobación de trasplante",
+    "newPruning": "Nueva comprobación de poda",
+    "newGrowth": "Registrar crecimiento"
   },
   "profile": {
     "profile": "Perfil",
@@ -279,7 +287,8 @@
     "featureCalendar": "Sincronización de calendario",
     "featureCommunity": "Publicaciones en la comunidad",
     "featureRecovery": "Recuperación en bucle cerrado",
-    "allAIAdvisors": "Todos los asesores AI"
+    "allAIAdvisors": "Todos los asesores AI",
+    "featureFertilizer": "Seguimiento de Fertilizante"
   },
   "common": {
     "cancel": "Cancelar",
@@ -626,7 +635,11 @@
     "myGarden": "Mi Jardín",
     "viewMyProfile": "Ver mi perfil público",
     "myPostsCount": "{{count}} publicaciones compartidas",
-    "shareAPost": "Compartir una publicación"
+    "shareAPost": "Compartir una publicación",
+    "inviteFriends": "Invitar Amigos",
+    "inviteSubtitle": "Selecciona contactos para invitar a GreenThumb",
+    "inviteMessage": "Únete a mí en GreenThumb, ¡la app de cuidado de plantas con IA! Descárgala aquí: https://play.google.com/store/apps/details?id=com.giamat90.greenthumb",
+    "sharedVia": "Compartido desde GreenThumb - Cuidado de Plantas con IA\nhttps://play.google.com/store/apps/details?id=com.giamat90.greenthumb"
   },
   "seasonal": {
     "seasonalTips": "Consejos de Temporada",
@@ -650,6 +663,11 @@
     "tipWarning": "Advertencia",
     "generalTipsFor": "Consejos Generales para {{location}}",
     "yourPlantsMonth": "Tus Plantas Este Mes"
+  },
+  "fertilizer": {
+    "title": "Registrar Fertilizante",
+    "selectType": "Selecciona el tipo de fertilizante",
+    "confirm": "Confirmar Fertilización"
   },
   "errors": {
     "noInternet": "Sin conexión a Internet",

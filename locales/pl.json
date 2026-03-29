@@ -92,7 +92,8 @@
     "fertilizerEvent": "🌱 Nawóź {{name}}",
     "diagnosisFollowUp": "🔬 Sprawdź zdrowie {{name}}",
     "calendarEventAdded": "Wydarzenie dodane do kalendarza",
-    "calendarEventsCount": "{{count}} wydarzeń w kalendarzu"
+    "calendarEventsCount": "{{count}} wydarzeń w kalendarzu",
+    "diagnosis": "Kontrola"
   },
   "plantDetail": {
     "careProfile": "Profil pielęgnacji",
@@ -195,10 +196,17 @@
     "every2days": "Co 2 dni",
     "every5days": "Co 5 dni",
     "every10days": "Co 10 dni",
+    "everyNDays": "Co {{n}} dni",
     "placementBtn": "Umiejscowienie",
     "repotBtn": "Przesadź",
     "growthBtn": "Wzrost",
-    "pruningBtn": "Przycinanie"
+    "pruningBtn": "Przycinanie",
+    "newDiagnosis": "Nowa diagnoza",
+    "newPlacement": "Nowe sprawdzenie miejsca",
+    "newFertilizer": "Zapisz nawożenie",
+    "newRepotting": "Nowe sprawdzenie przesadzania",
+    "newPruning": "Nowe sprawdzenie przycinania",
+    "newGrowth": "Zapisz wzrost"
   },
   "profile": {
     "profile": "Profil",
@@ -279,7 +287,8 @@
     "featureCalendar": "Synchronizacja kalendarza",
     "featureCommunity": "Posty społeczności",
     "featureRecovery": "Odzyskiwanie w zamkniętej pętli",
-    "allAIAdvisors": "Wszyscy doradcy AI"
+    "allAIAdvisors": "Wszyscy doradcy AI",
+    "featureFertilizer": "Śledzenie Nawożenia"
   },
   "common": {
     "cancel": "Anuluj",
@@ -626,7 +635,11 @@
     "myGarden": "Mój Ogród",
     "viewMyProfile": "Zobacz mój publiczny profil",
     "myPostsCount": "{{count}} udostępnionych postów",
-    "shareAPost": "Udostępnij post"
+    "shareAPost": "Udostępnij post",
+    "inviteFriends": "Zaproś Znajomych",
+    "inviteSubtitle": "Wybierz kontakty do zaproszenia do GreenThumb",
+    "inviteMessage": "Dołącz do mnie na GreenThumb, aplikacji do pielęgnacji roślin z AI! Pobierz ją tutaj: https://play.google.com/store/apps/details?id=com.giamat90.greenthumb",
+    "sharedVia": "Udostępniono z GreenThumb - Pielęgnacja Roślin z AI\nhttps://play.google.com/store/apps/details?id=com.giamat90.greenthumb"
   },
   "seasonal": {
     "seasonalTips": "Sezonowe Porady",
@@ -650,6 +663,11 @@
     "tipWarning": "Ostrzeżenie",
     "generalTipsFor": "Ogólne Porady dla {{location}}",
     "yourPlantsMonth": "Twoje Rośliny W Tym Miesiącu"
+  },
+  "fertilizer": {
+    "title": "Zapisz Nawożenie",
+    "selectType": "Wybierz rodzaj nawozu",
+    "confirm": "Potwierdź Nawożenie"
   },
   "errors": {
     "noInternet": "Brak połączenia z Internetem",

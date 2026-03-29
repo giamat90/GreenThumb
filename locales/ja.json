@@ -92,7 +92,8 @@
     "fertilizerEvent": "🌱 {{name}}に施肥",
     "diagnosisFollowUp": "🔬 {{name}}の健康チェック",
     "calendarEventAdded": "カレンダーにイベントを追加しました",
-    "calendarEventsCount": "{{count}}件のカレンダーイベント"
+    "calendarEventsCount": "{{count}}件のカレンダーイベント",
+    "diagnosis": "経過観察"
   },
   "plantDetail": {
     "careProfile": "ケアプロフィール",
@@ -195,10 +196,17 @@
     "every2days": "2日ごと",
     "every5days": "5日ごと",
     "every10days": "10日ごと",
+    "everyNDays": "{{n}}日ごと",
     "placementBtn": "配置",
     "repotBtn": "植え替え",
     "growthBtn": "成長",
-    "pruningBtn": "剪定"
+    "pruningBtn": "剪定",
+    "newDiagnosis": "新しい診断",
+    "newPlacement": "新しい配置チェック",
+    "newFertilizer": "施肥を記録",
+    "newRepotting": "新しい植え替えチェック",
+    "newPruning": "新しい剪定チェック",
+    "newGrowth": "成長を記録"
   },
   "profile": {
     "profile": "プロフィール",
@@ -279,7 +287,8 @@
     "featureCalendar": "カレンダー同期",
     "featureCommunity": "コミュニティ投稿",
     "featureRecovery": "クローズドループ回復",
-    "allAIAdvisors": "全AIアドバイザー"
+    "allAIAdvisors": "全AIアドバイザー",
+    "featureFertilizer": "施肥の追跡"
   },
   "common": {
     "cancel": "キャンセル",
@@ -626,7 +635,11 @@
     "myGarden": "マイガーデン",
     "viewMyProfile": "公開プロフィールを見る",
     "myPostsCount": "{{count}}件の投稿",
-    "shareAPost": "投稿をシェア"
+    "shareAPost": "投稿をシェア",
+    "inviteFriends": "友達を招待",
+    "inviteSubtitle": "GreenThumbに招待するコンタクトを選択してください",
+    "inviteMessage": "GreenThumb（AI植物ケアアプリ）に参加しましょう！こちらからダウンロード: https://play.google.com/store/apps/details?id=com.giamat90.greenthumb",
+    "sharedVia": "GreenThumb - AI植物ケアから共有\nhttps://play.google.com/store/apps/details?id=com.giamat90.greenthumb"
   },
   "seasonal": {
     "seasonalTips": "季節のヒント",
@@ -650,6 +663,11 @@
     "tipWarning": "注意",
     "generalTipsFor": "{{location}}の一般的なヒント",
     "yourPlantsMonth": "今月のあなたの植物"
+  },
+  "fertilizer": {
+    "title": "施肥を記録",
+    "selectType": "肥料の種類を選択",
+    "confirm": "施肥を確認"
   },
   "errors": {
     "noInternet": "インターネット接続なし",

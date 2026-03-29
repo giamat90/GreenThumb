@@ -92,7 +92,8 @@
     "fertilizerEvent": "🌱 为 {{name}} 施肥",
     "diagnosisFollowUp": "🔬 检查 {{name}} 健康状况",
     "calendarEventAdded": "事件已添加到日历",
-    "calendarEventsCount": "{{count}} 个日历事件"
+    "calendarEventsCount": "{{count}} 个日历事件",
+    "diagnosis": "复查"
   },
   "plantDetail": {
     "careProfile": "养护档案",
@@ -195,10 +196,17 @@
     "every2days": "每2天",
     "every5days": "每5天",
     "every10days": "每10天",
+    "everyNDays": "每{{n}}天",
     "placementBtn": "位置",
     "repotBtn": "换盆",
     "growthBtn": "生长",
-    "pruningBtn": "修剪"
+    "pruningBtn": "修剪",
+    "newDiagnosis": "新诊断",
+    "newPlacement": "新位置检查",
+    "newFertilizer": "记录施肥",
+    "newRepotting": "新换盆检查",
+    "newPruning": "新修剪检查",
+    "newGrowth": "记录生长"
   },
   "profile": {
     "profile": "个人资料",
@@ -279,7 +287,8 @@
     "featureCalendar": "日历同步",
     "featureCommunity": "社区发帖",
     "featureRecovery": "闭环康复",
-    "allAIAdvisors": "全部AI顾问"
+    "allAIAdvisors": "全部AI顾问",
+    "featureFertilizer": "施肥追踪"
   },
   "common": {
     "cancel": "取消",
@@ -626,7 +635,11 @@
     "myGarden": "我的花园",
     "viewMyProfile": "查看我的公开资料",
     "myPostsCount": "已分享 {{count}} 条帖子",
-    "shareAPost": "分享帖子"
+    "shareAPost": "分享帖子",
+    "inviteFriends": "邀请朋友",
+    "inviteSubtitle": "选择联系人邀请加入GreenThumb",
+    "inviteMessage": "加入我在GreenThumb，AI植物护理应用！点此下载：https://play.google.com/store/apps/details?id=com.giamat90.greenthumb",
+    "sharedVia": "来自GreenThumb - AI植物护理的分享\nhttps://play.google.com/store/apps/details?id=com.giamat90.greenthumb"
   },
   "seasonal": {
     "seasonalTips": "季节建议",
@@ -650,6 +663,11 @@
     "tipWarning": "警告",
     "generalTipsFor": "{{location}}的一般建议",
     "yourPlantsMonth": "本月您的植物"
+  },
+  "fertilizer": {
+    "title": "记录施肥",
+    "selectType": "选择肥料类型",
+    "confirm": "确认施肥"
   },
   "errors": {
     "noInternet": "无互联网连接",

@@ -92,7 +92,8 @@
     "fertilizerEvent": "🌱 Fertilizza {{name}}",
     "diagnosisFollowUp": "🔬 Controlla la salute di {{name}}",
     "calendarEventAdded": "Evento aggiunto al calendario",
-    "calendarEventsCount": "{{count}} eventi nel calendario"
+    "calendarEventsCount": "{{count}} eventi nel calendario",
+    "diagnosis": "Controllo"
   },
   "plantDetail": {
     "careProfile": "Profilo cure",
@@ -195,10 +196,17 @@
     "every2days": "Ogni 2 giorni",
     "every5days": "Ogni 5 giorni",
     "every10days": "Ogni 10 giorni",
+    "everyNDays": "Ogni {{n}} giorni",
     "placementBtn": "Posizionamento",
     "repotBtn": "Rinvaso",
     "growthBtn": "Crescita",
-    "pruningBtn": "Potatura"
+    "pruningBtn": "Potatura",
+    "newDiagnosis": "Nuova diagnosi",
+    "newPlacement": "Nuovo controllo posizione",
+    "newFertilizer": "Registra concimazione",
+    "newRepotting": "Nuovo controllo rinvaso",
+    "newPruning": "Nuovo controllo potatura",
+    "newGrowth": "Registra crescita"
   },
   "profile": {
     "profile": "Profilo",
@@ -279,7 +287,8 @@
     "featureCalendar": "Sincronizzazione calendario",
     "featureCommunity": "Post nella community",
     "featureRecovery": "Recupero a ciclo chiuso",
-    "allAIAdvisors": "Tutti i consulenti AI"
+    "allAIAdvisors": "Tutti i consulenti AI",
+    "featureFertilizer": "Monitoraggio Fertilizzante"
   },
   "common": {
     "cancel": "Annulla",
@@ -626,7 +635,11 @@
     "myGarden": "Il mio Giardino",
     "viewMyProfile": "Visualizza il mio profilo pubblico",
     "myPostsCount": "{{count}} post condivisi",
-    "shareAPost": "Condividi un post"
+    "shareAPost": "Condividi un post",
+    "inviteFriends": "Invita Amici",
+    "inviteSubtitle": "Seleziona i contatti da invitare su GreenThumb",
+    "inviteMessage": "Unisciti a me su GreenThumb, l'app per la cura delle piante con AI! Scaricala qui: https://play.google.com/store/apps/details?id=com.giamat90.greenthumb",
+    "sharedVia": "Condiviso da GreenThumb - Cura delle Piante con AI\nhttps://play.google.com/store/apps/details?id=com.giamat90.greenthumb"
   },
   "seasonal": {
     "seasonalTips": "Consigli Stagionali",
@@ -650,6 +663,11 @@
     "tipWarning": "Attenzione",
     "generalTipsFor": "Consigli Generali per {{location}}",
     "yourPlantsMonth": "Le Tue Piante Questo Mese"
+  },
+  "fertilizer": {
+    "title": "Registra Fertilizzante",
+    "selectType": "Seleziona il tipo di fertilizzante",
+    "confirm": "Conferma Fertilizzazione"
   },
   "errors": {
     "noInternet": "Nessuna connessione Internet",
