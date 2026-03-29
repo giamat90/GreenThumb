@@ -6,6 +6,8 @@ import {
   Alert,
   StyleSheet,
   ActivityIndicator,
+  Image,
+  ScrollView,
 } from "react-native";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useNavigation } from "@react-navigation/native";
@@ -133,33 +135,52 @@ export default function FertilizerScreen() {
     <View style={[styles.screen, { paddingBottom: insets.bottom }]}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      {/* ── Header ─────────────────────────────────────────────────────── */}
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-          accessibilityLabel={t("common.back")}
-          accessibilityRole="button"
-        >
-          <ArrowLeft size={22} color={COLORS.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t("fertilizer.title")}</Text>
-        <View style={styles.headerSpacer} />
-      </View>
-
-      {/* ── Content ────────────────────────────────────────────────────── */}
-      <View style={styles.content}>
-        {/* Plant name */}
-        <View style={styles.plantInfo}>
-          <Text style={styles.plantName}>{plant.name}</Text>
-          {plant.species ? (
-            <Text style={styles.plantSpecies}>{plant.species}</Text>
-          ) : null}
+      {/* ── Scrollable content ─────────────────────────────────────────── */}
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[
+          styles.content,
+          { paddingTop: insets.top + 16 },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* ── Header ───────────────────────────────────────────────────── */}
+        <View style={styles.formHeader}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+            accessibilityLabel={t("common.back")}
+            accessibilityRole="button"
+          >
+            <ArrowLeft size={20} color={COLORS.textPrimary} />
+          </TouchableOpacity>
+          <Text style={styles.formTitle}>{t("fertilizer.title")}</Text>
         </View>
 
-        {/* Type selection */}
-        <Text style={styles.sectionLabel}>{t("fertilizer.selectType")}</Text>
-        <View style={styles.typeRow}>
+        {/* ── Plant preview ─────────────────────────────────────────────── */}
+        <View style={styles.plantPreview}>
+          {plant.photo_url ? (
+            <Image
+              source={{ uri: plant.photo_url }}
+              style={styles.plantThumb}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={[styles.plantThumb, styles.plantThumbPlaceholder]}>
+              <Text style={{ fontSize: 32 }}>🌿</Text>
+            </View>
+          )}
+          <View style={styles.plantPreviewText}>
+            <Text style={styles.plantPreviewName}>{plant.name}</Text>
+            {plant.species ? (
+              <Text style={styles.plantPreviewSpecies}>{plant.species}</Text>
+            ) : null}
+          </View>
+        </View>
+
+        {/* ── Type selection ────────────────────────────────────────────── */}
+        <Text style={styles.sectionTitle}>{t("fertilizer.selectType")}</Text>
+        <View style={styles.pillRow}>
           {FERTILIZER_TYPES.map(({ value, labelKey }) => {
             const isSelected = selectedType === value;
             return (
@@ -183,7 +204,7 @@ export default function FertilizerScreen() {
             );
           })}
         </View>
-      </View>
+      </ScrollView>
 
       {/* ── Confirm button ─────────────────────────────────────────────── */}
       <TouchableOpacity
@@ -227,82 +248,117 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  // Header
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-    backgroundColor: COLORS.cream,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E8E0CC",
-  },
-  backButton: {
-    padding: 8,
-  },
-  headerTitle: {
+  // Scroll + content
+  scroll: {
     flex: 1,
-    textAlign: "center",
-    fontSize: 17,
-    fontWeight: "600",
-    color: COLORS.textPrimary,
   },
-  headerSpacer: {
-    width: 38, // balances the back button width so title is centered
+  content: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
   },
 
-  // Content
-  content: {
-    flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 24,
+  // Header
+  formHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 20,
   },
-  plantInfo: {
-    marginBottom: 28,
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 1,
   },
-  plantName: {
+  formTitle: {
     fontSize: 22,
+    fontWeight: "800",
+    color: COLORS.textPrimary,
+  },
+
+  // Plant preview card
+  plantPreview: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    padding: 14,
+    gap: 14,
+    marginBottom: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  plantThumb: {
+    width: 56,
+    height: 56,
+    borderRadius: 14,
+  },
+  plantThumbPlaceholder: {
+    backgroundColor: COLORS.lightgreen,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  plantPreviewText: {
+    flex: 1,
+  },
+  plantPreviewName: {
+    fontSize: 16,
     fontWeight: "700",
     color: COLORS.textPrimary,
-    marginBottom: 4,
   },
-  plantSpecies: {
-    fontSize: 15,
-    color: COLORS.textSecondary,
+  plantPreviewSpecies: {
+    fontSize: 13,
     fontStyle: "italic",
-  },
-  sectionLabel: {
-    fontSize: 14,
-    fontWeight: "600",
     color: COLORS.textSecondary,
-    marginBottom: 12,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
+    marginTop: 2,
   },
-  typeRow: {
+
+  // Section title
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: COLORS.textPrimary,
+    marginBottom: 10,
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+  },
+
+  // Pills
+  pillRow: {
     flexDirection: "row",
+    gap: 8,
     flexWrap: "wrap",
-    gap: 10,
   },
   typePill: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 24,
+    paddingVertical: 9,
+    paddingHorizontal: 14,
+    borderRadius: 20,
     borderWidth: 1.5,
-    borderColor: COLORS.primary,
+    borderColor: "#E5E7EB",
     backgroundColor: "#fff",
   },
   typePillSelected: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
+    backgroundColor: COLORS.lightgreen,
+    borderColor: COLORS.secondary,
   },
   typePillText: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: "500",
-    color: COLORS.primary,
+    color: COLORS.textSecondary,
   },
   typePillTextSelected: {
-    color: "#fff",
+    color: COLORS.primary,
+    fontWeight: "700",
   },
 
   // Confirm button
