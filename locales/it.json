@@ -669,6 +669,36 @@
     "selectType": "Seleziona il tipo di fertilizzante",
     "confirm": "Conferma Fertilizzazione"
   },
+  "addPlant": {
+    "title": "Aggiungi pianta",
+    "plantName": "Nome della pianta",
+    "plantNamePlaceholder": "es. La mia Monstera",
+    "plantNameRequired": "Inserisci un nome per la pianta",
+    "species": "Specie (facoltativo)",
+    "speciesPlaceholder": "es. Monstera deliciosa",
+    "photo": "Foto (facoltativa)",
+    "addPhoto": "Aggiungi una foto",
+    "changePhoto": "Cambia foto",
+    "removePhoto": "Rimuovi",
+    "potSize": "Dimensione vaso",
+    "location": "Posizione",
+    "wateringFrequency": "Frequenza di irrigazione",
+    "frequentLabel": "Frequente",
+    "frequentDesc": "Ogni 2 giorni",
+    "averageLabel": "Media",
+    "averageDesc": "Ogni 5 giorni",
+    "minimumLabel": "Minima",
+    "minimumDesc": "Ogni 10 giorni",
+    "savePlant": "Salva pianta",
+    "plantAdded": "Pianta aggiunta!",
+    "plantAddedMessage": "{{name}} è stata aggiunta al tuo giardino.",
+    "viewMyPlants": "Vedi le mie piante",
+    "saveFailed": "Impossibile salvare la pianta"
+  },
+  "emptyPlants": {
+    "title": "Nessuna pianta ancora",
+    "subtitle": "Usa la fotocamera per identificare una pianta, o tocca + per aggiungerla manualmente"
+  },
   "errors": {
     "noInternet": "Nessuna connessione Internet",
     "noInternetDesc": "Controlla la connessione e riprova.",

@@ -669,6 +669,36 @@
     "selectType": "选择肥料类型",
     "confirm": "确认施肥"
   },
+  "addPlant": {
+    "title": "添加植物",
+    "plantName": "植物名称",
+    "plantNamePlaceholder": "例：我的龟背竹",
+    "plantNameRequired": "请输入植物名称",
+    "species": "物种（可选）",
+    "speciesPlaceholder": "例：Monstera deliciosa",
+    "photo": "照片（可选）",
+    "addPhoto": "添加照片",
+    "changePhoto": "更换照片",
+    "removePhoto": "删除",
+    "potSize": "花盆大小",
+    "location": "位置",
+    "wateringFrequency": "浇水频率",
+    "frequentLabel": "频繁",
+    "frequentDesc": "每2天",
+    "averageLabel": "一般",
+    "averageDesc": "每5天",
+    "minimumLabel": "最少",
+    "minimumDesc": "每10天",
+    "savePlant": "保存植物",
+    "plantAdded": "植物已添加！",
+    "plantAddedMessage": "{{name}} 已添加到您的花园。",
+    "viewMyPlants": "查看我的植物",
+    "saveFailed": "无法保存植物"
+  },
+  "emptyPlants": {
+    "title": "还没有植物",
+    "subtitle": "使用相机识别植物，或点击+手动添加"
+  },
   "errors": {
     "noInternet": "无互联网连接",
     "noInternetDesc": "请检查您的连接并重试。",

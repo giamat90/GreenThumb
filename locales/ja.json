@@ -669,6 +669,36 @@
     "selectType": "肥料の種類を選択",
     "confirm": "施肥を確認"
   },
+  "addPlant": {
+    "title": "植物を追加",
+    "plantName": "植物の名前",
+    "plantNamePlaceholder": "例：私のモンステラ",
+    "plantNameRequired": "植物の名前を入力してください",
+    "species": "種（任意）",
+    "speciesPlaceholder": "例：Monstera deliciosa",
+    "photo": "写真（任意）",
+    "addPhoto": "写真を追加",
+    "changePhoto": "写真を変更",
+    "removePhoto": "削除",
+    "potSize": "鉢のサイズ",
+    "location": "場所",
+    "wateringFrequency": "水やりの頻度",
+    "frequentLabel": "頻繁",
+    "frequentDesc": "2日ごと",
+    "averageLabel": "普通",
+    "averageDesc": "5日ごと",
+    "minimumLabel": "最小限",
+    "minimumDesc": "10日ごと",
+    "savePlant": "植物を保存",
+    "plantAdded": "植物を追加しました！",
+    "plantAddedMessage": "{{name}} があなたの庭に追加されました。",
+    "viewMyPlants": "マイ植物を表示",
+    "saveFailed": "植物を保存できませんでした"
+  },
+  "emptyPlants": {
+    "title": "まだ植物がありません",
+    "subtitle": "カメラで植物を識別するか、+をタップして手動で追加してください"
+  },
   "errors": {
     "noInternet": "インターネット接続なし",
     "noInternetDesc": "接続を確認して、もう一度お試しください。",

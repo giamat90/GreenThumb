@@ -1,15 +1,15 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
+import { useTranslation } from "react-i18next";
 import { COLORS } from "@/constants";
 
 export function EmptyPlants() {
+  const { t } = useTranslation();
   return (
     <View style={styles.container}>
       <Text style={styles.emoji}>🌱</Text>
-      <Text style={styles.title}>No plants yet</Text>
-      <Text style={styles.subtitle}>
-        Tap the camera button below to identify and add your first plant
-      </Text>
+      <Text style={styles.title}>{t("emptyPlants.title")}</Text>
+      <Text style={styles.subtitle}>{t("emptyPlants.subtitle")}</Text>
       <Text style={styles.arrow}>↓</Text>
     </View>
   );

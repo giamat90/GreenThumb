@@ -669,6 +669,36 @@
     "selectType": "Düngerart auswählen",
     "confirm": "Düngung Bestätigen"
   },
+  "addPlant": {
+    "title": "Pflanze hinzufügen",
+    "plantName": "Pflanzenname",
+    "plantNamePlaceholder": "z.B. Mein Monstera",
+    "plantNameRequired": "Bitte gib einen Namen für die Pflanze ein",
+    "species": "Art (optional)",
+    "speciesPlaceholder": "z.B. Monstera deliciosa",
+    "photo": "Foto (optional)",
+    "addPhoto": "Foto hinzufügen",
+    "changePhoto": "Foto ändern",
+    "removePhoto": "Entfernen",
+    "potSize": "Topfgröße",
+    "location": "Standort",
+    "wateringFrequency": "Bewässerungshäufigkeit",
+    "frequentLabel": "Häufig",
+    "frequentDesc": "Alle 2 Tage",
+    "averageLabel": "Mittel",
+    "averageDesc": "Alle 5 Tage",
+    "minimumLabel": "Minimal",
+    "minimumDesc": "Alle 10 Tage",
+    "savePlant": "Pflanze speichern",
+    "plantAdded": "Pflanze hinzugefügt!",
+    "plantAddedMessage": "{{name}} wurde deinem Garten hinzugefügt.",
+    "viewMyPlants": "Meine Pflanzen ansehen",
+    "saveFailed": "Pflanze konnte nicht gespeichert werden"
+  },
+  "emptyPlants": {
+    "title": "Noch keine Pflanzen",
+    "subtitle": "Nutze die Kamera, um eine Pflanze zu identifizieren, oder tippe auf +, um eine manuell hinzuzufügen"
+  },
   "errors": {
     "noInternet": "Keine Internetverbindung",
     "noInternetDesc": "Bitte überprüfe deine Verbindung und versuche es erneut.",

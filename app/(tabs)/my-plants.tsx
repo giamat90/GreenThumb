@@ -13,7 +13,7 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { SlidersHorizontal, Droplets, Heart, Leaf, X, Check } from "lucide-react-native";
+import { SlidersHorizontal, Droplets, Heart, Leaf, X, Check, Plus } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
 import { COLORS } from "@/constants";
@@ -313,14 +313,24 @@ export default function MyPlantsScreen() {
             {plants.length} {plants.length === 1 ? t("myPlants.plant") : t("myPlants.plants")}
           </Text>
         </View>
-        <TouchableOpacity
-          style={[styles.sortButton, isFiltered && styles.sortButtonActive]}
-          onPress={() => setFilterSheetVisible(true)}
-          accessibilityLabel="Filter and sort plants"
-          accessibilityRole="button"
-        >
-          <SlidersHorizontal size={20} color={isFiltered ? "#fff" : COLORS.primary} />
-        </TouchableOpacity>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => router.push("/add-plant")}
+            accessibilityLabel={t("addPlant.title")}
+            accessibilityRole="button"
+          >
+            <Plus size={20} color={COLORS.primary} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.sortButton, isFiltered && styles.sortButtonActive]}
+            onPress={() => setFilterSheetVisible(true)}
+            accessibilityLabel="Filter and sort plants"
+            accessibilityRole="button"
+          >
+            <SlidersHorizontal size={20} color={isFiltered ? "#fff" : COLORS.primary} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Weather adjustment banner */}
@@ -500,6 +510,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: COLORS.textSecondary,
     marginTop: 2,
+  },
+  addButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.lightgreen,
+    alignItems: "center",
+    justifyContent: "center",
   },
   sortButton: {
     width: 40,

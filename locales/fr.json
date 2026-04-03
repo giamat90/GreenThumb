@@ -669,6 +669,36 @@
     "selectType": "Sélectionnez le type d'engrais",
     "confirm": "Confirmer la Fertilisation"
   },
+  "addPlant": {
+    "title": "Ajouter une plante",
+    "plantName": "Nom de la plante",
+    "plantNamePlaceholder": "ex. Mon Monstera",
+    "plantNameRequired": "Veuillez entrer un nom pour la plante",
+    "species": "Espèce (facultatif)",
+    "speciesPlaceholder": "ex. Monstera deliciosa",
+    "photo": "Photo (facultative)",
+    "addPhoto": "Ajouter une photo",
+    "changePhoto": "Changer la photo",
+    "removePhoto": "Supprimer",
+    "potSize": "Taille du pot",
+    "location": "Emplacement",
+    "wateringFrequency": "Fréquence d'arrosage",
+    "frequentLabel": "Fréquent",
+    "frequentDesc": "Tous les 2 jours",
+    "averageLabel": "Moyen",
+    "averageDesc": "Tous les 5 jours",
+    "minimumLabel": "Minimum",
+    "minimumDesc": "Tous les 10 jours",
+    "savePlant": "Sauvegarder la plante",
+    "plantAdded": "Plante ajoutée !",
+    "plantAddedMessage": "{{name}} a été ajoutée à votre jardin.",
+    "viewMyPlants": "Voir mes plantes",
+    "saveFailed": "Impossible de sauvegarder la plante"
+  },
+  "emptyPlants": {
+    "title": "Pas encore de plantes",
+    "subtitle": "Utilisez la caméra pour identifier une plante, ou appuyez sur + pour en ajouter une manuellement"
+  },
   "errors": {
     "noInternet": "Pas de connexion Internet",
     "noInternetDesc": "Vérifiez votre connexion et réessayez.",

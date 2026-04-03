@@ -669,6 +669,36 @@
     "selectType": "Selecteer type meststof",
     "confirm": "Bemesting Bevestigen"
   },
+  "addPlant": {
+    "title": "Plant toevoegen",
+    "plantName": "Naam van de plant",
+    "plantNamePlaceholder": "bijv. Mijn Monstera",
+    "plantNameRequired": "Voer een naam in voor de plant",
+    "species": "Soort (optioneel)",
+    "speciesPlaceholder": "bijv. Monstera deliciosa",
+    "photo": "Foto (optioneel)",
+    "addPhoto": "Foto toevoegen",
+    "changePhoto": "Foto wijzigen",
+    "removePhoto": "Verwijderen",
+    "potSize": "Potgrootte",
+    "location": "Locatie",
+    "wateringFrequency": "Waterfrequentie",
+    "frequentLabel": "Frequent",
+    "frequentDesc": "Elke 2 dagen",
+    "averageLabel": "Gemiddeld",
+    "averageDesc": "Elke 5 dagen",
+    "minimumLabel": "Minimaal",
+    "minimumDesc": "Elke 10 dagen",
+    "savePlant": "Plant opslaan",
+    "plantAdded": "Plant toegevoegd!",
+    "plantAddedMessage": "{{name}} is toegevoegd aan uw tuin.",
+    "viewMyPlants": "Mijn planten bekijken",
+    "saveFailed": "Kon de plant niet opslaan"
+  },
+  "emptyPlants": {
+    "title": "Nog geen planten",
+    "subtitle": "Gebruik de camera om een plant te identificeren, of tik op + om er een handmatig toe te voegen"
+  },
   "errors": {
     "noInternet": "Geen internetverbinding",
     "noInternetDesc": "Controleer uw verbinding en probeer het opnieuw.",

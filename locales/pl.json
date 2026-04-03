@@ -669,6 +669,36 @@
     "selectType": "Wybierz rodzaj nawozu",
     "confirm": "Potwierdź Nawożenie"
   },
+  "addPlant": {
+    "title": "Dodaj roślinę",
+    "plantName": "Nazwa rośliny",
+    "plantNamePlaceholder": "np. Moja Monstera",
+    "plantNameRequired": "Proszę podać nazwę rośliny",
+    "species": "Gatunek (opcjonalne)",
+    "speciesPlaceholder": "np. Monstera deliciosa",
+    "photo": "Zdjęcie (opcjonalne)",
+    "addPhoto": "Dodaj zdjęcie",
+    "changePhoto": "Zmień zdjęcie",
+    "removePhoto": "Usuń",
+    "potSize": "Rozmiar doniczki",
+    "location": "Lokalizacja",
+    "wateringFrequency": "Częstotliwość podlewania",
+    "frequentLabel": "Częste",
+    "frequentDesc": "Co 2 dni",
+    "averageLabel": "Średnie",
+    "averageDesc": "Co 5 dni",
+    "minimumLabel": "Minimalne",
+    "minimumDesc": "Co 10 dni",
+    "savePlant": "Zapisz roślinę",
+    "plantAdded": "Roślina dodana!",
+    "plantAddedMessage": "{{name}} została dodana do twojego ogrodu.",
+    "viewMyPlants": "Zobacz moje rośliny",
+    "saveFailed": "Nie udało się zapisać rośliny"
+  },
+  "emptyPlants": {
+    "title": "Brak roślin",
+    "subtitle": "Użyj aparatu, aby zidentyfikować roślinę, lub dotknij +, aby dodać ją ręcznie"
+  },
   "errors": {
     "noInternet": "Brak połączenia z Internetem",
     "noInternetDesc": "Sprawdź połączenie i spróbuj ponownie.",

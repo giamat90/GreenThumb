@@ -669,6 +669,36 @@
     "selectType": "Select fertilizer type",
     "confirm": "Confirm Fertilization"
   },
+  "addPlant": {
+    "title": "Add Plant",
+    "plantName": "Plant name",
+    "plantNamePlaceholder": "e.g. My Monstera",
+    "plantNameRequired": "Please enter a plant name",
+    "species": "Species (optional)",
+    "speciesPlaceholder": "e.g. Monstera deliciosa",
+    "photo": "Photo (optional)",
+    "addPhoto": "Add a photo",
+    "changePhoto": "Change photo",
+    "removePhoto": "Remove",
+    "potSize": "Pot size",
+    "location": "Location",
+    "wateringFrequency": "Watering frequency",
+    "frequentLabel": "Frequent",
+    "frequentDesc": "Every 2 days",
+    "averageLabel": "Average",
+    "averageDesc": "Every 5 days",
+    "minimumLabel": "Minimum",
+    "minimumDesc": "Every 10 days",
+    "savePlant": "Save Plant",
+    "plantAdded": "Plant added!",
+    "plantAddedMessage": "{{name}} has been added to your garden.",
+    "viewMyPlants": "View My Plants",
+    "saveFailed": "Could not save plant"
+  },
+  "emptyPlants": {
+    "title": "No plants yet",
+    "subtitle": "Use the camera to identify a plant, or tap + to add one manually"
+  },
   "errors": {
     "noInternet": "No Internet Connection",
     "noInternetDesc": "Please check your connection and try again.",
