@@ -237,6 +237,8 @@
     "couldNotSendTest": "Test-Benachrichtigung konnte nicht gesendet werden.",
     "couldNotOpenUrl": "URL konnte nicht geöffnet werden.",
     "failedToSaveCity": "Stadt konnte nicht gespeichert werden.",
+    "cityNotFound": "Stadt nicht gefunden. Versuche einen anderen Namen.",
+    "cityPlaceholder": "z.B. Berlin, London, Tokio",
     "somethingWentWrong": "Etwas ist schief gelaufen. Bitte versuche es erneut."
   },
   "paywall": {

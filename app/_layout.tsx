@@ -206,11 +206,16 @@ export default function RootLayout() {
       setSubscription(status);
     });
 
-    // Listen for RevenueCat customer info updates (purchase, renewal, expiry)
-    const listener = Purchases.addCustomerInfoUpdateListener((customerInfo) => {
-      const isProActive = "pro" in customerInfo.entitlements.active;
-      setSubscription(isProActive ? "pro" : "free");
-    });
+    // Listen for RevenueCat customer info updates (purchase, renewal, expiry).
+    // Only in __DEV__ where RevenueCat is actually initialised — in release
+    // the listener would fire with empty entitlements and override beta-email Pro status.
+    let listener: { remove: () => void } | null = null;
+    if (__DEV__) {
+      listener = Purchases.addCustomerInfoUpdateListener((customerInfo) => {
+        const isProActive = "pro" in customerInfo.entitlements.active;
+        setSubscription(isProActive ? "pro" : "free");
+      });
+    }
 
     return () => {
       try { listener?.remove(); } catch {}
@@ -309,6 +314,7 @@ export default function RootLayout() {
         <Stack.Screen name="paywall" options={{ headerShown: false }} />
         <Stack.Screen name="seasonal-tips" options={{ headerShown: false }} />
         <Stack.Screen name="community/new-post" options={{ headerShown: false }} />
+
         <Stack.Screen name="community/post/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="community/profile/[id]" options={{ headerShown: false }} />
       </Stack>

@@ -64,9 +64,7 @@ export function useProGate(): ProGateResult {
         return true;
 
       case "unlimited_identification":
-        // Identification monthly limit is enforced separately in
-        // useIdentificationLimit — here we just return true so the camera
-        // can open; the limit hook blocks before the API call.
+        // Plant ID is free and unlimited for all users — always allow.
         return true;
 
       case "weather_scheduling":

@@ -38,7 +38,6 @@ import { useTranslation } from "react-i18next";
 
 import { COLORS } from "@/constants";
 import { useCamera } from "@/hooks/useCamera";
-import { useIdentificationLimit } from "@/hooks/useIdentificationLimit";
 import { compressImage } from "@/lib/imageUtils";
 import { identifyPlant } from "@/lib/plantid";
 import type { IdentificationResult, PlantSuggestion } from "@/lib/plantid";
@@ -259,7 +258,6 @@ export default function IdentifyScreen() {
   const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
 
   const { hasPermission, requestPermission } = useCamera();
-  const { canIdentify, isLoading: limitLoading } = useIdentificationLimit();
   const { addPlant } = usePlantsStore();
   const { profile } = useUserStore();
 
@@ -268,9 +266,6 @@ export default function IdentifyScreen() {
   const [capturedUri, setCapturedUri] = useState<string | null>(null);
   const [identificationResult, setIdentificationResult] =
     useState<IdentificationResult | null>(null);
-
-  // Paywall modal state
-  const [showPaywallModal, setShowPaywallModal] = useState(false);
 
   // Add-plant bottom sheet state
   const [showAddModal, setShowAddModal] = useState(false);
@@ -282,13 +277,6 @@ export default function IdentifyScreen() {
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(0);
   const [isManualAdd, setIsManualAdd] = useState(false);
   const [manualSpecies, setManualSpecies] = useState("");
-
-  // Show paywall when limit check completes and user is over quota
-  useEffect(() => {
-    if (!limitLoading && !canIdentify) {
-      setShowPaywallModal(true);
-    }
-  }, [limitLoading, canIdentify]);
 
   // Spin animation for the loading leaf icon
   useEffect(() => {
@@ -355,11 +343,6 @@ export default function IdentifyScreen() {
   }, [hasPermission, requestPermission]);
 
   const handleGalleryPick = useCallback(async () => {
-    if (!canIdentify && !limitLoading) {
-      setShowPaywallModal(true);
-      return;
-    }
-
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
       Alert.alert(
@@ -409,16 +392,10 @@ export default function IdentifyScreen() {
       Alert.alert(t("identify.identificationFailed"), message);
       setScreenState("camera");
     }
-  }, [canIdentify, limitLoading, t]);
+  }, [t]);
 
   const handleCapture = useCallback(async () => {
     if (!cameraRef.current) return;
-
-    // Double-check limit at capture time (in case modal was dismissed)
-    if (!canIdentify && !limitLoading) {
-      setShowPaywallModal(true);
-      return;
-    }
 
     try {
       const photo = await cameraRef.current.takePictureAsync({
@@ -451,7 +428,7 @@ export default function IdentifyScreen() {
       Alert.alert(t("identify.identificationFailed"), message);
       setScreenState("camera");
     }
-  }, [canIdentify, limitLoading, t]);
+  }, [t]);
 
   const handleTryAgain = useCallback(() => {
     setScreenState("camera");
@@ -601,18 +578,6 @@ export default function IdentifyScreen() {
     inputRange: [0, 1],
     outputRange: ["0deg", "360deg"],
   });
-
-  // ── Loading gate (limit check) ──────────────────────────────────────────────
-  if (limitLoading) {
-    return (
-      <View
-        style={{ flex: 1, backgroundColor: "black", alignItems: "center", justifyContent: "center" }}
-      >
-        <StatusBar barStyle="light-content" />
-        <ActivityIndicator color="white" size="large" />
-      </View>
-    );
-  }
 
   // ── Main render ─────────────────────────────────────────────────────────────
   return (
@@ -1451,88 +1416,6 @@ export default function IdentifyScreen() {
           })()}
         </View>
       )}
-
-      {/* ── Paywall Modal ── */}
-      <Modal
-        visible={showPaywallModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowPaywallModal(false)}
-      >
-        <View
-          style={{
-            flex: 1,
-            backgroundColor: "rgba(0,0,0,0.65)",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: 24,
-          }}
-        >
-          <View
-            style={{
-              backgroundColor: "white",
-              borderRadius: 28,
-              padding: 28,
-              width: "100%",
-            }}
-          >
-            <Text style={{ fontSize: 32, textAlign: "center", marginBottom: 4 }}>
-              🌿
-            </Text>
-            <Text
-              style={{
-                fontSize: 20,
-                fontWeight: "700",
-                color: COLORS.primary,
-                textAlign: "center",
-                marginBottom: 10,
-              }}
-            >
-              {t("identify.limitReached")}
-            </Text>
-            <Text
-              style={{
-                fontSize: 15,
-                color: COLORS.textSecondary,
-                textAlign: "center",
-                lineHeight: 22,
-                marginBottom: 24,
-              }}
-            >
-              {t("identify.limitReachedMessage")}
-            </Text>
-
-            <TouchableOpacity
-              onPress={() => {
-                setShowPaywallModal(false);
-                router.push("/paywall" as never);
-              }}
-              style={{
-                backgroundColor: COLORS.primary,
-                borderRadius: 16,
-                paddingVertical: 14,
-                alignItems: "center",
-                marginBottom: 10,
-              }}
-              accessibilityLabel={t("identify.upgradeToPro")}
-            >
-              <Text style={{ color: "white", fontWeight: "700", fontSize: 16 }}>
-                {t("identify.upgradeToPro")}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={() => setShowPaywallModal(false)}
-              style={{ paddingVertical: 10, alignItems: "center" }}
-              accessibilityLabel={t("identify.maybeLater")}
-            >
-              <Text style={{ color: COLORS.textSecondary, fontSize: 14 }}>
-                {t("identify.maybeLater")}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
 
       {/* ── Add Plant Bottom Sheet ── */}
       <Modal

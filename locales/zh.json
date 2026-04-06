@@ -237,6 +237,8 @@
     "couldNotSendTest": "无法发送测试通知。",
     "couldNotOpenUrl": "无法打开链接。",
     "failedToSaveCity": "保存城市失败。",
+    "cityNotFound": "找不到该城市，请尝试其他名称。",
+    "cityPlaceholder": "例如：北京、伦敦、东京",
     "somethingWentWrong": "出现问题，请重试。"
   },
   "paywall": {

@@ -1,4 +1,4 @@
-import { Alert, Platform } from "react-native";
+import { Platform } from "react-native";
 import Purchases, {
   LOG_LEVEL,
   type PurchasesOffering,
@@ -30,19 +30,9 @@ export const isBetaEmail = (email: string | null | undefined): boolean =>
  * Passing appUserID ties RevenueCat receipts to this specific account,
  * which is critical for restoring purchases across devices.
  *
- * NOTE: RevenueCat is only initialised in __DEV__ builds. Preview/production
- * builds skip initialisation entirely until a real Google Play production key
- * is configured in the RevenueCat dashboard. Until then all users are treated
- * as 'free' and the paywall shows a "Coming Soon" message.
+ * NOTE: Uses the production Google Play key via EXPO_PUBLIC_REVENUECAT_ANDROID_KEY.
  */
 export function initializePurchases(userId: string): void {
-  if (!__DEV__) {
-    console.log(
-      "RevenueCat: skipping initialization in production until real key is configured"
-    );
-    return;
-  }
-
   const apiKey =
     Platform.OS === "ios"
       ? (process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY ?? "")
@@ -67,11 +57,9 @@ export function initializePurchases(userId: string): void {
 
 /**
  * Fetches the current RevenueCat offering.
- * Returns null in production (pre-launch) or when no offerings are configured.
+ * Returns null when no offerings are configured.
  */
 export async function getOfferings(): Promise<PurchasesOffering | null> {
-  if (!__DEV__) return null;
-
   try {
     const offerings = await Purchases.getOfferings();
     return offerings.current ?? null;
@@ -83,19 +71,10 @@ export async function getOfferings(): Promise<PurchasesOffering | null> {
 
 /**
  * Initiates a purchase for the given package.
- * In production (pre-launch) shows a "Coming Soon" alert instead.
  * Returns true on success, false if the user cancels.
  * Throws a user-facing error string on hard failures.
  */
 export async function purchasePackage(pkg: PurchasesPackage): Promise<boolean> {
-  if (!__DEV__) {
-    Alert.alert(
-      "Coming Soon",
-      "Subscriptions will be available at launch! Stay tuned."
-    );
-    return false;
-  }
-
   try {
     const { customerInfo } = await Purchases.purchasePackage(pkg);
     return isPro(customerInfo);
@@ -118,8 +97,6 @@ export async function purchasePackage(pkg: PurchasesPackage): Promise<boolean> {
  * is found among them.
  */
 export async function restorePurchases(): Promise<boolean> {
-  if (!__DEV__) return false;
-
   try {
     const customerInfo = await Purchases.restorePurchases();
     return isPro(customerInfo);
@@ -132,13 +109,10 @@ export async function restorePurchases(): Promise<boolean> {
 /**
  * Reads the current customer info and returns 'pro' if the 'pro' entitlement
  * is active, 'free' otherwise.
- * Always returns 'free' in production until a real key is configured.
  */
 export async function checkSubscriptionStatus(): Promise<Subscription> {
   const { data: { user } } = await supabase.auth.getUser();
   if (isBetaEmail(user?.email)) return "pro";
-
-  if (!__DEV__) return "free";
 
   try {
     const customerInfo = await Purchases.getCustomerInfo();

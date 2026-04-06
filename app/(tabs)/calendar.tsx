@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -8,10 +8,12 @@ import {
   StyleSheet,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { useFocusEffect } from "@react-navigation/native";
 import { useTranslation } from "react-i18next";
-import { CalendarDays, Droplets, Leaf } from "lucide-react-native";
+import { CalendarDays, Droplets, Leaf, Stethoscope } from "lucide-react-native";
 import { COLORS } from "@/constants";
 import { ResponsiveContainer } from "@/components/ui/ResponsiveContainer";
+import { supabase } from "@/lib/supabase";
 import { usePlantsStore } from "@/store/plants";
 import type { Plant } from "@/types";
 
@@ -43,7 +45,7 @@ interface CalendarEntry {
   plant: Plant;
   days: number;
   section: Section;
-  type: "watering" | "fertilizer";
+  type: "watering" | "fertilizer" | "diagnosis";
 }
 
 const SECTION_ORDER: Section[] = ["overdue", "today", "tomorrow", "week", "later"];
@@ -80,9 +82,15 @@ function CareEntry({
 
   const icon = type === "fertilizer"
     ? <Leaf size={14} color={dayColor} />
-    : <Droplets size={14} color={dayColor} />;
+    : type === "diagnosis"
+      ? <Stethoscope size={14} color={dayColor} />
+      : <Droplets size={14} color={dayColor} />;
 
-  const actionLabel = type === "fertilizer" ? t("calendar.fertilize") : t("calendar.water");
+  const actionLabel = type === "fertilizer"
+    ? t("calendar.fertilize")
+    : type === "diagnosis"
+      ? t("calendar.diagnosis")
+      : t("calendar.water");
 
   return (
     <TouchableOpacity style={styles.entry} onPress={onPress} activeOpacity={0.8}>
@@ -138,6 +146,23 @@ export default function CalendarScreen() {
   const router = useRouter();
   const plants = usePlantsStore((s) => s.plants);
 
+  // Fetch diagnosis follow-ups from Supabase
+  const [diagnosisFollowUps, setDiagnosisFollowUps] = useState<
+    { plant_id: string; follow_up_date: string }[]
+  >([]);
+
+  useFocusEffect(
+    useCallback(() => {
+      supabase
+        .from("diagnoses")
+        .select("plant_id, follow_up_date")
+        .not("follow_up_date", "is", null)
+        .then(({ data }) => {
+          if (data) setDiagnosisFollowUps(data as { plant_id: string; follow_up_date: string }[]);
+        });
+    }, [])
+  );
+
   const SECTION_LABEL: Record<Section, string> = {
     overdue: t("calendar.overdue"),
     today: t("calendar.today"),
@@ -160,6 +185,15 @@ export default function CalendarScreen() {
       }
     }
 
+    // Add diagnosis follow-up entries
+    for (const d of diagnosisFollowUps) {
+      const plant = plants.find((p) => p.id === d.plant_id);
+      if (plant && d.follow_up_date) {
+        const days = daysFromToday(d.follow_up_date);
+        entries.push({ plant, days, section: getSection(days), type: "diagnosis" });
+      }
+    }
+
     entries.sort((a, b) => a.days - b.days);
 
     const grouped = new Map<Section, CalendarEntry[]>();
@@ -175,7 +209,7 @@ export default function CalendarScreen() {
       data: grouped.get(s)!,
     }));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [plants, t]);
+  }, [plants, diagnosisFollowUps, t]);
 
   // Empty state: no plants at all
   if (plants.length === 0) {

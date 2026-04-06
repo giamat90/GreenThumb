@@ -8,6 +8,9 @@ interface UpgradePromptProps {
   description?: string;
 }
 
+// UpgradeModal: contextual bottom sheet (use this for Pro gates)
+// UpgradePrompt: inline banner (legacy, being phased out)
+
 /**
  * Inline upgrade banner used throughout the app to soft-gate Pro features.
  * Shows a lock icon, the feature name, and a tappable "Upgrade to Pro" button

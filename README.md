@@ -56,7 +56,6 @@ lib/
 
 hooks/
   useCamera.ts              # Camera permission hook
-  useIdentificationLimit.ts # Free tier quota check
 
 store/
   plants.ts         # Zustand plant collection store

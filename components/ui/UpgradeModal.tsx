@@ -1,3 +1,6 @@
+// UpgradeModal: contextual bottom sheet (use this for Pro gates)
+// UpgradePrompt: inline banner (legacy, being phased out)
+
 import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,

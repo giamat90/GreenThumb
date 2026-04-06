@@ -205,33 +205,9 @@ Respond ONLY with this exact JSON structure, no other text:
       diagnosis.severity = "warning";
     }
 
-    // ── Persist the diagnosis to Supabase ─────────────────────────────────────
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-
-    if (supabaseUrl && serviceRoleKey) {
-      const insertResponse = await fetch(`${supabaseUrl}/rest/v1/diagnoses`, {
-        method: "POST",
-        headers: {
-          "apikey": serviceRoleKey,
-          "Authorization": `Bearer ${serviceRoleKey}`,
-          "Content-Type": "application/json",
-          "Prefer": "return=minimal",
-        },
-        body: JSON.stringify({
-          plant_id: body.plantId,
-          user_id: body.userId,
-          result: diagnosis,
-          severity: diagnosis.severity,
-        }),
-      });
-
-      if (!insertResponse.ok) {
-        console.error("Failed to save diagnosis:", await insertResponse.text());
-      }
-    } else {
-      console.warn("Supabase env vars not available — diagnosis not persisted");
-    }
+    // Diagnosis is persisted client-side (app/diagnosis/[id].tsx) which includes
+    // follow_up_date, watering_adjusted, and watering_adjustment_days fields.
+    // Do NOT save here to avoid duplicate entries.
 
     return new Response(JSON.stringify(diagnosis), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

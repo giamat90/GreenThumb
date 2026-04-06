@@ -1,15 +1,33 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx supabase:*)",
+      "Bash(cmd.exe /c \"set PATH=C:\\\\Program Files\\\\nodejs;%PATH% && node -e \"\"const sharp = require\\(''sharp''\\); sharp\\(''C:/Workspace/GiaMat90/GreenThumb/assets/images/logo.png''\\).metadata\\(\\).then\\(m => console.log\\(JSON.stringify\\(m\\)\\)\\)\"\"\")",
+      "Bash(magick --version)",
+      "Bash(convert --version)",
+      "Bash(python:*)",
+      "Bash(python3 -c \"from PIL import Image; print\\(''Pillow OK''\\)\")",
+      "Bash(cd:*)",
       "Bash(ls:*)",
-      "Bash(npx expo:*)",
-      "Bash(xargs grep:*)",
+      "Bash(find C:/Workspace/GiaMat90/GreenThumb/android/app/src/main/res -name ic_launcher* -o -name *icon*)",
+      "Bash(grep -n \"handlePress\\\\|TouchableOpacity\\\\|diagnosis\\\\|placement\\\\|repotting\\\\|pruning\" /c/Workspace/GiaMat90/GreenThumb/app/plant/[id].tsx)",
+      "Bash(wc:*)",
+      "Bash(grep -n \"const.*ScreenState\\\\|useState.*State\\\\|const \\\\[.*State\" /c/Workspace/GiaMat90/GreenThumb/app/diagnosis/[id].tsx)",
+      "Bash(grep:*)",
+      "Bash(find /c/Workspace/GiaMat90/GreenThumb/types -type f -name *.ts)",
+      "Bash(node -e \"const lucide = require\\(''lucide-react-native''\\); console.log\\(''UserPlus:'', typeof lucide.UserPlus\\); console.log\\(''Search:'', typeof lucide.Search\\); console.log\\(''Check:'', typeof lucide.Check\\); console.log\\(''CheckSquare:'', typeof lucide.CheckSquare\\); console.log\\(''Square:'', typeof lucide.Square\\);\")",
+      "Bash(cmd.exe /c \"set PATH=C:\\\\Program Files\\\\nodejs;%PATH% && cd /d C:\\\\Workspace\\\\GiaMat90\\\\GreenThumb && npx expo install expo-contacts\" 2>&1)",
+      "Bash(cmd.exe /c \"set PATH=C:\\\\Program Files\\\\nodejs;%PATH% && cd /d C:\\\\Workspace\\\\GiaMat90\\\\GreenThumb && npx tsc --noEmit 2>&1\")",
+      "Bash(cmd.exe /c \"type C:\\\\Workspace\\\\GiaMat90\\\\GreenThumb\\\\node_modules\\\\expo-contacts\\\\build\\\\Contacts.types.d.ts\")",
+      "Bash(cmd.exe /c \"set PATH=C:\\\\Program Files\\\\nodejs;%PATH% && cd /d C:\\\\Workspace\\\\GiaMat90\\\\GreenThumb && npx tsc --noEmit 2>&1 | findstr community\")",
+      "Bash(cmd.exe /c \"set PATH=C:\\\\Program Files\\\\nodejs;%PATH% && cd /d C:\\\\Workspace\\\\GiaMat90\\\\GreenThumb && npm uninstall expo-contacts\")",
+      "Bash(node -e \"JSON.parse\\(require\\(''fs''\\).readFileSync\\(''C:\\\\Workspace\\\\GiaMat90\\\\GreenThumb\\\\locales\\\\en.json'', ''utf8''\\)\\); console.log\\(''en.json: valid''\\)\")",
+      "Bash(node -e \"JSON.parse\\(require\\(''fs''\\).readFileSync\\(''C:\\\\Workspace\\\\GiaMat90\\\\GreenThumb\\\\locales\\\\it.json'', ''utf8''\\)\\); console.log\\(''it.json: valid''\\)\")",
+      "Bash(node -e \"JSON.parse\\(require\\(''fs''\\).readFileSync\\(''C:\\\\Workspace\\\\GiaMat90\\\\GreenThumb\\\\locales\\\\fr.json'', ''utf8''\\)\\); console.log\\(''fr.json: valid''\\)\")",
+      "Bash(node -e \"JSON.parse\\(require\\(''fs''\\).readFileSync\\(''C:\\\\Workspace\\\\GiaMat90\\\\GreenThumb\\\\locales\\\\de.json'', ''utf8''\\)\\); console.log\\(''de.json: valid''\\)\")",
+      "Bash(node -e \"JSON.parse\\(require\\(''fs''\\).readFileSync\\(''C:\\\\Workspace\\\\GiaMat90\\\\GreenThumb\\\\locales\\\\ja.json'', ''utf8''\\)\\); console.log\\(''ja.json: valid''\\)\")",
+      "Bash(cmd.exe /c \"node -e \\\\\"JSON.parse\\(require\\('fs'\\).readFileSync\\('C:/Workspace/GiaMat90/GreenThumb/locales/en.json', 'utf8'\\)\\); console.log\\('en: valid'\\)\\\\\" && node -e \\\\\"JSON.parse\\(require\\('fs'\\).readFileSync\\('C:/Workspace/GiaMat90/GreenThumb/locales/it.json', 'utf8'\\)\\); console.log\\('it: valid'\\)\\\\\" && node -e \\\\\"JSON.parse\\(require\\('fs'\\).readFileSync\\('C:/Workspace/GiaMat90/GreenThumb/locales/fr.json', 'utf8'\\)\\); console.log\\('fr: valid'\\)\\\\\" && node -e \\\\\"JSON.parse\\(require\\('fs'\\).readFileSync\\('C:/Workspace/GiaMat90/GreenThumb/locales/de.json', 'utf8'\\)\\); console.log\\('de: valid'\\)\\\\\" && node -e \\\\\"JSON.parse\\(require\\('fs'\\).readFileSync\\('C:/Workspace/GiaMat90/GreenThumb/locales/ja.json', 'utf8'\\)\\); console.log\\('ja: valid'\\)\\\\\" && node -e \\\\\"JSON.parse\\(require\\('fs'\\).readFileSync\\('C:/Workspace/GiaMat90/GreenThumb/locales/zh.json', 'utf8'\\)\\); console.log\\('zh: valid'\\)\\\\\" && node -e \\\\\"JSON.parse\\(require\\('fs'\\).readFileSync\\('C:/Workspace/GiaMat90/GreenThumb/locales/es.json', 'utf8'\\)\\); console.log\\('es: valid'\\)\\\\\" && node -e \\\\\"JSON.parse\\(require\\('fs'\\).readFileSync\\('C:/Workspace/GiaMat90/GreenThumb/locales/pt.json', 'utf8'\\)\\); console.log\\('pt: valid'\\)\\\\\" && node -e \\\\\"JSON.parse\\(require\\('fs'\\).readFileSync\\('C:/Workspace/GiaMat90/GreenThumb/locales/nl.json', 'utf8'\\)\\); console.log\\('nl: valid'\\)\\\\\" && node -e \\\\\"JSON.parse\\(require\\('fs'\\).readFileSync\\('C:/Workspace/GiaMat90/GreenThumb/locales/pl.json', 'utf8'\\)\\); console.log\\('pl: valid'\\)\\\\\"\")",
       "Bash(git add:*)",
-      "Bash(git commit:*)",
-      "Bash(git push:*)",
-      "Bash(npx eas:*)",
-      "Bash(python:*)"
+      "Bash(git commit:*)"
     ]
   }
 }

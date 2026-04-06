@@ -29,7 +29,7 @@ import { COLORS } from "@/constants";
 import { compressImage } from "@/lib/imageUtils";
 import { supabase } from "@/lib/supabase";
 import { deviceLanguage } from "@/lib/i18n";
-import { scheduleFollowUpDiagnosisNotification } from "@/lib/notifications";
+import { scheduleFollowUpDiagnosisNotification, rescheduleReminderForPlant } from "@/lib/notifications";
 import { usePlantsStore } from "@/store/plants";
 import { useUserStore } from "@/store/user";
 import { useProGate } from "@/hooks/useProGate";
@@ -416,10 +416,24 @@ export default function DiagnosisScreen() {
     const suggested = detectedType === "underwatering" ? Math.max(1, currentDays - 2) : currentDays + 3;
 
     try {
+      const newCareProfile = { ...plant.care_profile, watering_interval_days: suggested };
+
+      // Recalculate next_watering from the last watered date using the new interval
+      const lastWateredAt = plant.last_watered_at ? new Date(plant.last_watered_at) : new Date();
+      const nextWateringDate = new Date(lastWateredAt);
+      nextWateringDate.setDate(nextWateringDate.getDate() + suggested);
+      const nextWatering = nextWateringDate.toISOString();
+
       await supabase.from("plants").update({
-        care_profile: { ...plant.care_profile, watering_interval_days: suggested },
+        care_profile: newCareProfile,
+        next_watering: nextWatering,
       }).eq("id", plant.id);
-      updatePlant(plant.id, { care_profile: { ...plant.care_profile, watering_interval_days: suggested } });
+
+      updatePlant(plant.id, { care_profile: newCareProfile, next_watering: nextWatering });
+
+      // Reschedule the push notification for the new date
+      rescheduleReminderForPlant({ ...plant, care_profile: newCareProfile, next_watering: nextWatering }).catch(console.warn);
+
       setWateringAdjusted(true);
       setWateringAdjustmentDone(true);
     } catch (err) {

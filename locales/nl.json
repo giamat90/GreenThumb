@@ -237,6 +237,8 @@
     "couldNotSendTest": "Testmelding kon niet worden verzonden.",
     "couldNotOpenUrl": "URL kon niet worden geopend.",
     "failedToSaveCity": "Stad opslaan mislukt.",
+    "cityNotFound": "Stad niet gevonden. Probeer een andere naam.",
+    "cityPlaceholder": "bijv. Amsterdam, Londen, Tokio",
     "somethingWentWrong": "Er is iets misgegaan. Probeer opnieuw."
   },
   "paywall": {

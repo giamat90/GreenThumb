@@ -237,6 +237,8 @@
     "couldNotSendTest": "テスト通知を送信できませんでした。",
     "couldNotOpenUrl": "URLを開けませんでした。",
     "failedToSaveCity": "都市の保存に失敗しました。",
+    "cityNotFound": "その都市が見つかりません。別の名前をお試しください。",
+    "cityPlaceholder": "例：東京、ロンドン、パリ",
     "somethingWentWrong": "問題が発生しました。もう一度お試しください。"
   },
   "paywall": {

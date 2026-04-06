@@ -20,7 +20,12 @@ const BASE_INTERVAL_DAYS: Record<string, number> = {
 };
 
 function getBaseInterval(plant: Plant): number {
-  const watering = (plant.care_profile as Record<string, string> | null)?.watering ?? "average";
+  const careProfile = plant.care_profile as Record<string, unknown> | null;
+  // Diagnosis-adjusted interval takes priority over the categorical value
+  if (careProfile?.watering_interval_days != null) {
+    return careProfile.watering_interval_days as number;
+  }
+  const watering = (careProfile?.watering as string) ?? "average";
   return BASE_INTERVAL_DAYS[watering] ?? 5;
 }
 

@@ -100,6 +100,15 @@ All required assets present in `assets/images/`:
 - `splash-icon.png` — splash screen
 - `favicon.png` — web favicon
 
+## Upgrade Components
+
+Two upgrade UI components exist — use the right one:
+
+| Component | File | When to use |
+|---|---|---|
+| `UpgradeModal` | `components/ui/UpgradeModal.tsx` | **Use this.** Contextual bottom sheet that slides up when a user taps a locked feature. Wired through `useProGate().requirePro()`. |
+| `UpgradePrompt` | `components/ui/UpgradePrompt.tsx` | Legacy inline banner. Still used in `app/(tabs)/index.tsx`. Being phased out — do not use in new screens. |
+
 ## i18n Rules
 
 GreenThumb uses **i18next + react-i18next** with `expo-localization` for device language detection.

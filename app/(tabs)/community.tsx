@@ -8,10 +8,11 @@ import {
   ActivityIndicator,
   StyleSheet,
   RefreshControl,
+  Share,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Heart, MessageCircle, Plus, Users } from "lucide-react-native";
+import { Heart, MessageCircle, Plus, Share2, Users } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
 import { COLORS } from "@/constants";
@@ -58,12 +59,14 @@ function PostCard({
   currentUserId,
   onLike,
   onComment,
+  onShare,
   onProfile,
 }: {
   post: CommunityPost;
   currentUserId: string;
   onLike: (postId: string, isLiked: boolean) => void;
   onComment: (postId: string) => void;
+  onShare: (postId: string) => void;
   onProfile: (userId: string) => void;
 }) {
   const { t } = useTranslation();
@@ -121,6 +124,14 @@ function PostCard({
         >
           <MessageCircle size={22} color={COLORS.textSecondary} />
           <Text style={styles.actionCount}>{post.comments_count}</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.actionBtn}
+          onPress={() => onShare(post.id)}
+          activeOpacity={0.7}
+        >
+          <Share2 size={22} color={COLORS.textSecondary} />
         </TouchableOpacity>
       </View>
 
@@ -391,14 +402,26 @@ export default function CommunityScreen() {
     router.push({ pathname: "/community/post/[id]", params: { id: postId } });
   }, [router]);
 
+  const handleShare = useCallback(async (postId: string) => {
+    const post = [...discoverPosts, ...followingPosts].find((p) => p.id === postId);
+    const message = post?.caption
+      ? `${post.caption}\n\n${t("community.sharedVia")}`
+      : t("community.sharedVia");
+    await Share.share({ message });
+  }, [discoverPosts, followingPosts, t]);
+
   const handleProfile = useCallback((userId: string) => {
     router.push({ pathname: "/community/profile/[id]", params: { id: userId } });
   }, [router]);
 
-  const handleNewPost = useCallback(() => {
-    if (!requirePro(t("paywall.featureCommunity"))) return;
-    router.push("/community/new-post");
-  }, [requirePro, router, t]);
+  const handleFabPress = useCallback(() => {
+    if (activeTab === "discover") {
+      if (!requirePro(t("paywall.featureCommunity"))) return;
+      router.push("/community/new-post");
+    } else {
+      Share.share({ message: t("community.inviteMessage") });
+    }
+  }, [activeTab, requirePro, router, t]);
 
   const [fabHeight, setFabHeight] = useState(0);
 
@@ -425,6 +448,7 @@ export default function CommunityScreen() {
               currentUserId={profile?.id ?? ""}
               onLike={handleLike}
               onComment={handleComment}
+              onShare={handleShare}
               onProfile={handleProfile}
             />
           );
@@ -511,12 +535,16 @@ export default function CommunityScreen() {
       >
         <TouchableOpacity
           style={styles.fabButton}
-          onPress={handleNewPost}
+          onPress={handleFabPress}
           activeOpacity={0.85}
-          accessibilityLabel={t("community.sharePost")}
+          accessibilityLabel={activeTab === "discover" ? t("community.sharePost") : t("community.inviteFriends")}
           accessibilityRole="button"
         >
-          <Plus size={26} color="#fff" />
+          {activeTab === "discover" ? (
+            <Plus size={26} color="#fff" />
+          ) : (
+            <Share2 size={24} color="#fff" />
+          )}
         </TouchableOpacity>
       </View>
 

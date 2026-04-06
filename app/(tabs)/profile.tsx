@@ -10,8 +10,12 @@ import {
   StyleSheet,
   Linking,
   Platform,
+  Modal,
+  TextInput,
+  KeyboardAvoidingView,
 } from "react-native";
 import { LogOut, MapPin, Info, Shield, FileText, Crown, Users, Camera } from "lucide-react-native";
+
 import Constants from "expo-constants";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
@@ -64,6 +68,9 @@ export default function ProfileScreen() {
   const { t } = useTranslation();
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isSavingCity, setIsSavingCity] = useState(false);
+  const [showCityModal, setShowCityModal] = useState(false);
+  const [cityInput, setCityInput] = useState("");
+  const [cityError, setCityError] = useState<string | null>(null);
   const { profile, setProfile } = useUserStore();
   const router = useRouter();
   const isPro = profile?.subscription === "pro";
@@ -82,37 +89,49 @@ export default function ProfileScreen() {
   }
 
   function handleEditCity() {
-    Alert.prompt(
-      t("profile.updateCity"),
-      t("profile.enterCity"),
-      [
-        { text: t("common.cancel"), style: "cancel" },
-        {
-          text: t("common.save"),
-          onPress: async (city) => {
-            if (!city?.trim() || !profile?.id) return;
-            setIsSavingCity(true);
-            try {
-              const { error } = await supabase
-                .from("profiles")
-                .update({ city: city.trim() })
-                .eq("id", profile.id);
-              if (error) throw error;
-              setProfile({ ...profile, city: city.trim() });
-            } catch (err) {
-              Alert.alert(
-                t("common.error"),
-                err instanceof Error ? err.message : t("profile.failedToSaveCity")
-              );
-            } finally {
-              setIsSavingCity(false);
-            }
-          },
-        },
-      ],
-      "plain-text",
-      profile?.city ?? ""
-    );
+    setCityInput(profile?.city ?? "");
+    setCityError(null);
+    setShowCityModal(true);
+  }
+
+  async function handleSaveCity() {
+    const trimmed = cityInput.trim();
+    if (!trimmed || !profile?.id) return;
+
+    setIsSavingCity(true);
+    setCityError(null);
+
+    try {
+      const OWM_KEY = process.env.EXPO_PUBLIC_OPENWEATHER_API_KEY ?? "";
+      const geoRes = await fetch(
+        `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(trimmed)}&limit=1&appid=${OWM_KEY}`
+      );
+      if (!geoRes.ok) throw new Error(`Geocoding error: ${geoRes.status}`);
+      const geoData = (await geoRes.json()) as Array<{ lat: number; lon: number }>;
+
+      if (!geoData.length) {
+        setCityError(t("profile.cityNotFound"));
+        setIsSavingCity(false);
+        return;
+      }
+
+      const { lat: latitude, lon: longitude } = geoData[0];
+      const { error } = await supabase
+        .from("profiles")
+        .update({ city: trimmed, lat: latitude, lng: longitude })
+        .eq("id", profile.id);
+
+      if (error) throw error;
+
+      setProfile({ ...profile, city: trimmed, lat: latitude, lng: longitude });
+      setShowCityModal(false);
+    } catch (err) {
+      setCityError(
+        err instanceof Error ? err.message : t("profile.failedToSaveCity")
+      );
+    } finally {
+      setIsSavingCity(false);
+    }
   }
 
   function handleOpenUrl(url: string) {
@@ -301,6 +320,68 @@ export default function ProfileScreen() {
           </>
         )}
       </Pressable>
+
+      {/* ── City edit modal ──────────────────────────────────────────────── */}
+      <Modal
+        visible={showCityModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowCityModal(false)}
+      >
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
+          <Pressable
+            style={styles.modalOverlay}
+            onPress={() => setShowCityModal(false)}
+          >
+            <Pressable style={styles.modalCard} onPress={() => {}}>
+              <Text style={styles.modalTitle}>{t("profile.updateCity")}</Text>
+              <Text style={styles.modalSubtitle}>{t("profile.enterCity")}</Text>
+
+              <TextInput
+                style={styles.modalInput}
+                value={cityInput}
+                onChangeText={setCityInput}
+                placeholder={t("profile.cityPlaceholder")}
+                placeholderTextColor={COLORS.textSecondary}
+                autoFocus
+                returnKeyType="done"
+                onSubmitEditing={handleSaveCity}
+              />
+
+              {cityError ? (
+                <Text style={styles.modalError}>{cityError}</Text>
+              ) : null}
+
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={styles.modalCancelBtn}
+                  onPress={() => setShowCityModal(false)}
+                >
+                  <Text style={styles.modalCancelText}>{t("common.cancel")}</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.modalSaveBtn,
+                    (!cityInput.trim() || isSavingCity) && styles.modalSaveBtnDisabled,
+                  ]}
+                  onPress={handleSaveCity}
+                  disabled={!cityInput.trim() || isSavingCity}
+                >
+                  {isSavingCity ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Text style={styles.modalSaveText}>{t("common.save")}</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </Pressable>
+          </Pressable>
+        </KeyboardAvoidingView>
+      </Modal>
     </ScrollView>
   );
 }
@@ -525,5 +606,81 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: COLORS.danger,
+  },
+
+  // ── City modal ──────────────────────────────────────────────────────────
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalCard: {
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    padding: 24,
+    width: "85%",
+    maxWidth: 360,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: COLORS.textPrimary,
+    marginBottom: 4,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    marginBottom: 16,
+  },
+  modalInput: {
+    backgroundColor: "#F9FAFB",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: COLORS.textPrimary,
+  },
+  modalError: {
+    fontSize: 13,
+    color: COLORS.danger,
+    marginTop: 8,
+  },
+  modalButtons: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 10,
+    marginTop: 20,
+  },
+  modalCancelBtn: {
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
+  modalCancelText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: COLORS.textSecondary,
+  },
+  modalSaveBtn: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
+  modalSaveBtnDisabled: {
+    opacity: 0.5,
+  },
+  modalSaveText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#fff",
   },
 });

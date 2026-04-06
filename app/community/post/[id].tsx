@@ -10,11 +10,12 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  Share,
 } from "react-native";
 import { Stack, useLocalSearchParams } from "expo-router";
 import { useNavigation } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ArrowLeft, Heart, Send } from "lucide-react-native";
+import { ArrowLeft, Heart, Send, Share2 } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
 import { COLORS } from "@/constants";
@@ -198,6 +199,19 @@ export default function PostDetailScreen() {
                   {post.likes_count}
                 </Text>
               </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.actionBtn}
+                onPress={async () => {
+                  const message = post.caption
+                    ? `${post.caption}\n\n${t("community.sharedVia")}`
+                    : t("community.sharedVia");
+                  await Share.share({ message });
+                }}
+                activeOpacity={0.7}
+              >
+                <Share2 size={24} color={COLORS.textSecondary} />
+              </TouchableOpacity>
             </View>
 
             {/* Caption */}
@@ -271,7 +285,7 @@ const styles = StyleSheet.create({
   },
   photo: { width: "100%", aspectRatio: 1, backgroundColor: "#E5E7EB" },
   actions: {
-    flexDirection: "row", padding: 12, backgroundColor: "#fff",
+    flexDirection: "row", padding: 12, gap: 16, backgroundColor: "#fff",
   },
   actionBtn: { flexDirection: "row", alignItems: "center", gap: 6 },
   actionCount: { fontSize: 14, fontWeight: "600", color: COLORS.textSecondary },

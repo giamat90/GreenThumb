@@ -18,11 +18,10 @@ export const useUserStore = create<UserState>((set) => ({
   isLoading: false,
   subscription: "free",
   setProfile: (profile) =>
-    set({
-      profile,
-      // Keep subscription in sync when a full profile is loaded
-      subscription: profile?.subscription ?? "free",
-    }),
+    set((state) => ({
+      // Don't override subscription — it's managed by checkSubscriptionStatus/setSubscription
+      profile: profile ? { ...profile, subscription: state.subscription } : null,
+    })),
   clearProfile: () => set({ profile: null, subscription: "free" }),
   setLoading: (isLoading) => set({ isLoading }),
   setSubscription: (subscription) =>
