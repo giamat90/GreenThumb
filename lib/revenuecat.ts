@@ -1,16 +1,16 @@
 import { Platform } from "react-native";
 import Purchases, {
   LOG_LEVEL,
+  type CustomerInfo,
   type PurchasesOffering,
   type PurchasesPackage,
-  type CustomerInfo,
 } from "react-native-purchases";
 
 import { supabase } from "@/lib/supabase";
 import type { Subscription } from "@/types";
 
 // The entitlement ID must match exactly what's created in the RevenueCat dashboard.
-const PRO_ENTITLEMENT_ID = "pro";
+const PRO_ENTITLEMENT_ID = "GreenThumb Pro";
 
 // Beta testers — add emails here to grant Pro access
 // Remove this list before production release v2.0
@@ -18,6 +18,15 @@ export const BETA_PRO_EMAILS = [
   "giacominomatzeu@gmail.com",
   "alessiamagnani@hotmail.it",
   "alessandra.grassi0@gmail.com",
+  "davidelonghi1992@gmail.com",
+  "giacomomontanari0@gmail.com",
+  "hamzasarrat@gmail.com",
+  "lucafarina94@gmail.com",
+  "luciamontanari1996@gmail.com",
+  "mefistofelepablito@gmail.com",
+  "mich.danniballe@gmail.com",
+  "michaelscorzoni@gmail.com",
+  "mr.daerio@gmail.com"
 ];
 
 export const isBetaEmail = (email: string | null | undefined): boolean =>
@@ -107,7 +116,7 @@ export async function restorePurchases(): Promise<boolean> {
 }
 
 /**
- * Reads the current customer info and returns 'pro' if the 'pro' entitlement
+ * Reads the current customer info and returns 'pro' if the 'GreenThumb Pro' entitlement
  * is active, 'free' otherwise.
  */
 export async function checkSubscriptionStatus(): Promise<Subscription> {
