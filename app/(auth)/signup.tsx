@@ -9,7 +9,7 @@ import {
   Platform,
   ScrollView,
 } from "react-native";
-import { Link } from "expo-router";
+import { Link, router } from "expo-router";
 import { Eye, EyeOff, Leaf } from "lucide-react-native";
 
 import { supabase } from "@/lib/supabase";
@@ -32,7 +32,6 @@ export default function SignupScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
-  const [success, setSuccess] = useState(false);
 
   function validate(): boolean {
     const errors: FieldErrors = {};
@@ -61,7 +60,7 @@ export default function SignupScreen() {
     setError(null);
 
     try {
-      const { error: authError } = await supabase.auth.signUp({
+      const { data, error: authError } = await supabase.auth.signUp({
         email: email.trim(),
         password,
         options: {
@@ -71,41 +70,16 @@ export default function SignupScreen() {
 
       if (authError) {
         setError(authError.message);
+      } else if (data.session) {
+        router.replace("/(tabs)/my-plants");
       } else {
-        setSuccess(true);
+        router.replace("/(auth)/login");
       }
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);
     }
-  }
-
-  if (success) {
-    return (
-      <View className="flex-1 bg-cream items-center justify-center px-8">
-        <View className="bg-lightgreen rounded-full p-5 mb-6">
-          <Leaf size={40} color={COLORS.primary} />
-        </View>
-        <Text className="text-2xl font-bold text-primary mb-3 text-center">
-          Check your email
-        </Text>
-        <Text className="text-base text-gray-500 text-center mb-8">
-          We sent a confirmation link to {email.trim()}. Tap the link to activate
-          your account.
-        </Text>
-        <Link href="/(auth)/login" asChild>
-          <Pressable
-            className="bg-primary rounded-3xl py-4 px-12"
-            accessibilityLabel="Back to sign in"
-          >
-            <Text className="text-white text-base font-semibold">
-              Back to Sign In
-            </Text>
-          </Pressable>
-        </Link>
-      </View>
-    );
   }
 
   return (
