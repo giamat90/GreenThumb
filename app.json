@@ -24,7 +24,7 @@
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.giamat90.greenthumb",
-      "versionCode": 1,
+      "versionCode": 3,
       "googleServicesFile": "./google-services.json",
       "permissions": [
         "android.permission.CAMERA",
@@ -36,7 +36,8 @@
         "android.permission.RECORD_AUDIO",
         "READ_CALENDAR",
         "WRITE_CALENDAR"
-      ]
+      ],
+      "blockedPermissions": ["android.permission.ACTIVITY_RECOGNITION"]
     },
     "web": {
       "bundler": "metro",
