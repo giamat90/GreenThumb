@@ -718,5 +718,10 @@
     "checkConnection": "接続を確認",
     "somethingWentWrong": "問題が発生しました",
     "somethingWentWrongDesc": "予期しないエラーが発生しました。もう一度お試しください。"
+  },
+  "editPlant": {
+    "title": "植物を編集",
+    "saveChanges": "変更を保存",
+    "saveFailed": "変更を保存できませんでした"
   }
 }

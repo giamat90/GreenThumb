@@ -718,5 +718,10 @@
     "checkConnection": "Sprawdź połączenie",
     "somethingWentWrong": "Coś poszło nie tak",
     "somethingWentWrongDesc": "Wystąpił nieoczekiwany błąd. Spróbuj ponownie."
+  },
+  "editPlant": {
+    "title": "Edytuj Roślinę",
+    "saveChanges": "Zapisz Zmiany",
+    "saveFailed": "Nie można zapisać zmian"
   }
 }

@@ -718,5 +718,10 @@
     "checkConnection": "Check Connection",
     "somethingWentWrong": "Something Went Wrong",
     "somethingWentWrongDesc": "An unexpected error occurred. Please try again."
+  },
+  "editPlant": {
+    "title": "Edit Plant",
+    "saveChanges": "Save Changes",
+    "saveFailed": "Could not save changes"
   }
 }

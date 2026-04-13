@@ -344,26 +344,6 @@ export default function DiagnosisScreen() {
       setDiagnosis(result);
       setAnalyzedCount(photos.length);
 
-      // Update plant health score
-      const currentHealth = plant.health_score;
-      let newHealth = currentHealth;
-      if (result.severity === "healthy") {
-        newHealth = Math.min(100, currentHealth + 5);
-      } else if (result.severity === "warning") {
-        newHealth = Math.max(0, currentHealth - 15);
-      } else {
-        newHealth = Math.max(0, currentHealth - 30);
-      }
-
-      supabase
-        .from("plants")
-        .update({ health_score: newHealth })
-        .eq("id", plant.id)
-        .then(({ error }) => {
-          if (error) console.warn("diagnosis: health score update failed", error.message);
-          else updatePlant(plant.id, { health_score: newHealth });
-        });
-
       setScreenState("results");
     } catch (err) {
       const errorType = classifyError(err);
@@ -397,6 +377,27 @@ export default function DiagnosisScreen() {
         watering_adjusted: wateringAdjusted,
         watering_adjustment_days: wateringAdjusted ? suggestedWateringDays : null,
       });
+
+      // Update plant health score only after the user explicitly saves
+      const currentHealth = plant.health_score;
+      let newHealth = currentHealth;
+      if (diagnosis.severity === "healthy") {
+        newHealth = Math.min(100, currentHealth + 5);
+      } else if (diagnosis.severity === "warning") {
+        newHealth = Math.max(0, currentHealth - 15);
+      } else {
+        newHealth = Math.max(0, currentHealth - 30);
+      }
+
+      const { error: hpError } = await supabase
+        .from("plants")
+        .update({ health_score: newHealth })
+        .eq("id", plant.id);
+
+      if (!hpError) {
+        updatePlant(plant.id, { health_score: newHealth });
+      }
+
       router.back();
     } catch (err) {
       const errorType = classifyError(err);

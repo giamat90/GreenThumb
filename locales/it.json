@@ -718,5 +718,10 @@
     "checkConnection": "Controlla la connessione",
     "somethingWentWrong": "Qualcosa è andato storto",
     "somethingWentWrongDesc": "Si è verificato un errore imprevisto. Riprova."
+  },
+  "editPlant": {
+    "title": "Modifica Pianta",
+    "saveChanges": "Salva Modifiche",
+    "saveFailed": "Impossibile salvare le modifiche"
   }
 }

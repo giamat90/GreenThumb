@@ -21,6 +21,7 @@ import {
   Calendar,
   Trash2,
   Plus,
+  Pencil,
 } from "lucide-react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -480,6 +481,16 @@ function PlantDetailScreen() {
             accessibilityRole="button"
           >
             <ArrowLeft size={20} color="#fff" />
+          </TouchableOpacity>
+
+          {/* Edit button */}
+          <TouchableOpacity
+            style={[styles.editButton, { top: insets.top + 12 }]}
+            onPress={() => router.push({ pathname: "/edit-plant/[id]", params: { id: plant.id } })}
+            accessibilityLabel={`Edit ${plant.name}`}
+            accessibilityRole="button"
+          >
+            <Pencil size={18} color="#fff" />
           </TouchableOpacity>
 
           {/* Delete button */}
@@ -1035,6 +1046,16 @@ const styles = StyleSheet.create({
   backButton: {
     position: "absolute",
     left: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  editButton: {
+    position: "absolute",
+    right: 68,
     width: 40,
     height: 40,
     borderRadius: 20,

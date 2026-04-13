@@ -718,5 +718,10 @@
     "checkConnection": "Verbinding controleren",
     "somethingWentWrong": "Er is iets misgegaan",
     "somethingWentWrongDesc": "Er is een onverwachte fout opgetreden. Probeer het opnieuw."
+  },
+  "editPlant": {
+    "title": "Plant Bewerken",
+    "saveChanges": "Wijzigingen Opslaan",
+    "saveFailed": "Wijzigingen konden niet worden opgeslagen"
   }
 }
