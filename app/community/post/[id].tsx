@@ -144,6 +144,7 @@ export default function PostDetailScreen() {
         username: (row.user_profiles as Record<string, unknown> | null)?.username as string | undefined,
       };
       setComments((prev) => [...prev, newComment]);
+      setPost((p) => p ? { ...p, comments_count: p.comments_count + 1 } : p);
       setCommentText("");
     } catch (err) {
       console.warn("post detail: comment failed", err);
