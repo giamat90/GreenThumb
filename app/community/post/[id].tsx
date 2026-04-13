@@ -51,15 +51,19 @@ export default function PostDetailScreen() {
     if (!postId || !profile) return;
     setLoading(true);
     try {
+      // Fetch post, comments, and like status in parallel.
+      // Avoid joining user_profiles directly: posts.user_id has two FKs
+      // (auth.users + user_profiles) which causes PostgREST to fail silently.
+      // Mirror the enrichment pattern from community.tsx instead.
       const [postResult, commentsResult, likeResult] = await Promise.all([
         supabase
           .from("posts")
-          .select("*, user_profiles(username, avatar_url), plants(name)")
+          .select("*, plants(name)")
           .eq("id", postId)
           .single(),
         supabase
           .from("post_comments")
-          .select("*, user_profiles(username)")
+          .select("*")
           .eq("post_id", postId)
           .order("created_at", { ascending: true }),
         supabase
@@ -70,34 +74,58 @@ export default function PostDetailScreen() {
           .maybeSingle(),
       ]);
 
-      if (postResult.data) {
-        const row = postResult.data as Record<string, unknown>;
-        setPost({
-          id: row.id as string,
-          user_id: row.user_id as string,
-          plant_id: row.plant_id as string | null,
-          photo_url: row.photo_url as string,
-          caption: row.caption as string | null,
-          likes_count: row.likes_count as number,
-          comments_count: row.comments_count as number,
-          is_public: row.is_public as boolean,
-          created_at: row.created_at as string,
-          username: (row.user_profiles as Record<string, unknown> | null)?.username as string | undefined,
-          avatar_url: (row.user_profiles as Record<string, unknown> | null)?.avatar_url as string | null | undefined,
-          plant_name: (row.plants as Record<string, unknown> | null)?.name as string | null | undefined,
-          is_liked: !!likeResult.data,
-        });
+      if (!postResult.data) return;
+      const row = postResult.data as Record<string, unknown>;
+
+      // Fetch post author profile separately
+      const { data: authorProfile } = await supabase
+        .from("user_profiles")
+        .select("username, avatar_url")
+        .eq("id", row.user_id as string)
+        .maybeSingle();
+
+      setPost({
+        id: row.id as string,
+        user_id: row.user_id as string,
+        plant_id: row.plant_id as string | null,
+        photo_url: row.photo_url as string,
+        caption: row.caption as string | null,
+        likes_count: row.likes_count as number,
+        comments_count: row.comments_count as number,
+        is_public: row.is_public as boolean,
+        created_at: row.created_at as string,
+        username: (authorProfile as Record<string, unknown> | null)?.username as string | undefined,
+        avatar_url: (authorProfile as Record<string, unknown> | null)?.avatar_url as string | null | undefined,
+        plant_name: (row.plants as Record<string, unknown> | null)?.name as string | null | undefined,
+        is_liked: !!likeResult.data,
+      });
+
+      // Fetch commenter usernames separately
+      const commentRows = (commentsResult.data ?? []) as Record<string, unknown>[];
+      const commenterIds = [...new Set(commentRows.map((c) => c.user_id as string))];
+      let usernameMap: Record<string, string> = {};
+      if (commenterIds.length > 0) {
+        const { data: commenterProfiles } = await supabase
+          .from("user_profiles")
+          .select("id, username")
+          .in("id", commenterIds);
+        if (commenterProfiles) {
+          usernameMap = Object.fromEntries(
+            (commenterProfiles as Record<string, unknown>[]).map((p) => [p.id as string, p.username as string])
+          );
+        }
       }
 
-      const mappedComments: PostComment[] = (commentsResult.data ?? []).map((c: Record<string, unknown>) => ({
-        id: c.id as string,
-        user_id: c.user_id as string,
-        post_id: c.post_id as string,
-        content: c.content as string,
-        created_at: c.created_at as string,
-        username: (c.user_profiles as Record<string, unknown> | null)?.username as string | undefined,
-      }));
-      setComments(mappedComments);
+      setComments(
+        commentRows.map((c) => ({
+          id: c.id as string,
+          user_id: c.user_id as string,
+          post_id: c.post_id as string,
+          content: c.content as string,
+          created_at: c.created_at as string,
+          username: usernameMap[c.user_id as string],
+        }))
+      );
     } catch (err) {
       console.warn("post detail: fetch failed", err);
     } finally {
