@@ -233,9 +233,10 @@ export default function PostDetailScreen() {
               <TouchableOpacity
                 style={styles.actionBtn}
                 onPress={async () => {
+                  const shareUrl = `https://uhiyipkjrtqvfvtgerbo.supabase.co/functions/v1/share-post?id=${post.id}`;
                   const message = post.caption
-                    ? `${post.caption}\n\n${t("community.sharedVia")}`
-                    : t("community.sharedVia");
+                    ? `${post.caption}\n\n${shareUrl}`
+                    : shareUrl;
                   await Share.share({ message });
                 }}
                 activeOpacity={0.7}

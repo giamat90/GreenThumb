@@ -422,11 +422,12 @@ export default function CommunityScreen() {
 
   const handleShare = useCallback(async (postId: string) => {
     const post = [...discoverPosts, ...followingPosts].find((p) => p.id === postId);
+    const shareUrl = `https://uhiyipkjrtqvfvtgerbo.supabase.co/functions/v1/share-post?id=${postId}`;
     const message = post?.caption
-      ? `${post.caption}\n\n${t("community.sharedVia")}`
-      : t("community.sharedVia");
+      ? `${post.caption}\n\n${shareUrl}`
+      : shareUrl;
     await Share.share({ message });
-  }, [discoverPosts, followingPosts, t]);
+  }, [discoverPosts, followingPosts]);
 
   const handleProfile = useCallback((userId: string) => {
     router.push({ pathname: "/community/profile/[id]", params: { id: userId } });
