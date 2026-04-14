@@ -27,7 +27,15 @@
       "Bash(node -e \"JSON.parse\\(require\\(''fs''\\).readFileSync\\(''C:\\\\Workspace\\\\GiaMat90\\\\GreenThumb\\\\locales\\\\ja.json'', ''utf8''\\)\\); console.log\\(''ja.json: valid''\\)\")",
       "Bash(cmd.exe /c \"node -e \\\\\"JSON.parse\\(require\\('fs'\\).readFileSync\\('C:/Workspace/GiaMat90/GreenThumb/locales/en.json', 'utf8'\\)\\); console.log\\('en: valid'\\)\\\\\" && node -e \\\\\"JSON.parse\\(require\\('fs'\\).readFileSync\\('C:/Workspace/GiaMat90/GreenThumb/locales/it.json', 'utf8'\\)\\); console.log\\('it: valid'\\)\\\\\" && node -e \\\\\"JSON.parse\\(require\\('fs'\\).readFileSync\\('C:/Workspace/GiaMat90/GreenThumb/locales/fr.json', 'utf8'\\)\\); console.log\\('fr: valid'\\)\\\\\" && node -e \\\\\"JSON.parse\\(require\\('fs'\\).readFileSync\\('C:/Workspace/GiaMat90/GreenThumb/locales/de.json', 'utf8'\\)\\); console.log\\('de: valid'\\)\\\\\" && node -e \\\\\"JSON.parse\\(require\\('fs'\\).readFileSync\\('C:/Workspace/GiaMat90/GreenThumb/locales/ja.json', 'utf8'\\)\\); console.log\\('ja: valid'\\)\\\\\" && node -e \\\\\"JSON.parse\\(require\\('fs'\\).readFileSync\\('C:/Workspace/GiaMat90/GreenThumb/locales/zh.json', 'utf8'\\)\\); console.log\\('zh: valid'\\)\\\\\" && node -e \\\\\"JSON.parse\\(require\\('fs'\\).readFileSync\\('C:/Workspace/GiaMat90/GreenThumb/locales/es.json', 'utf8'\\)\\); console.log\\('es: valid'\\)\\\\\" && node -e \\\\\"JSON.parse\\(require\\('fs'\\).readFileSync\\('C:/Workspace/GiaMat90/GreenThumb/locales/pt.json', 'utf8'\\)\\); console.log\\('pt: valid'\\)\\\\\" && node -e \\\\\"JSON.parse\\(require\\('fs'\\).readFileSync\\('C:/Workspace/GiaMat90/GreenThumb/locales/nl.json', 'utf8'\\)\\); console.log\\('nl: valid'\\)\\\\\" && node -e \\\\\"JSON.parse\\(require\\('fs'\\).readFileSync\\('C:/Workspace/GiaMat90/GreenThumb/locales/pl.json', 'utf8'\\)\\); console.log\\('pl: valid'\\)\\\\\"\")",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(sed:*)",
+      "Bash(git push:*)",
+      "Bash(find:*)",
+      "Bash(cat /c/Workspace/GiaMat90/GreenThumb/supabase/migrations/*.sql)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(cmd.exe:*)"
     ]
   }
 }
