@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 import {
   View,
   Text,
@@ -16,6 +17,7 @@ import { Heart, MessageCircle, Plus, Share2, Users } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
 import { COLORS } from "@/constants";
+import { commentCountUpdates } from "@/lib/communityUpdates";
 import { ResponsiveContainer } from "@/components/ui/ResponsiveContainer";
 import { useResponsive } from "@/hooks/useResponsive";
 import { supabase } from "@/lib/supabase";
@@ -348,6 +350,22 @@ export default function CommunityScreen() {
     fetchDiscover(true);
     fetchFollowing(true);
   }, [profile?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Apply any comment-count changes made while viewing a post detail, then clear.
+  // Uses a module-level Map to avoid network requests; safe on tab switch (no-op when map is empty).
+  useFocusEffect(
+    useCallback(() => {
+      if (commentCountUpdates.size === 0) return;
+      const patch = (prev: CommunityPost[]) =>
+        prev.map((p) => {
+          const updated = commentCountUpdates.get(p.id);
+          return updated !== undefined ? { ...p, comments_count: updated } : p;
+        });
+      setDiscoverPosts(patch);
+      setFollowingPosts(patch);
+      commentCountUpdates.clear();
+    }, [])
+  );
 
   // ── Handlers ────────────────────────────────────────────────────────────────
 

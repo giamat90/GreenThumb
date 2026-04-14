@@ -19,6 +19,7 @@ import { ArrowLeft, Heart, Send, Share2 } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
 import { COLORS } from "@/constants";
+import { commentCountUpdates } from "@/lib/communityUpdates";
 import { supabase } from "@/lib/supabase";
 import { useUserStore } from "@/store/user";
 import type { CommunityPost, PostComment } from "@/types";
@@ -159,7 +160,7 @@ export default function PostDetailScreen() {
       const { data, error } = await supabase
         .from("post_comments")
         .insert({ user_id: profile.id, post_id: post.id, content: commentText.trim() })
-        .select("*, user_profiles(username)")
+        .select("*")
         .single();
       if (error) throw error;
       const row = data as Record<string, unknown>;
@@ -169,10 +170,11 @@ export default function PostDetailScreen() {
         post_id: row.post_id as string,
         content: row.content as string,
         created_at: row.created_at as string,
-        username: (row.user_profiles as Record<string, unknown> | null)?.username as string | undefined,
+        username: undefined, // populated on next fetchPost; Profile type has no username field
       };
       setComments((prev) => [...prev, newComment]);
       setPost((p) => p ? { ...p, comments_count: p.comments_count + 1 } : p);
+      commentCountUpdates.set(post.id, post.comments_count + 1);
       setCommentText("");
     } catch (err) {
       console.warn("post detail: comment failed", err);
