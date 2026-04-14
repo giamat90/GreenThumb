@@ -1,11 +1,13 @@
 // Deno edge function — publicly accessible (deployed with --no-verify-jwt)
-// Serves an HTML redirect page that opens the GreenThumb app via custom scheme,
-// or shows a Play Store fallback if the app is not installed.
+// Serves a landing page that lets the recipient open the post in the GreenThumb
+// app via an Android intent:// link (works in Chrome / WhatsApp in-app browser),
+// with a Play Store fallback for users who don't have the app installed.
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 
 const PLAY_STORE_URL =
   "https://play.google.com/store/apps/details?id=com.giamat90.greenthumb";
+const PACKAGE = "com.giamat90.greenthumb";
 
 serve(async (req: Request) => {
   const url = new URL(req.url);
@@ -15,7 +17,13 @@ serve(async (req: Request) => {
     return new Response("Missing post ID", { status: 400 });
   }
 
-  const deepLink = `greenthumb://community/post/${encodeURIComponent(postId)}`;
+  const encodedId = encodeURIComponent(postId);
+
+  // intent:// link: works natively in Chrome and Chrome Custom Tabs (used by WhatsApp).
+  // Tells Android to open greenthumb://community/post/<id> in the GreenThumb app.
+  // If the app is not installed, Android falls back to the Play Store URL.
+  const intentUrl =
+    `intent://community/post/${encodedId}#Intent;scheme=greenthumb;package=${PACKAGE};S.browser_fallback_url=${encodeURIComponent(PLAY_STORE_URL)};end`;
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -56,31 +64,14 @@ serve(async (req: Request) => {
       color: #3E7428;
       border: 2px solid #3E7428;
     }
-    #fallback { display: none; }
   </style>
-  <script>
-    window.addEventListener("load", function () {
-      // Attempt to open the app via custom scheme
-      window.location.href = "${deepLink}";
-      // If still on this page after 2s, the app is not installed
-      setTimeout(function () {
-        document.getElementById("opening").style.display = "none";
-        document.getElementById("fallback").style.display = "block";
-      }, 2000);
-    });
-  </script>
 </head>
 <body>
-  <div class="icon">🌿</div>
+  <div class="icon">&#127807;</div>
   <h1>GreenThumb</h1>
-  <div id="opening">
-    <p class="sub">Opening your post\u2026</p>
-  </div>
-  <div id="fallback">
-    <p class="sub">Don't have GreenThumb yet?</p>
-    <a href="${deepLink}" class="btn btn-primary">Open in App</a>
-    <a href="${PLAY_STORE_URL}" class="btn btn-secondary">Get it on Google Play</a>
-  </div>
+  <p class="sub">Tap below to view this post in the app.</p>
+  <a href="${intentUrl}" class="btn btn-primary">Open in GreenThumb</a>
+  <a href="${PLAY_STORE_URL}" class="btn btn-secondary">Get it on Google Play</a>
 </body>
 </html>`;
 
