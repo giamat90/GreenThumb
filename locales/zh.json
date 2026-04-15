@@ -646,7 +646,10 @@
     "inviteFriends": "邀请朋友",
     "inviteSubtitle": "选择联系人邀请加入GreenThumb",
     "inviteMessage": "加入我在GreenThumb，AI植物护理应用！点此下载：https://play.google.com/store/apps/details?id=com.giamat90.greenthumb",
-    "sharedVia": "来自GreenThumb - AI植物护理的分享\nhttps://play.google.com/store/apps/details?id=com.giamat90.greenthumb"
+    "sharedVia": "来自GreenThumb - AI植物护理的分享\nhttps://play.google.com/store/apps/details?id=com.giamat90.greenthumb",
+    "plantsSection": "植物",
+    "noPlantsYet": "暂无植物",
+    "mutualFollowersOnly": "仅互相关注的用户可见"
   },
   "seasonal": {
     "seasonalTips": "季节建议",

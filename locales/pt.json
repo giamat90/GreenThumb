@@ -646,7 +646,10 @@
     "inviteFriends": "Convidar Amigos",
     "inviteSubtitle": "Selecione contatos para convidar ao GreenThumb",
     "inviteMessage": "Junte-se a mim no GreenThumb, o app de cuidado de plantas com IA! Baixe aqui: https://play.google.com/store/apps/details?id=com.giamat90.greenthumb",
-    "sharedVia": "Compartilhado do GreenThumb - Cuidado de Plantas com IA\nhttps://play.google.com/store/apps/details?id=com.giamat90.greenthumb"
+    "sharedVia": "Compartilhado do GreenThumb - Cuidado de Plantas com IA\nhttps://play.google.com/store/apps/details?id=com.giamat90.greenthumb",
+    "plantsSection": "Plantas",
+    "noPlantsYet": "Sem plantas ainda",
+    "mutualFollowersOnly": "Visível para seguidores mútuos"
   },
   "seasonal": {
     "seasonalTips": "Dicas Sazonais",

@@ -3,6 +3,7 @@ import {
   View,
   Text,
   FlatList,
+  ScrollView,
   TouchableOpacity,
   Image,
   ActivityIndicator,
@@ -12,7 +13,7 @@ import {
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useNavigation } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ArrowLeft } from "lucide-react-native";
+import { ArrowLeft, Leaf } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
 import { COLORS } from "@/constants";
@@ -22,6 +23,14 @@ import type { CommunityPost, UserProfile } from "@/types";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const GRID_ITEM_SIZE = (SCREEN_WIDTH - 4) / 3;
+
+type PlantPreview = {
+  id: string;
+  name: string;
+  species: string | null;
+  photo_url: string | null;
+  health_score: number;
+};
 
 export default function PublicProfileScreen() {
   const { t } = useTranslation();
@@ -34,6 +43,8 @@ export default function PublicProfileScreen() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [posts, setPosts] = useState<CommunityPost[]>([]);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [isFollowedBy, setIsFollowedBy] = useState(false);
+  const [userPlants, setUserPlants] = useState<PlantPreview[]>([]);
   const [loading, setLoading] = useState(true);
   const [followLoading, setFollowLoading] = useState(false);
 
@@ -43,7 +54,7 @@ export default function PublicProfileScreen() {
     if (!userId || !currentProfile) return;
     setLoading(true);
     try {
-      const [profileResult, postsResult, followResult] = await Promise.all([
+      const [profileResult, postsResult, followResult, followedByResult] = await Promise.all([
         supabase.from("user_profiles").select("*").eq("id", userId).maybeSingle(),
         supabase
           .from("posts")
@@ -51,11 +62,19 @@ export default function PublicProfileScreen() {
           .eq("user_id", userId)
           .eq("is_public", true)
           .order("created_at", { ascending: false }),
+        // Does viewer follow profile owner?
         supabase
           .from("follows")
           .select("id")
           .eq("follower_id", currentProfile.id)
           .eq("following_id", userId)
+          .maybeSingle(),
+        // Does profile owner follow viewer back?
+        supabase
+          .from("follows")
+          .select("id")
+          .eq("follower_id", userId)
+          .eq("following_id", currentProfile.id)
           .maybeSingle(),
       ]);
 
@@ -75,13 +94,30 @@ export default function PublicProfileScreen() {
         created_at: row.created_at as string,
       }));
       setPosts(mappedPosts);
-      setIsFollowing(!!followResult.data);
+
+      const following = !!followResult.data;
+      const followedBy = !!followedByResult.data;
+      setIsFollowing(following);
+      setIsFollowedBy(followedBy);
+
+      // Fetch plants — RLS allows: own profile always, mutual follow if both follow each other
+      const isMutual = following && followedBy;
+      if (isOwnProfile || isMutual) {
+        const { data: plantsData } = await supabase
+          .from("plants")
+          .select("id, name, species, photo_url, health_score")
+          .eq("user_id", userId)
+          .order("created_at", { ascending: false });
+        setUserPlants((plantsData as PlantPreview[]) ?? []);
+      } else {
+        setUserPlants([]);
+      }
     } catch (err) {
       console.warn("profile: fetch failed", err);
     } finally {
       setLoading(false);
     }
-  }, [userId, currentProfile]);
+  }, [userId, currentProfile, isOwnProfile]);
 
   useEffect(() => {
     fetchProfile();
@@ -95,15 +131,26 @@ export default function PublicProfileScreen() {
     try {
       if (wasFollowing) {
         await supabase.from("follows").delete().eq("follower_id", currentProfile.id).eq("following_id", userId);
+        // If unfollowing, mutual follow is broken — clear plants
+        if (isFollowedBy) setUserPlants([]);
       } else {
         await supabase.from("follows").insert({ follower_id: currentProfile.id, following_id: userId });
+        // If now mutual, re-fetch plants
+        if (isFollowedBy) {
+          const { data: plantsData } = await supabase
+            .from("plants")
+            .select("id, name, species, photo_url, health_score")
+            .eq("user_id", userId)
+            .order("created_at", { ascending: false });
+          setUserPlants((plantsData as PlantPreview[]) ?? []);
+        }
       }
     } catch {
       setIsFollowing(wasFollowing);
     } finally {
       setFollowLoading(false);
     }
-  }, [currentProfile, userId, isFollowing]);
+  }, [currentProfile, userId, isFollowing, isFollowedBy]);
 
   if (loading) {
     return (
@@ -116,6 +163,8 @@ export default function PublicProfileScreen() {
 
   const username = userProfile?.username ?? "User";
   const postCount = posts.length;
+  const isMutualFollow = isFollowing && isFollowedBy;
+  const showPlants = isOwnProfile || isMutualFollow;
 
   return (
     <View style={styles.screen}>
@@ -185,6 +234,50 @@ export default function PublicProfileScreen() {
               )}
             </View>
 
+            {/* Plants section — visible only to own profile or mutual followers */}
+            {showPlants && userPlants.length > 0 && (
+              <View style={styles.plantsSection}>
+                <Text style={styles.plantsSectionTitle}>{t("community.plantsSection")}</Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.plantsRow}
+                >
+                  {userPlants.map((plant) => (
+                    <View key={plant.id} style={styles.plantCard}>
+                      {plant.photo_url ? (
+                        <Image source={{ uri: plant.photo_url }} style={styles.plantCardPhoto} />
+                      ) : (
+                        <View style={styles.plantCardPhotoPlaceholder}>
+                          <Leaf size={24} color={COLORS.primary} />
+                        </View>
+                      )}
+                      <Text style={styles.plantCardName} numberOfLines={1}>{plant.name}</Text>
+                      {plant.species ? (
+                        <Text style={styles.plantCardSpecies} numberOfLines={1}>{plant.species}</Text>
+                      ) : null}
+                      <View style={styles.plantCardHealthBar}>
+                        <View
+                          style={[
+                            styles.plantCardHealthFill,
+                            {
+                              width: `${plant.health_score}%` as `${number}%`,
+                              backgroundColor:
+                                plant.health_score >= 70
+                                  ? COLORS.primary
+                                  : plant.health_score >= 40
+                                  ? "#F59E0B"
+                                  : COLORS.danger,
+                            },
+                          ]}
+                        />
+                      </View>
+                    </View>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+
             {/* Divider */}
             <View style={styles.divider} />
           </View>
@@ -244,6 +337,73 @@ const styles = StyleSheet.create({
   },
   followBtnText: { fontSize: 15, fontWeight: "700", color: "#fff" },
   followingBtnText: { color: COLORS.primary },
+
+  // ── Plants section ────────────────────────────────────────────────────────
+  plantsSection: {
+    backgroundColor: "#fff",
+    paddingTop: 20,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+  },
+  plantsSectionTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: COLORS.textPrimary,
+    marginBottom: 12,
+  },
+  plantsRow: {
+    gap: 10,
+    paddingBottom: 4,
+  },
+  plantCard: {
+    width: 100,
+    backgroundColor: COLORS.cream,
+    borderRadius: 14,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 1,
+    paddingBottom: 8,
+  },
+  plantCardPhoto: {
+    width: 100,
+    height: 80,
+  },
+  plantCardPhotoPlaceholder: {
+    width: 100,
+    height: 80,
+    backgroundColor: COLORS.lightgreen,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  plantCardName: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: COLORS.textPrimary,
+    marginTop: 6,
+    paddingHorizontal: 8,
+  },
+  plantCardSpecies: {
+    fontSize: 10,
+    color: COLORS.textSecondary,
+    paddingHorizontal: 8,
+    marginTop: 1,
+  },
+  plantCardHealthBar: {
+    height: 3,
+    backgroundColor: "#E5E7EB",
+    borderRadius: 2,
+    marginHorizontal: 8,
+    marginTop: 6,
+    overflow: "hidden",
+  },
+  plantCardHealthFill: {
+    height: 3,
+    borderRadius: 2,
+  },
+
   divider: { height: 1, backgroundColor: "#EFEFEF", marginTop: 8 },
   emptyGrid: { padding: 40, alignItems: "center" },
   emptyText: { fontSize: 15, color: COLORS.textSecondary },

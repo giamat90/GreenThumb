@@ -646,7 +646,10 @@
     "inviteFriends": "友達を招待",
     "inviteSubtitle": "GreenThumbに招待するコンタクトを選択してください",
     "inviteMessage": "GreenThumb（AI植物ケアアプリ）に参加しましょう！こちらからダウンロード: https://play.google.com/store/apps/details?id=com.giamat90.greenthumb",
-    "sharedVia": "GreenThumb - AI植物ケアから共有\nhttps://play.google.com/store/apps/details?id=com.giamat90.greenthumb"
+    "sharedVia": "GreenThumb - AI植物ケアから共有\nhttps://play.google.com/store/apps/details?id=com.giamat90.greenthumb",
+    "plantsSection": "植物",
+    "noPlantsYet": "まだ植物がありません",
+    "mutualFollowersOnly": "相互フォロワーのみ表示"
   },
   "seasonal": {
     "seasonalTips": "季節のヒント",
