@@ -239,7 +239,12 @@
     "failedToSaveCity": "Stadt konnte nicht gespeichert werden.",
     "cityNotFound": "Stadt nicht gefunden. Versuche einen anderen Namen.",
     "cityPlaceholder": "z.B. Berlin, London, Tokio",
-    "somethingWentWrong": "Etwas ist schief gelaufen. Bitte versuche es erneut."
+    "somethingWentWrong": "Etwas ist schief gelaufen. Bitte versuche es erneut.",
+    "changePhoto": "Foto ändern",
+    "uploadingPhoto": "Hochladen...",
+    "photoUpdated": "Profilfoto aktualisiert!",
+    "photoUpdateFailed": "Foto konnte nicht aktualisiert werden. Bitte versuche es erneut.",
+    "tapToChangePhoto": "Tippe, um das Foto zu ändern"
   },
   "paywall": {
     "greenThumbPro": "GreenThumb Pro",

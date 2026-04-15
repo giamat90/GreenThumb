@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   View,
   Text,
+  Image,
   Pressable,
   TouchableOpacity,
   ActivityIndicator,
@@ -15,6 +16,8 @@ import {
   KeyboardAvoidingView,
 } from "react-native";
 import { LogOut, MapPin, Info, Shield, FileText, Crown, Users, Camera } from "lucide-react-native";
+import * as ImagePicker from "expo-image-picker";
+import * as FileSystem from "expo-file-system/legacy";
 
 import Constants from "expo-constants";
 import { useRouter } from "expo-router";
@@ -24,6 +27,7 @@ import { supabase } from "@/lib/supabase";
 import { useUserStore } from "@/store/user";
 import { COLORS } from "@/constants";
 import { NotificationSettings } from "@/components/ui/NotificationSettings";
+import { compressImage } from "@/lib/imageUtils";
 
 const APP_VERSION: string =
   (Constants.expoConfig?.version as string | undefined) ?? "1.0.0";
@@ -68,6 +72,7 @@ export default function ProfileScreen() {
   const { t } = useTranslation();
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isSavingCity, setIsSavingCity] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [showCityModal, setShowCityModal] = useState(false);
   const [cityInput, setCityInput] = useState("");
   const [cityError, setCityError] = useState<string | null>(null);
@@ -140,6 +145,85 @@ export default function ProfileScreen() {
     );
   }
 
+  function handleChangeAvatar() {
+    Alert.alert(t("profile.changePhoto"), "", [
+      { text: t("common.takePhoto"), onPress: () => pickAndUploadAvatar("camera") },
+      { text: t("common.chooseFromGallery"), onPress: () => pickAndUploadAvatar("gallery") },
+      { text: t("common.cancel"), style: "cancel" },
+    ]);
+  }
+
+  async function pickAndUploadAvatar(source: "camera" | "gallery") {
+    if (!profile) return;
+
+    let result: ImagePicker.ImagePickerResult;
+    if (source === "camera") {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== "granted") return;
+      result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.85,
+      });
+    } else {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== "granted") return;
+      result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.85,
+      });
+    }
+
+    if (result.canceled || !result.assets[0]) return;
+
+    setIsUploadingAvatar(true);
+    try {
+      const filename = `avatar_${Date.now()}.jpg`;
+      const destUri = `${FileSystem.cacheDirectory}${filename}`;
+      await FileSystem.copyAsync({ from: result.assets[0].uri, to: destUri });
+      const base64 = await compressImage(destUri);
+
+      const byteCharacters = atob(base64);
+      const byteArray = new Uint8Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteArray[i] = byteCharacters.charCodeAt(i);
+      }
+
+      const storagePath = `${profile.id}/avatar.jpg`;
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(storagePath, byteArray, { contentType: "image/jpeg", upsert: true });
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(storagePath);
+      const avatarUrl = urlData.publicUrl;
+
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .update({ avatar_url: avatarUrl })
+        .eq("id", profile.id);
+      if (profileError) throw profileError;
+
+      const { error: upError } = await supabase
+        .from("user_profiles")
+        .upsert({ id: profile.id, avatar_url: avatarUrl }, { onConflict: "id" });
+      if (upError) throw upError;
+
+      setProfile({ ...profile, avatar_url: avatarUrl });
+      Alert.alert("", t("profile.photoUpdated"));
+    } catch (err) {
+      Alert.alert(
+        t("common.error"),
+        err instanceof Error ? err.message : t("profile.photoUpdateFailed")
+      );
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  }
+
   // User initials for avatar placeholder
   const initials = profile?.display_name
     ? profile.display_name
@@ -156,9 +240,31 @@ export default function ProfileScreen() {
       <Text style={styles.pageTitle}>{t("profile.profile")}</Text>
 
       <View style={styles.userCard}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{initials}</Text>
-        </View>
+        <TouchableOpacity
+          onPress={handleChangeAvatar}
+          disabled={isUploadingAvatar}
+          activeOpacity={0.8}
+          accessibilityLabel={t("profile.tapToChangePhoto")}
+          accessibilityRole="button"
+          style={styles.avatarWrapper}
+        >
+          {isUploadingAvatar ? (
+            <View style={styles.avatar}>
+              <ActivityIndicator color={COLORS.primary} />
+            </View>
+          ) : profile?.avatar_url ? (
+            <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} />
+          ) : (
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>{initials}</Text>
+            </View>
+          )}
+          {!isUploadingAvatar && (
+            <View style={styles.avatarCameraBadge}>
+              <Camera size={10} color="#fff" />
+            </View>
+          )}
+        </TouchableOpacity>
         <View style={styles.userInfo}>
           <Text style={styles.displayName}>
             {profile?.display_name ?? "User"}
@@ -420,6 +526,9 @@ const styles = StyleSheet.create({
     elevation: 1,
     marginBottom: 8,
   },
+  avatarWrapper: {
+    position: "relative",
+  },
   avatar: {
     width: 52,
     height: 52,
@@ -427,6 +536,24 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.lightgreen,
     alignItems: "center",
     justifyContent: "center",
+  },
+  avatarImage: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+  },
+  avatarCameraBadge: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: COLORS.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.5,
+    borderColor: "#fff",
   },
   avatarText: {
     fontSize: 20,

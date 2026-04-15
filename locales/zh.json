@@ -239,7 +239,12 @@
     "failedToSaveCity": "保存城市失败。",
     "cityNotFound": "找不到该城市，请尝试其他名称。",
     "cityPlaceholder": "例如：北京、伦敦、东京",
-    "somethingWentWrong": "出现问题，请重试。"
+    "somethingWentWrong": "出现问题，请重试。",
+    "changePhoto": "更换照片",
+    "uploadingPhoto": "上传中...",
+    "photoUpdated": "个人资料照片已更新！",
+    "photoUpdateFailed": "无法更新照片，请重试。",
+    "tapToChangePhoto": "点击更换照片"
   },
   "paywall": {
     "greenThumbPro": "GreenThumb Pro",

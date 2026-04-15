@@ -239,7 +239,12 @@
     "failedToSaveCity": "都市の保存に失敗しました。",
     "cityNotFound": "その都市が見つかりません。別の名前をお試しください。",
     "cityPlaceholder": "例：東京、ロンドン、パリ",
-    "somethingWentWrong": "問題が発生しました。もう一度お試しください。"
+    "somethingWentWrong": "問題が発生しました。もう一度お試しください。",
+    "changePhoto": "写真を変更",
+    "uploadingPhoto": "アップロード中...",
+    "photoUpdated": "プロフィール写真を更新しました！",
+    "photoUpdateFailed": "写真の更新に失敗しました。もう一度お試しください。",
+    "tapToChangePhoto": "タップして写真を変更"
   },
   "paywall": {
     "greenThumbPro": "GreenThumb Pro",

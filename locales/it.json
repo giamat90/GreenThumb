@@ -239,7 +239,12 @@
     "failedToSaveCity": "Impossibile salvare la città.",
     "cityNotFound": "Città non trovata. Prova con un nome diverso.",
     "cityPlaceholder": "es. Roma, Londra, Tokyo",
-    "somethingWentWrong": "Qualcosa è andato storto. Riprova."
+    "somethingWentWrong": "Qualcosa è andato storto. Riprova.",
+    "changePhoto": "Cambia foto",
+    "uploadingPhoto": "Caricamento...",
+    "photoUpdated": "Foto del profilo aggiornata!",
+    "photoUpdateFailed": "Impossibile aggiornare la foto. Riprova.",
+    "tapToChangePhoto": "Tocca per cambiare la foto"
   },
   "paywall": {
     "greenThumbPro": "GreenThumb Pro",

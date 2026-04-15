@@ -239,7 +239,12 @@
     "failedToSaveCity": "Stad opslaan mislukt.",
     "cityNotFound": "Stad niet gevonden. Probeer een andere naam.",
     "cityPlaceholder": "bijv. Amsterdam, Londen, Tokio",
-    "somethingWentWrong": "Er is iets misgegaan. Probeer opnieuw."
+    "somethingWentWrong": "Er is iets misgegaan. Probeer opnieuw.",
+    "changePhoto": "Foto wijzigen",
+    "uploadingPhoto": "Uploaden...",
+    "photoUpdated": "Profielfoto bijgewerkt!",
+    "photoUpdateFailed": "Foto bijwerken mislukt. Probeer het opnieuw.",
+    "tapToChangePhoto": "Tik om de foto te wijzigen"
   },
   "paywall": {
     "greenThumbPro": "GreenThumb Pro",
