@@ -29,7 +29,7 @@ import { COLORS } from "@/constants";
 import { compressImage } from "@/lib/imageUtils";
 import { supabase } from "@/lib/supabase";
 import { deviceLanguage } from "@/lib/i18n";
-import { scheduleFollowUpDiagnosisNotification, rescheduleReminderForPlant } from "@/lib/notifications";
+import { scheduleFollowUpDiagnosisNotification, cancelFollowUpDiagnosisNotification, rescheduleReminderForPlant } from "@/lib/notifications";
 import { usePlantsStore } from "@/store/plants";
 import { useUserStore } from "@/store/user";
 import { useProGate } from "@/hooks/useProGate";
@@ -368,7 +368,7 @@ export default function DiagnosisScreen() {
     if (!plant || !profile || !diagnosis) return;
     setIsSaving(true);
     try {
-      await supabase.from("diagnoses").insert({
+      const { data: inserted } = await supabase.from("diagnoses").insert({
         plant_id: plant.id,
         user_id: profile.id,
         result: diagnosis as unknown as Record<string, unknown>,
@@ -376,7 +376,21 @@ export default function DiagnosisScreen() {
         follow_up_date: followUpDate ? followUpDate.toISOString() : null,
         watering_adjusted: wateringAdjusted,
         watering_adjustment_days: wateringAdjusted ? suggestedWateringDays : null,
-      });
+      }).select("id").single();
+
+      // Clear any previous follow-up tasks for this plant now that a new diagnosis has been done
+      if (inserted?.id) {
+        supabase
+          .from("diagnoses")
+          .update({ follow_up_date: null, follow_up_diagnosis_id: inserted.id })
+          .eq("plant_id", plant.id)
+          .eq("user_id", profile.id)
+          .neq("id", inserted.id)
+          .not("follow_up_date", "is", null)
+          .then(() => {})
+          .catch((e) => console.warn("diagnosis: failed to clear old follow-ups", e));
+      }
+      cancelFollowUpDiagnosisNotification(plant.id).catch(console.warn);
 
       // Update plant health score only after the user explicitly saves
       const currentHealth = plant.health_score;

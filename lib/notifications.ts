@@ -273,6 +273,25 @@ export async function scheduleFollowUpDiagnosisNotification(
 }
 
 /**
+ * Cancels a pending follow-up diagnosis notification for a plant and removes
+ * it from AsyncStorage.
+ */
+export async function cancelFollowUpDiagnosisNotification(plantId: string): Promise<void> {
+  try {
+    const raw = await AsyncStorage.getItem(FOLLOWUP_NOTIFICATION_IDS_KEY);
+    if (!raw) return;
+    const idMap: NotificationIdMap = JSON.parse(raw) as NotificationIdMap;
+    const identifier = idMap[plantId];
+    if (!identifier) return;
+    await Notifications.cancelScheduledNotificationAsync(identifier).catch(() => {});
+    delete idMap[plantId];
+    await AsyncStorage.setItem(FOLLOWUP_NOTIFICATION_IDS_KEY, JSON.stringify(idMap));
+  } catch (err) {
+    console.warn(`notifications: failed to cancel follow-up for plantId ${plantId}`, err);
+  }
+}
+
+/**
  * Schedules a notification on the 1st of next month reminding the user to
  * check their seasonal tips. Safe to call every month — cancels any prior
  * seasonal tips notification before scheduling a new one.
