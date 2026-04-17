@@ -48,6 +48,7 @@ export default function PostDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [inputBarHeight, setInputBarHeight] = useState(0);
+  const [currentUserUsername, setCurrentUserUsername] = useState<string | undefined>(undefined);
 
   const fetchPost = useCallback(async () => {
     if (!postId || !profile) return;
@@ -102,21 +103,25 @@ export default function PostDetailScreen() {
         is_liked: !!likeResult.data,
       });
 
-      // Fetch commenter usernames separately
+      // Fetch commenter usernames separately.
+      // Always include the current user's ID so their username is available
+      // immediately when they submit a new comment (optimistic update).
       const commentRows = (commentsResult.data ?? []) as Record<string, unknown>[];
-      const commenterIds = [...new Set(commentRows.map((c) => c.user_id as string))];
+      const commenterIds = [...new Set([
+        ...commentRows.map((c) => c.user_id as string),
+        profile.id,
+      ])];
       let usernameMap: Record<string, string> = {};
-      if (commenterIds.length > 0) {
-        const { data: commenterProfiles } = await supabase
-          .from("user_profiles")
-          .select("id, username")
-          .in("id", commenterIds);
-        if (commenterProfiles) {
-          usernameMap = Object.fromEntries(
-            (commenterProfiles as Record<string, unknown>[]).map((p) => [p.id as string, p.username as string])
-          );
-        }
+      const { data: commenterProfiles } = await supabase
+        .from("user_profiles")
+        .select("id, username")
+        .in("id", commenterIds);
+      if (commenterProfiles) {
+        usernameMap = Object.fromEntries(
+          (commenterProfiles as Record<string, unknown>[]).map((p) => [p.id as string, p.username as string])
+        );
       }
+      setCurrentUserUsername(usernameMap[profile.id]);
 
       setComments(
         commentRows.map((c) => ({
@@ -172,7 +177,7 @@ export default function PostDetailScreen() {
         post_id: row.post_id as string,
         content: row.content as string,
         created_at: row.created_at as string,
-        username: undefined, // populated on next fetchPost; Profile type has no username field
+        username: currentUserUsername,
       };
       setComments((prev) => [...prev, newComment]);
       setPost((p) => p ? { ...p, comments_count: p.comments_count + 1 } : p);
@@ -184,7 +189,7 @@ export default function PostDetailScreen() {
     } finally {
       setSubmitting(false);
     }
-  }, [profile, post, commentText]);
+  }, [profile, post, commentText, currentUserUsername]);
 
   if (loading) {
     return (
