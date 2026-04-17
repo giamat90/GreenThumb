@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from "react";
+import React, { useMemo, useState, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -6,11 +6,13 @@ import {
   SectionList,
   TouchableOpacity,
   StyleSheet,
+  Animated,
+  PanResponder,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 import { useTranslation } from "react-i18next";
-import { CalendarDays, Droplets, Leaf, Stethoscope } from "lucide-react-native";
+import { CalendarDays, Droplets, Leaf, Stethoscope, Trash2 } from "lucide-react-native";
 import { COLORS } from "@/constants";
 import { ResponsiveContainer } from "@/components/ui/ResponsiveContainer";
 import { supabase } from "@/lib/supabase";
@@ -55,9 +57,11 @@ const SECTION_ORDER: Section[] = ["overdue", "today", "tomorrow", "week", "later
 function CareEntry({
   entry,
   onPress,
+  style,
 }: {
   entry: CalendarEntry;
   onPress: () => void;
+  style?: object;
 }) {
   const { t } = useTranslation();
   const { plant, days, section, type } = entry;
@@ -93,7 +97,7 @@ function CareEntry({
       : t("calendar.water");
 
   return (
-    <TouchableOpacity style={styles.entry} onPress={onPress} activeOpacity={0.8}>
+    <TouchableOpacity style={[styles.entry, style]} onPress={onPress} activeOpacity={0.8}>
       {plant.photo_url ? (
         <Image
           source={{ uri: plant.photo_url }}
@@ -127,6 +131,60 @@ function CareEntry({
   );
 }
 
+// ─── Swipeable overdue entry ──────────────────────────────────────────────────
+
+const SWIPE_THRESHOLD = 90;
+
+function SwipeableOverdueEntry({
+  entry,
+  onPress,
+  onDismiss,
+}: {
+  entry: CalendarEntry;
+  onPress: () => void;
+  onDismiss: () => void;
+}) {
+  const translateX = useRef(new Animated.Value(0)).current;
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gs) =>
+        Math.abs(gs.dx) > 8 && Math.abs(gs.dx) > Math.abs(gs.dy) * 1.5,
+      onPanResponderMove: (_, gs) => {
+        if (gs.dx < 0) translateX.setValue(gs.dx);
+      },
+      onPanResponderRelease: (_, gs) => {
+        if (gs.dx < -SWIPE_THRESHOLD) {
+          Animated.timing(translateX, {
+            toValue: -500,
+            duration: 180,
+            useNativeDriver: true,
+          }).start(onDismiss);
+        } else {
+          Animated.spring(translateX, {
+            toValue: 0,
+            useNativeDriver: true,
+            bounciness: 6,
+          }).start();
+        }
+      },
+    })
+  ).current;
+
+  return (
+    <View style={styles.swipeWrapper}>
+      {/* Red delete background — revealed as card slides left */}
+      <View style={styles.deleteBackground}>
+        <Trash2 size={22} color="#fff" />
+      </View>
+
+      <Animated.View style={{ transform: [{ translateX }] }} {...panResponder.panHandlers}>
+        <CareEntry entry={entry} onPress={onPress} style={styles.entryNoMargin} />
+      </Animated.View>
+    </View>
+  );
+}
+
 // ─── Section header ───────────────────────────────────────────────────────────
 
 function SectionHeader({ title, danger }: { title: string; danger?: boolean }) {
@@ -144,12 +202,14 @@ function SectionHeader({ title, danger }: { title: string; danger?: boolean }) {
 export default function CalendarScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const plants = usePlantsStore((s) => s.plants);
+  const { plants, updatePlant } = usePlantsStore();
 
-  // Fetch diagnosis follow-ups from Supabase
   const [diagnosisFollowUps, setDiagnosisFollowUps] = useState<
     { plant_id: string; follow_up_date: string }[]
   >([]);
+
+  // Keys of overdue entries the user has dismissed (optimistic)
+  const [dismissedKeys, setDismissedKeys] = useState<Set<string>>(new Set());
 
   useFocusEffect(
     useCallback(() => {
@@ -162,6 +222,46 @@ export default function CalendarScreen() {
         });
     }, [])
   );
+
+  const handleDismissOverdue = useCallback(async (entry: CalendarEntry) => {
+    const key = `${entry.plant.id}-${entry.type}`;
+    // Optimistic: hide immediately
+    setDismissedKeys((prev) => new Set([...prev, key]));
+
+    try {
+      if (entry.type === "watering") {
+        const watering =
+          (entry.plant.care_profile as Record<string, unknown>)?.watering as string ?? "average";
+        const daysMap: Record<string, number> = { frequent: 2, average: 5, minimum: 10 };
+        const interval = daysMap[watering] ?? 5;
+        const next = new Date();
+        next.setDate(next.getDate() + interval);
+        const nextWatering = next.toISOString();
+        await supabase.from("plants").update({ next_watering: nextWatering }).eq("id", entry.plant.id);
+        updatePlant(entry.plant.id, { next_watering: nextWatering });
+      } else if (entry.type === "fertilizer") {
+        const next = new Date();
+        next.setDate(next.getDate() + 30);
+        const nextFertilizer = next.toISOString();
+        await supabase.from("plants").update({ next_fertilizer_at: nextFertilizer }).eq("id", entry.plant.id);
+        updatePlant(entry.plant.id, { next_fertilizer_at: nextFertilizer });
+      } else if (entry.type === "diagnosis") {
+        await supabase
+          .from("diagnoses")
+          .update({ follow_up_date: null })
+          .eq("plant_id", entry.plant.id)
+          .not("follow_up_date", "is", null);
+        setDiagnosisFollowUps((prev) => prev.filter((d) => d.plant_id !== entry.plant.id));
+      }
+    } catch {
+      // Revert optimistic update on error
+      setDismissedKeys((prev) => {
+        const next = new Set(prev);
+        next.delete(key);
+        return next;
+      });
+    }
+  }, [updatePlant]);
 
   const SECTION_LABEL: Record<Section, string> = {
     overdue: t("calendar.overdue"),
@@ -185,7 +285,6 @@ export default function CalendarScreen() {
       }
     }
 
-    // Add diagnosis follow-up entries
     for (const d of diagnosisFollowUps) {
       const plant = plants.find((p) => p.id === d.plant_id);
       if (plant && d.follow_up_date) {
@@ -194,10 +293,12 @@ export default function CalendarScreen() {
       }
     }
 
-    entries.sort((a, b) => a.days - b.days);
+    // Filter out dismissed entries
+    const visible = entries.filter((e) => !dismissedKeys.has(`${e.plant.id}-${e.type}`));
+    visible.sort((a, b) => a.days - b.days);
 
     const grouped = new Map<Section, CalendarEntry[]>();
-    for (const entry of entries) {
+    for (const entry of visible) {
       const list = grouped.get(entry.section) ?? [];
       list.push(entry);
       grouped.set(entry.section, list);
@@ -209,9 +310,8 @@ export default function CalendarScreen() {
       data: grouped.get(s)!,
     }));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [plants, diagnosisFollowUps, t]);
+  }, [plants, diagnosisFollowUps, dismissedKeys, t]);
 
-  // Empty state: no plants at all
   if (plants.length === 0) {
     return (
       <ResponsiveContainer>
@@ -228,7 +328,6 @@ export default function CalendarScreen() {
     );
   }
 
-  // All caught up: plants exist but none have a watering date
   if (sections.length === 0) {
     return (
       <ResponsiveContainer>
@@ -258,12 +357,20 @@ export default function CalendarScreen() {
               danger={section.key === "overdue"}
             />
           )}
-          renderItem={({ item }) => (
-            <CareEntry
-              entry={item}
-              onPress={() => router.push(`/plant/${item.plant.id}`)}
-            />
-          )}
+          renderItem={({ item, section }) =>
+            section.key === "overdue" ? (
+              <SwipeableOverdueEntry
+                entry={item}
+                onPress={() => router.push(`/plant/${item.plant.id}`)}
+                onDismiss={() => handleDismissOverdue(item)}
+              />
+            ) : (
+              <CareEntry
+                entry={item}
+                onPress={() => router.push(`/plant/${item.plant.id}`)}
+              />
+            )
+          }
           ListFooterComponent={
             <View style={styles.listFooter}>
               <Text style={styles.listFooterText}>{t("calendar.allCareTasksShown")}</Text>
@@ -328,6 +435,25 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 2,
   },
+  entryNoMargin: {
+    marginBottom: 0,
+  },
+  swipeWrapper: {
+    marginBottom: 10,
+    borderRadius: 16,
+    overflow: "hidden",
+  },
+  deleteBackground: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    width: "100%",
+    backgroundColor: COLORS.danger,
+    alignItems: "flex-end",
+    justifyContent: "center",
+    paddingRight: 20,
+  },
   thumb: {
     width: 40,
     height: 40,
@@ -377,7 +503,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "600",
   },
-  // Empty / caught-up states
   emptyContainer: {
     flex: 1,
     alignItems: "center",

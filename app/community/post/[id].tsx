@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -8,8 +8,7 @@ import {
   Image,
   ActivityIndicator,
   StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
+  Keyboard,
   Share,
 } from "react-native";
 import { Stack, useLocalSearchParams } from "expo-router";
@@ -47,8 +46,11 @@ export default function PostDetailScreen() {
   const [commentText, setCommentText] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [inputBarHeight, setInputBarHeight] = useState(0);
   const [currentUserUsername, setCurrentUserUsername] = useState<string | undefined>(undefined);
+  const flatListRef = useRef<FlatList>(null);
+  const preKeyboardOffsetRef = useRef(0);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const keyboardHeightRef = useRef(0);
 
   const fetchPost = useCallback(async () => {
     if (!postId || !profile) return;
@@ -144,6 +146,25 @@ export default function PostDetailScreen() {
     fetchPost();
   }, [fetchPost]);
 
+  useEffect(() => {
+    const show = Keyboard.addListener("keyboardDidShow", (e) => {
+      keyboardHeightRef.current = e.endCoordinates.height;
+      setKeyboardHeight(e.endCoordinates.height);
+      // scrollToEnd is triggered by FlatList's onLayout once the layout
+      // has settled with the new paddingBottom — no delay needed.
+    });
+    const hide = Keyboard.addListener("keyboardDidHide", () => {
+      keyboardHeightRef.current = 0;
+      setKeyboardHeight(0);
+      // Pre-keyboard offset is always valid for the full-height list.
+      flatListRef.current?.scrollToOffset({
+        offset: preKeyboardOffsetRef.current,
+        animated: false,
+      });
+    });
+    return () => { show.remove(); hide.remove(); };
+  }, []);
+
   const handleLike = useCallback(async () => {
     if (!profile || !post) return;
     const wasLiked = post.is_liked;
@@ -203,16 +224,22 @@ export default function PostDetailScreen() {
   if (!post) return null;
 
   return (
-    <KeyboardAvoidingView
-      style={styles.screen}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
+    <View style={[styles.screen, { paddingBottom: keyboardHeight }]}>
       <Stack.Screen options={{ headerShown: false }} />
 
       <FlatList
+        ref={flatListRef}
         data={comments}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={{ paddingBottom: inputBarHeight + 16 }}
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingBottom: 16 }}
+        onScroll={(e) => { preKeyboardOffsetRef.current = e.nativeEvent.contentOffset.y; }}
+        scrollEventThrottle={100}
+        onLayout={() => {
+          if (keyboardHeightRef.current > 0) {
+            flatListRef.current?.scrollToEnd({ animated: true });
+          }
+        }}
         ListHeaderComponent={
           <View>
             {/* Back */}
@@ -282,10 +309,7 @@ export default function PostDetailScreen() {
       />
 
       {/* Comment input bar */}
-      <View
-        style={[styles.inputBar, { paddingBottom: insets.bottom + 8 }]}
-        onLayout={(e) => setInputBarHeight(e.nativeEvent.layout.height)}
-      >
+      <View style={[styles.inputBar, { paddingBottom: insets.bottom + 8 }]}>
         <TextInput
           style={styles.input}
           value={commentText}
@@ -308,7 +332,7 @@ export default function PostDetailScreen() {
           )}
         </TouchableOpacity>
       </View>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -352,7 +376,6 @@ const styles = StyleSheet.create({
   commentTime: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
   noComments: { padding: 20, color: COLORS.textSecondary, textAlign: "center" },
   inputBar: {
-    position: "absolute", bottom: 0, left: 0, right: 0,
     backgroundColor: "#fff", paddingTop: 8, paddingHorizontal: 16,
     borderTopWidth: 1, borderTopColor: "#EFEFEF",
     flexDirection: "row", alignItems: "center", gap: 10,

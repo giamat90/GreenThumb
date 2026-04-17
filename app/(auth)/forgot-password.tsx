@@ -6,7 +6,6 @@ import {
   Pressable,
   ActivityIndicator,
   KeyboardAvoidingView,
-  Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { ArrowLeft, Mail } from "lucide-react-native";
@@ -75,7 +74,7 @@ export default function ForgotPasswordScreen() {
   return (
     <KeyboardAvoidingView
       className="flex-1 bg-cream"
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      behavior="padding"
     >
       <View className="flex-1 justify-center px-8">
         {/* Back button */}

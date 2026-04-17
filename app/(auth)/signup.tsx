@@ -6,7 +6,6 @@ import {
   Pressable,
   ActivityIndicator,
   KeyboardAvoidingView,
-  Platform,
   ScrollView,
 } from "react-native";
 import { Link, router } from "expo-router";
@@ -85,7 +84,7 @@ export default function SignupScreen() {
   return (
     <KeyboardAvoidingView
       className="flex-1 bg-cream"
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      behavior="padding"
     >
       <ScrollView
         className="flex-1"

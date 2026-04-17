@@ -116,11 +116,11 @@ function WeatherCard({
   // Smart banner logic
   let banner: string | null = null;
   if (weather.rainExpected && weather.rainAmountMm > 5) {
-    banner = "🌧️ Rain expected — outdoor plants watering adjusted";
+    banner = t("home.weatherBannerRain");
   } else if (weather.temperature > 32) {
-    banner = "🌡️ Heat wave — plants may need extra water";
+    banner = t("home.weatherBannerHeat");
   } else if (weather.temperature < 5) {
-    banner = "❄️ Cold snap — reducing watering frequency";
+    banner = t("home.weatherBannerCold");
   }
 
   return (
@@ -129,7 +129,7 @@ function WeatherCard({
         <View>
           <Text style={styles.weatherCity}>{weather.city}</Text>
           <Text style={styles.weatherCondition}>
-            {weather.condition.charAt(0).toUpperCase() + weather.condition.slice(1)}
+            {t(`home.condition${weather.condition.charAt(0).toUpperCase() + weather.condition.slice(1)}`)}
           </Text>
         </View>
         <View style={styles.weatherRight}>
@@ -163,7 +163,7 @@ function WeatherCard({
         <View style={{ marginTop: 12 }}>
           <UpgradePrompt
             featureName={t("home.weatherSmartScheduling")}
-            description="Adjust watering based on live weather"
+            description={t("home.weatherSmartDescription")}
           />
         </View>
       ) : null}
@@ -638,6 +638,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 10,
     alignItems: "center",
+    justifyContent: "space-between",
+    minHeight: 56,
   },
   weatherStatLabel: {
     fontSize: 10,
@@ -645,6 +647,7 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     letterSpacing: 0.5,
     marginBottom: 4,
+    textAlign: "center",
   },
   weatherStatValue: {
     fontSize: 14,

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -9,8 +9,7 @@ import {
   Alert,
   ActivityIndicator,
   StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
+  Keyboard,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { Stack, useRouter } from "expo-router";
@@ -42,6 +41,23 @@ export default function NewPostScreen() {
   const [isSharing, setIsSharing] = useState(false);
 
   const selectedPlant = plants.find((p) => p.id === selectedPlantId);
+  const scrollRef = useRef<ScrollView>(null);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const keyboardHeightRef = useRef(0);
+
+  useEffect(() => {
+    const show = Keyboard.addListener("keyboardDidShow", (e) => {
+      keyboardHeightRef.current = e.endCoordinates.height;
+      setKeyboardHeight(e.endCoordinates.height);
+      // scrollToEnd triggered by ScrollView's onLayout once layout settles.
+    });
+    const hide = Keyboard.addListener("keyboardDidHide", () => {
+      keyboardHeightRef.current = 0;
+      setKeyboardHeight(0);
+      scrollRef.current?.scrollTo({ y: 0, animated: false });
+    });
+    return () => { show.remove(); hide.remove(); };
+  }, []);
 
   const handlePickPhoto = useCallback(() => {
     Alert.alert(t("community.sharePost"), t("diagnosis.chooseSource"), [
@@ -127,19 +143,22 @@ export default function NewPostScreen() {
   }, [photoUri, profile, caption, selectedPlantId, router, t]);
 
   return (
-    <KeyboardAvoidingView
-      style={styles.screen}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
+    <View style={[styles.screen, { paddingBottom: keyboardHeight }]}>
       <Stack.Screen options={{ headerShown: false }} />
 
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={[
           styles.content,
           { paddingTop: insets.top + 16, paddingBottom: 16 },
         ]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
+        onLayout={() => {
+          if (keyboardHeightRef.current > 0) {
+            scrollRef.current?.scrollToEnd({ animated: true });
+          }
+        }}
       >
         {/* Back */}
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
@@ -212,7 +231,7 @@ export default function NewPostScreen() {
         )}
       </ScrollView>
 
-      {/* Action bar */}
+      {/* Action bar — sits above the keyboard-height spacer */}
       <View style={[styles.actionBar, { paddingBottom: insets.bottom + 12 }]}>
         <TouchableOpacity
           style={[styles.shareButton, (!photoUri || isSharing) && styles.shareButtonDisabled]}
@@ -227,7 +246,7 @@ export default function NewPostScreen() {
           )}
         </TouchableOpacity>
       </View>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 

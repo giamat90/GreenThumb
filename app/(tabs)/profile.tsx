@@ -539,7 +539,7 @@ export default function ProfileScreen() {
       >
         <KeyboardAvoidingView
           style={{ flex: 1 }}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          behavior="padding"
         >
           <Pressable
             style={styles.modalOverlay}
@@ -595,7 +595,7 @@ export default function ProfileScreen() {
       >
         <KeyboardAvoidingView
           style={{ flex: 1 }}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          behavior="padding"
         >
           <Pressable
             style={styles.modalOverlay}

@@ -10,7 +10,6 @@ import {
   ActivityIndicator,
   Image,
   KeyboardAvoidingView,
-  Platform,
 } from "react-native";
 import { Stack, useLocalSearchParams } from "expo-router";
 import { useNavigation } from "@react-navigation/native";
@@ -280,7 +279,7 @@ export default function GrowthScreen() {
     return (
       <KeyboardAvoidingView
         style={styles.screen}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior="padding"
       >
         <Stack.Screen options={{ headerShown: false }} />
 
