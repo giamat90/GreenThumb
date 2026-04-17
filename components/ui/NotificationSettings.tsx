@@ -216,7 +216,7 @@ export function NotificationSettings() {
             <View style={styles.iconWrap}>
               <Bell size={18} color={COLORS.primary} />
             </View>
-            <View>
+            <View style={{ flex: 1 }}>
               <Text style={styles.rowLabel}>{t("notifications.wateringReminders")}</Text>
               <Text style={styles.rowSubLabel}>
                 {t("notifications.getNotified")}
