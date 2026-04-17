@@ -15,7 +15,7 @@ import {
   TextInput,
   KeyboardAvoidingView,
 } from "react-native";
-import { LogOut, MapPin, Info, Shield, FileText, Crown, Users, Camera, Ruler } from "lucide-react-native";
+import { LogOut, MapPin, Info, Shield, FileText, Crown, Users, Camera, Ruler, Pencil } from "lucide-react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Location from "expo-location";
@@ -79,6 +79,9 @@ export default function ProfileScreen() {
   const [showCityModal, setShowCityModal] = useState(false);
   const [cityInput, setCityInput] = useState("");
   const [cityError, setCityError] = useState<string | null>(null);
+  const [showNameModal, setShowNameModal] = useState(false);
+  const [nameInput, setNameInput] = useState("");
+  const [isSavingName, setIsSavingName] = useState(false);
   const { profile, setProfile } = useUserStore();
   const router = useRouter();
   const isPro = profile?.subscription === "pro";
@@ -109,6 +112,35 @@ export default function ProfileScreen() {
       // Revert on failure
       setProfile({ ...profile, units: profile.units });
       Alert.alert(t("common.error"), error.message);
+    }
+  }
+
+  function handleEditName() {
+    setNameInput(profile?.display_name ?? "");
+    setShowNameModal(true);
+  }
+
+  async function handleSaveName() {
+    const trimmed = nameInput.trim();
+    if (!trimmed || !profile?.id) return;
+    setIsSavingName(true);
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ display_name: trimmed })
+        .eq("id", profile.id);
+      if (error) throw error;
+      // Keep community username in sync
+      await supabase
+        .from("user_profiles")
+        .upsert({ id: profile.id, username: trimmed }, { onConflict: "id" });
+      setProfile({ ...profile, display_name: trimmed });
+      setShowNameModal(false);
+      Alert.alert("", t("profile.nameUpdated"));
+    } catch {
+      Alert.alert(t("common.error"), t("profile.nameUpdateFailed"));
+    } finally {
+      setIsSavingName(false);
     }
   }
 
@@ -319,9 +351,18 @@ export default function ProfileScreen() {
           )}
         </TouchableOpacity>
         <View style={styles.userInfo}>
-          <Text style={styles.displayName}>
-            {profile?.display_name ?? "User"}
-          </Text>
+          <TouchableOpacity
+            style={styles.displayNameRow}
+            onPress={handleEditName}
+            activeOpacity={0.7}
+            accessibilityLabel={t("profile.editName")}
+            accessibilityRole="button"
+          >
+            <Text style={styles.displayName}>
+              {profile?.display_name ?? "User"}
+            </Text>
+            <Pencil size={13} color={COLORS.textSecondary} />
+          </TouchableOpacity>
           <Text style={styles.email}>
             {profile?.subscription === "pro" ? t("profile.proPlan") : t("profile.freePlan")}
           </Text>
@@ -489,6 +530,62 @@ export default function ProfileScreen() {
         )}
       </Pressable>
 
+      {/* ── Name edit modal ──────────────────────────────────────────────── */}
+      <Modal
+        visible={showNameModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowNameModal(false)}
+      >
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
+          <Pressable
+            style={styles.modalOverlay}
+            onPress={() => setShowNameModal(false)}
+          >
+            <Pressable style={styles.modalCard} onPress={() => {}}>
+              <Text style={styles.modalTitle}>{t("profile.updateName")}</Text>
+              <TextInput
+                style={[styles.modalInput, { marginTop: 16 }]}
+                value={nameInput}
+                onChangeText={setNameInput}
+                placeholder={t("profile.namePlaceholder")}
+                placeholderTextColor={COLORS.textSecondary}
+                returnKeyType="done"
+                autoFocus
+                onSubmitEditing={handleSaveName}
+                maxLength={50}
+              />
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={styles.modalCancelBtn}
+                  onPress={() => setShowNameModal(false)}
+                  disabled={isSavingName}
+                >
+                  <Text style={styles.modalCancelText}>{t("common.cancel")}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.modalSaveBtn,
+                    (!nameInput.trim() || isSavingName) && styles.modalSaveBtnDisabled,
+                  ]}
+                  onPress={handleSaveName}
+                  disabled={!nameInput.trim() || isSavingName}
+                >
+                  {isSavingName ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Text style={styles.modalSaveText}>{t("common.save")}</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </Pressable>
+          </Pressable>
+        </KeyboardAvoidingView>
+      </Modal>
+
       {/* ── City edit modal ──────────────────────────────────────────────── */}
       <Modal
         visible={showCityModal}
@@ -649,6 +746,11 @@ const styles = StyleSheet.create({
   },
   userInfo: {
     flex: 1,
+  },
+  displayNameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
   displayName: {
     fontSize: 17,

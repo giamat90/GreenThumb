@@ -276,7 +276,13 @@
     "tapToChangePhoto": "Tik om de foto te wijzigen",
     "measurementUnits": "Maateenheden",
     "metric": "Metrisch",
-    "imperial": "Imperiaal"
+    "imperial": "Imperiaal",
+    "editName": "Naam bewerken",
+    "updateName": "Naam bijwerken",
+    "namePlaceholder": "Jouw naam",
+    "nameUpdated": "Naam bijgewerkt!",
+    "nameUpdateFailed": "Naam bijwerken mislukt.",
+    "nameEmpty": "Naam mag niet leeg zijn."
   },
   "paywall": {
     "greenThumbPro": "GreenThumb Pro",

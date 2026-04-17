@@ -276,7 +276,13 @@
     "tapToChangePhoto": "点击更换照片",
     "measurementUnits": "度量单位",
     "metric": "公制",
-    "imperial": "英制"
+    "imperial": "英制",
+    "editName": "编辑名称",
+    "updateName": "更新名称",
+    "namePlaceholder": "您的姓名",
+    "nameUpdated": "名称已更新！",
+    "nameUpdateFailed": "更新名称失败。",
+    "nameEmpty": "名称不能为空。"
   },
   "paywall": {
     "greenThumbPro": "GreenThumb Pro",

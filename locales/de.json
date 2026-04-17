@@ -276,7 +276,13 @@
     "tapToChangePhoto": "Tippe, um das Foto zu ändern",
     "measurementUnits": "Maßeinheiten",
     "metric": "Metrisch",
-    "imperial": "Imperial"
+    "imperial": "Imperial",
+    "editName": "Name bearbeiten",
+    "updateName": "Name aktualisieren",
+    "namePlaceholder": "Dein Name",
+    "nameUpdated": "Name aktualisiert!",
+    "nameUpdateFailed": "Name konnte nicht aktualisiert werden.",
+    "nameEmpty": "Der Name darf nicht leer sein."
   },
   "paywall": {
     "greenThumbPro": "GreenThumb Pro",

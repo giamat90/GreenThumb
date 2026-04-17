@@ -276,7 +276,13 @@
     "tapToChangePhoto": "タップして写真を変更",
     "measurementUnits": "測定単位",
     "metric": "メートル法",
-    "imperial": "ヤード・ポンド法"
+    "imperial": "ヤード・ポンド法",
+    "editName": "名前を編集",
+    "updateName": "名前を更新",
+    "namePlaceholder": "お名前",
+    "nameUpdated": "名前を更新しました！",
+    "nameUpdateFailed": "名前の更新に失敗しました。",
+    "nameEmpty": "名前は空にできません。"
   },
   "paywall": {
     "greenThumbPro": "GreenThumb Pro",
