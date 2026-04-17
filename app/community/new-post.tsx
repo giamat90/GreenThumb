@@ -40,7 +40,6 @@ export default function NewPostScreen() {
   const [selectedPlantId, setSelectedPlantId] = useState<string | null>(null);
   const [showPlantPicker, setShowPlantPicker] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
-  const [actionBarHeight, setActionBarHeight] = useState(0);
 
   const selectedPlant = plants.find((p) => p.id === selectedPlantId);
 
@@ -130,14 +129,14 @@ export default function NewPostScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.screen}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <Stack.Screen options={{ headerShown: false }} />
 
       <ScrollView
         contentContainerStyle={[
           styles.content,
-          { paddingTop: insets.top + 16, paddingBottom: actionBarHeight + 16 },
+          { paddingTop: insets.top + 16, paddingBottom: 16 },
         ]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
@@ -214,10 +213,7 @@ export default function NewPostScreen() {
       </ScrollView>
 
       {/* Action bar */}
-      <View
-        style={[styles.actionBar, { paddingBottom: insets.bottom + 12 }]}
-        onLayout={(e) => setActionBarHeight(e.nativeEvent.layout.height)}
-      >
+      <View style={[styles.actionBar, { paddingBottom: insets.bottom + 12 }]}>
         <TouchableOpacity
           style={[styles.shareButton, (!photoUri || isSharing) && styles.shareButtonDisabled]}
           onPress={handleShare}
@@ -292,7 +288,6 @@ const styles = StyleSheet.create({
   plantOptionText: { fontSize: 15, color: COLORS.textPrimary },
   plantOptionTextSelected: { color: COLORS.primary, fontWeight: "700" },
   actionBar: {
-    position: "absolute", bottom: 0, left: 0, right: 0,
     backgroundColor: "#fff", paddingTop: 12, paddingHorizontal: 20,
     borderTopWidth: 1, borderTopColor: COLORS.cream,
     shadowColor: "#000", shadowOffset: { width: 0, height: -3 },

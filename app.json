@@ -37,7 +37,8 @@
         "READ_CALENDAR",
         "WRITE_CALENDAR"
       ],
-      "blockedPermissions": ["android.permission.ACTIVITY_RECOGNITION"]
+      "blockedPermissions": ["android.permission.ACTIVITY_RECOGNITION"],
+      "softwareKeyboardLayoutMode": "resize"
     },
     "web": {
       "bundler": "metro",
