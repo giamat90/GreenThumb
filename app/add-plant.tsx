@@ -47,6 +47,15 @@ function calculateNextWatering(
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
+const GROWING_MEDIUM_OPTIONS = [
+  { value: 'soil',       label: 'Soil 🌱' },
+  { value: 'hydroponic', label: 'Hydroponic 💧' },
+  { value: 'leca',       label: 'LECA 🪨' },
+  { value: 'moss',       label: 'Moss 🌿' },
+  { value: 'bark',       label: 'Bark 🌸' },
+  { value: 'coco',       label: 'Coco Coir 🥥' },
+] as const;
+
 export default function AddPlantScreen() {
   const { t } = useTranslation();
   const router = useRouter();
@@ -61,6 +70,7 @@ export default function AddPlantScreen() {
   const [selectedPotSize, setSelectedPotSize] = useState<PotSize>("medium");
   const [selectedLocation, setSelectedLocation] = useState<PlantLocation>("indoor");
   const [selectedWatering, setSelectedWatering] = useState<"frequent" | "average" | "minimum">("average");
+  const [growingMedium, setGrowingMedium] = useState('soil');
   const [isSaving, setIsSaving] = useState(false);
 
   const handlePickPhoto = useCallback(async () => {
@@ -155,7 +165,7 @@ export default function AddPlantScreen() {
         care_profile: {
           watering: selectedWatering,
           light: "indirect light",
-          soilType: "well-draining",
+          soilType: growingMedium === 'soil' ? 'well-draining' : growingMedium,
         },
         notes: null,
       };
@@ -198,6 +208,7 @@ export default function AddPlantScreen() {
     selectedPotSize,
     selectedLocation,
     selectedWatering,
+    growingMedium,
     profile,
     addPlant,
     router,
@@ -387,6 +398,31 @@ export default function AddPlantScreen() {
           ))}
         </View>
 
+        {/* Growing medium */}
+        <Text style={styles.label}>{t("addPlant.growingMedium")}</Text>
+        <View style={styles.selectorRowWrap}>
+          {GROWING_MEDIUM_OPTIONS.map(({ value, label }) => (
+            <TouchableOpacity
+              key={value}
+              onPress={() => setGrowingMedium(value)}
+              style={[
+                styles.selectorButtonWrap,
+                growingMedium === value && styles.selectorButtonActive,
+              ]}
+              accessibilityLabel={label}
+            >
+              <Text
+                style={[
+                  styles.selectorButtonText,
+                  growingMedium === value && styles.selectorButtonTextActive,
+                ]}
+              >
+                {label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
         {/* Save button */}
         <TouchableOpacity
           onPress={handleSave}
@@ -508,8 +544,22 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 8,
   },
+  selectorRowWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
   selectorButton: {
     flex: 1,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: "#E5E7EB",
+    backgroundColor: "white",
+    alignItems: "center",
+  },
+  selectorButtonWrap: {
+    width: "31.5%",
     paddingVertical: 10,
     borderRadius: 12,
     borderWidth: 2,

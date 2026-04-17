@@ -24,6 +24,21 @@ import { usePlantsStore } from "@/store/plants";
 import { useUserStore } from "@/store/user";
 import type { PlantLocation, PotSize } from "@/types";
 
+const GROWING_MEDIUM_OPTIONS = [
+  { value: 'soil',       label: 'Soil 🌱' },
+  { value: 'hydroponic', label: 'Hydroponic 💧' },
+  { value: 'leca',       label: 'LECA 🪨' },
+  { value: 'moss',       label: 'Moss 🌿' },
+  { value: 'bark',       label: 'Bark 🌸' },
+  { value: 'coco',       label: 'Coco Coir 🥥' },
+] as const;
+
+function deriveGrowingMedium(careProfile: Record<string, unknown> | null): string {
+  const soil = (careProfile?.soilType as string | undefined) ?? '';
+  const nonSoilValues = ['hydroponic', 'leca', 'moss', 'bark', 'coco'];
+  return nonSoilValues.includes(soil) ? soil : 'soil';
+}
+
 export default function EditPlantScreen() {
   const { t } = useTranslation();
   const router = useRouter();
@@ -46,6 +61,9 @@ export default function EditPlantScreen() {
   );
   const [selectedLocation, setSelectedLocation] = useState<PlantLocation>(
     plant?.location ?? "indoor"
+  );
+  const [growingMedium, setGrowingMedium] = useState(
+    deriveGrowingMedium(plant?.care_profile as Record<string, unknown> | null)
   );
   const [isSaving, setIsSaving] = useState(false);
 
@@ -130,11 +148,16 @@ export default function EditPlantScreen() {
         newPhotoUrl = null;
       }
 
+      const existingCareProfile = (plant.care_profile as Record<string, unknown>) ?? {};
       const updates: Record<string, unknown> = {
         name: trimmedName,
         species: species.trim() || null,
         pot_size: selectedPotSize,
         location: selectedLocation,
+        care_profile: {
+          ...existingCareProfile,
+          soilType: growingMedium === 'soil' ? 'well-draining' : growingMedium,
+        },
       };
 
       if (newPhotoUrl !== undefined) {
@@ -153,6 +176,7 @@ export default function EditPlantScreen() {
         species: species.trim() || null,
         pot_size: selectedPotSize,
         location: selectedLocation,
+        care_profile: updates.care_profile as Record<string, unknown>,
         ...(newPhotoUrl !== undefined ? { photo_url: newPhotoUrl } : {}),
       });
 
@@ -170,6 +194,7 @@ export default function EditPlantScreen() {
     photoCleared,
     selectedPotSize,
     selectedLocation,
+    growingMedium,
     profile,
     plant,
     updatePlant,
@@ -321,6 +346,31 @@ export default function EditPlantScreen() {
           ))}
         </View>
 
+        {/* Growing medium */}
+        <Text style={styles.label}>{t("addPlant.growingMedium")}</Text>
+        <View style={styles.selectorRowWrap}>
+          {GROWING_MEDIUM_OPTIONS.map(({ value, label }) => (
+            <TouchableOpacity
+              key={value}
+              onPress={() => setGrowingMedium(value)}
+              style={[
+                styles.selectorButtonWrap,
+                growingMedium === value && styles.selectorButtonActive,
+              ]}
+              accessibilityLabel={label}
+            >
+              <Text
+                style={[
+                  styles.selectorButtonText,
+                  growingMedium === value && styles.selectorButtonTextActive,
+                ]}
+              >
+                {label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
         {/* Save button */}
         <TouchableOpacity
           onPress={handleSave}
@@ -442,8 +492,22 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 8,
   },
+  selectorRowWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
   selectorButton: {
     flex: 1,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: "#E5E7EB",
+    backgroundColor: "white",
+    alignItems: "center",
+  },
+  selectorButtonWrap: {
+    width: "31.5%",
     paddingVertical: 10,
     borderRadius: 12,
     borderWidth: 2,

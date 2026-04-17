@@ -24,6 +24,7 @@ import { COLORS } from "@/constants";
 import { supabase } from "@/lib/supabase";
 import { compressImage } from "@/lib/imageUtils";
 import { deviceLanguage } from "@/lib/i18n";
+import { getPotSizes } from "@/lib/units";
 import { usePlantsStore } from "@/store/plants";
 import { useUserStore } from "@/store/user";
 import { classifyError, isConnected, type AppErrorType } from "@/lib/errorHandling";
@@ -67,7 +68,6 @@ const PHOTO_SLOTS: PhotoSlot[] = [
 
 // ─── Option data ──────────────────────────────────────────────────────────────
 
-const POT_SIZE_OPTIONS = ["< 4\"", "4-6\"", "6-8\"", "8-10\"", "> 10\""];
 const POT_MATERIAL_OPTIONS = ["Plastic", "Ceramic", "Terracotta", "Other"];
 const LAST_REPOTTED_OPTIONS = ["Never", "< 6 months", "6-12 months", "1-2 years", "> 2 years"];
 
@@ -158,8 +158,11 @@ export default function RepottingScreen() {
     }, [isPro, existingAnalysis]) // eslint-disable-line react-hooks/exhaustive-deps
   );
 
+  // ── Unit-aware pot size options ─────────────────────────────────────────────
+  const potSizeOptions = getPotSizes(profile?.units ?? 'metric');
+
   // ── Form state ──────────────────────────────────────────────────────────────
-  const [potSize, setPotSize] = useState(POT_SIZE_OPTIONS[1]);
+  const [potSize, setPotSize] = useState(potSizeOptions[1]);
   const [potMaterial, setPotMaterial] = useState(POT_MATERIAL_OPTIONS[0]);
   const [lastRepotted, setLastRepotted] = useState(LAST_REPOTTED_OPTIONS[3]);
   const [selectedSigns, setSelectedSigns] = useState<Set<string>>(new Set());
@@ -411,7 +414,7 @@ export default function RepottingScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{t("repotting.potSize")}</Text>
             <View style={styles.pillRow}>
-              {POT_SIZE_OPTIONS.map((opt) => (
+              {potSizeOptions.map((opt) => (
                 <PillOption key={opt} label={opt} selected={potSize === opt} onPress={() => setPotSize(opt)} />
               ))}
             </View>

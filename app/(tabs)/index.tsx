@@ -44,8 +44,8 @@ function greetingKey(): string {
   return "home.goodEvening";
 }
 
-function formatToday(): string {
-  return new Date().toLocaleDateString("en-US", {
+function formatToday(locale: string): string {
+  return new Date().toLocaleDateString(locale, {
     weekday: "long",
     month: "long",
     day: "numeric",
@@ -334,7 +334,7 @@ function SeasonalTipsCard({
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function HomeScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { profile } = useUserStore();
@@ -430,7 +430,7 @@ export default function HomeScreen() {
           <Text style={styles.greeting}>
             {t(greetingKey())}, {firstName}! 🌿
           </Text>
-          <Text style={styles.date}>{formatToday()}</Text>
+          <Text style={styles.date}>{formatToday(i18n.language)}</Text>
         </View>
         <TouchableOpacity
           style={styles.profileButton}

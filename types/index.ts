@@ -10,6 +10,8 @@ export type CareEventType = "fertilize" | "repot" | "prune" | "mist";
 
 export type DiagnosisSeverity = "healthy" | "warning" | "critical";
 
+export type UnitSystem = 'metric' | 'imperial';
+
 export interface Profile {
   id: string;
   display_name: string | null;
@@ -19,6 +21,7 @@ export interface Profile {
   city: string | null;
   lat: number | null;
   lng: number | null;
+  units: UnitSystem;
   created_at: string;
 }
 

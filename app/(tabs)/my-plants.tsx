@@ -123,7 +123,7 @@ const DEFAULT_FILTER: FilterOption = "all";
 const BANNER_DISMISS_KEY = `weather_banner_dismissed_${new Date().toISOString().slice(0, 10)}`;
 
 export default function MyPlantsScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { isDesktop } = useResponsive();
@@ -263,7 +263,7 @@ export default function MyPlantsScreen() {
                 };
                 rescheduleReminderForPlant(updatedPlant).catch(console.warn);
 
-                const nextDate = new Date(nextWatering).toLocaleDateString("en-US", {
+                const nextDate = new Date(nextWatering).toLocaleDateString(i18n.language, {
                   month: "short",
                   day: "numeric",
                 });

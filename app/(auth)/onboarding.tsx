@@ -15,6 +15,7 @@ import { MapPin, Check } from "lucide-react-native";
 import { supabase } from "@/lib/supabase";
 import { useUserStore } from "@/store/user";
 import { COLORS } from "@/constants";
+import { detectDefaultUnits } from "@/lib/units";
 
 const TOTAL_STEPS = 3;
 
@@ -105,13 +106,14 @@ export default function OnboardingScreen() {
   async function saveLocation(cityName: string, lat: number, lng: number) {
     if (!profile) return;
 
+    const units = detectDefaultUnits();
     const { error } = await supabase
       .from("profiles")
-      .update({ city: cityName, lat, lng })
+      .update({ city: cityName, lat, lng, units })
       .eq("id", profile.id);
 
     if (!error) {
-      setProfile({ ...profile, city: cityName, lat, lng });
+      setProfile({ ...profile, city: cityName, lat, lng, units });
     }
   }
 

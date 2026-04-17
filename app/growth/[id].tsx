@@ -40,14 +40,14 @@ function TimelineEntry({
   prevLog?: GrowthLog;
   isLast: boolean;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   const heightDiff =
     log.height_cm != null && prevLog?.height_cm != null
       ? log.height_cm - prevLog.height_cm
       : null;
 
-  const dateStr = new Date(log.logged_at).toLocaleDateString("en-US", {
+  const dateStr = new Date(log.logged_at).toLocaleDateString(i18n.language, {
     month: "long",
     day: "numeric",
     year: "numeric",

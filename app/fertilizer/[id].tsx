@@ -36,7 +36,7 @@ const FERTILIZER_TYPES: { value: FertilizerType; labelKey: string }[] = [
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function FertilizerScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const navigation = useNavigation();
   const router = useRouter();
@@ -111,7 +111,7 @@ export default function FertilizerScreen() {
         fertilizer_type: selectedType,
       }).catch(console.warn);
 
-      const nextDateStr = nextDate.toLocaleDateString("en-US", {
+      const nextDateStr = nextDate.toLocaleDateString(i18n.language, {
         month: "short",
         day: "numeric",
       });

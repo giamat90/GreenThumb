@@ -15,9 +15,10 @@ import {
   TextInput,
   KeyboardAvoidingView,
 } from "react-native";
-import { LogOut, MapPin, Info, Shield, FileText, Crown, Users, Camera } from "lucide-react-native";
+import { LogOut, MapPin, Info, Shield, FileText, Crown, Users, Camera, Ruler } from "lucide-react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system/legacy";
+import * as Location from "expo-location";
 
 import Constants from "expo-constants";
 import { useRouter } from "expo-router";
@@ -28,6 +29,7 @@ import { useUserStore } from "@/store/user";
 import { COLORS } from "@/constants";
 import { NotificationSettings } from "@/components/ui/NotificationSettings";
 import { compressImage } from "@/lib/imageUtils";
+import type { UnitSystem } from "@/types";
 
 const APP_VERSION: string =
   (Constants.expoConfig?.version as string | undefined) ?? "1.0.0";
@@ -72,6 +74,7 @@ export default function ProfileScreen() {
   const { t } = useTranslation();
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isSavingCity, setIsSavingCity] = useState(false);
+  const [isDetectingLocation, setIsDetectingLocation] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [showCityModal, setShowCityModal] = useState(false);
   const [cityInput, setCityInput] = useState("");
@@ -91,6 +94,16 @@ export default function ProfileScreen() {
     } finally {
       setIsSigningOut(false);
     }
+  }
+
+  async function handleToggleUnits() {
+    if (!profile?.id) return;
+    const newUnits: UnitSystem = profile.units === 'imperial' ? 'metric' : 'imperial';
+    const { error } = await supabase
+      .from("profiles")
+      .update({ units: newUnits })
+      .eq("id", profile.id);
+    if (!error) setProfile({ ...profile, units: newUnits });
   }
 
   function handleEditCity() {
@@ -136,6 +149,40 @@ export default function ProfileScreen() {
       );
     } finally {
       setIsSavingCity(false);
+    }
+  }
+
+  async function handleUseMyLocation() {
+    if (!profile?.id) return;
+    setIsDetectingLocation(true);
+    setCityError(null);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        setCityError(t("profile.locationPermissionDenied"));
+        return;
+      }
+      const loc = await Location.getCurrentPositionAsync({});
+      const [place] = await Location.reverseGeocodeAsync({
+        latitude: loc.coords.latitude,
+        longitude: loc.coords.longitude,
+      });
+      const cityName = place.city ?? place.region ?? place.subregion ?? "";
+      if (!cityName) {
+        setCityError(t("profile.cityNotFound"));
+        return;
+      }
+      const { error } = await supabase
+        .from("profiles")
+        .update({ city: cityName, lat: loc.coords.latitude, lng: loc.coords.longitude })
+        .eq("id", profile.id);
+      if (error) throw error;
+      setProfile({ ...profile, city: cityName, lat: loc.coords.latitude, lng: loc.coords.longitude });
+      setShowCityModal(false);
+    } catch (err) {
+      setCityError(err instanceof Error ? err.message : t("profile.failedToSaveCity"));
+    } finally {
+      setIsDetectingLocation(false);
     }
   }
 
@@ -383,6 +430,15 @@ export default function ProfileScreen() {
         <View style={styles.rowDivider} />
 
         <SettingRow
+          icon={<Ruler size={18} color={COLORS.primary} />}
+          label={t("profile.measurementUnits")}
+          value={profile?.units === 'imperial' ? t("profile.imperial") : t("profile.metric")}
+          onPress={handleToggleUnits}
+        />
+
+        <View style={styles.rowDivider} />
+
+        <SettingRow
           icon={<Info size={18} color={COLORS.primary} />}
           label={t("profile.aboutGreenThumb")}
           value={`v${APP_VERSION}`}
@@ -444,7 +500,32 @@ export default function ProfileScreen() {
           >
             <Pressable style={styles.modalCard} onPress={() => {}}>
               <Text style={styles.modalTitle}>{t("profile.updateCity")}</Text>
-              <Text style={styles.modalSubtitle}>{t("profile.enterCity")}</Text>
+
+              <TouchableOpacity
+                style={[
+                  styles.locationBtn,
+                  (isDetectingLocation || isSavingCity) && styles.locationBtnDisabled,
+                ]}
+                onPress={handleUseMyLocation}
+                disabled={isDetectingLocation || isSavingCity}
+              >
+                {isDetectingLocation ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <MapPin size={16} color="#fff" />
+                )}
+                <Text style={styles.locationBtnText}>
+                  {isDetectingLocation
+                    ? t("profile.detectingLocation")
+                    : t("profile.useMyLocation")}
+                </Text>
+              </TouchableOpacity>
+
+              <View style={styles.dividerRow}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>{t("profile.orEnterManually")}</Text>
+                <View style={styles.dividerLine} />
+              </View>
 
               <TextInput
                 style={styles.modalInput}
@@ -452,7 +533,6 @@ export default function ProfileScreen() {
                 onChangeText={setCityInput}
                 placeholder={t("profile.cityPlaceholder")}
                 placeholderTextColor={COLORS.textSecondary}
-                autoFocus
                 returnKeyType="done"
                 onSubmitEditing={handleSaveCity}
               />
@@ -465,6 +545,7 @@ export default function ProfileScreen() {
                 <TouchableOpacity
                   style={styles.modalCancelBtn}
                   onPress={() => setShowCityModal(false)}
+                  disabled={isDetectingLocation || isSavingCity}
                 >
                   <Text style={styles.modalCancelText}>{t("common.cancel")}</Text>
                 </TouchableOpacity>
@@ -472,10 +553,10 @@ export default function ProfileScreen() {
                 <TouchableOpacity
                   style={[
                     styles.modalSaveBtn,
-                    (!cityInput.trim() || isSavingCity) && styles.modalSaveBtnDisabled,
+                    (!cityInput.trim() || isSavingCity || isDetectingLocation) && styles.modalSaveBtnDisabled,
                   ]}
                   onPress={handleSaveCity}
-                  disabled={!cityInput.trim() || isSavingCity}
+                  disabled={!cityInput.trim() || isSavingCity || isDetectingLocation}
                 >
                   {isSavingCity ? (
                     <ActivityIndicator size="small" color="#fff" />
@@ -809,5 +890,38 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
     color: "#fff",
+  },
+  locationBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: COLORS.primary,
+    paddingVertical: 12,
+    borderRadius: 12,
+    marginBottom: 4,
+  },
+  locationBtnDisabled: {
+    opacity: 0.5,
+  },
+  locationBtnText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#fff",
+  },
+  dividerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: 14,
+    gap: 8,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: COLORS.border,
+  },
+  dividerText: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
   },
 });

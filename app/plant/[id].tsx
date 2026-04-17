@@ -54,18 +54,22 @@ function getNextWateringDate(careProfile: Record<string, unknown> | null): strin
   return next.toISOString();
 }
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-US", {
+function formatDate(iso: string, locale = "en"): string {
+  return new Date(iso).toLocaleDateString(locale, {
     month: "short",
     day: "numeric",
     year: "numeric",
   });
 }
 
-function wateringDateLabel(iso: string, t: (key: string, opts?: Record<string, unknown>) => string): string {
+function wateringDateLabel(
+  iso: string,
+  locale: string,
+  t: (key: string, opts?: Record<string, unknown>) => string
+): string {
   const diff = Date.now() - new Date(iso).getTime();
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-  const dateStr = new Date(iso).toLocaleDateString("en-US", {
+  const dateStr = new Date(iso).toLocaleDateString(locale, {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -73,6 +77,62 @@ function wateringDateLabel(iso: string, t: (key: string, opts?: Record<string, u
   if (days === 0) return `${t("common.today")} · ${dateStr}`;
   if (days === 1) return `${t("common.yesterday")} · ${dateStr}`;
   return dateStr;
+}
+
+/**
+ * Maps common English Plant.id light condition strings to i18n keys.
+ * Falls back to the raw stored value (which may already be localized for
+ * new identifications where Plant.id returns the user's language).
+ */
+function localizeLight(
+  value: string | undefined,
+  t: (key: string) => string
+): string {
+  if (!value) return t("plantDetail.brightIndirect");
+  const lower = value.toLowerCase();
+  if (lower.includes("bright") && (lower.includes("indirect") || lower.includes("filtered") || lower.includes("diffuse")))
+    return t("plantDetail.brightIndirect");
+  if (lower.includes("full sun") || (lower.includes("direct") && lower.includes("sun")))
+    return t("plantDetail.fullSun");
+  if (lower.includes("low light"))
+    return t("plantDetail.lowLight");
+  if (lower.includes("partial shade") || lower.includes("partial sun"))
+    return t("plantDetail.partialShade");
+  if (lower.includes("medium") && lower.includes("light"))
+    return t("plantDetail.mediumLight");
+  // Unknown value — may already be localized (new Plant.id response with language param)
+  return value;
+}
+
+/**
+ * Maps common English soil type strings (Plant.id URL slugs or English labels)
+ * to i18n keys. Handles both old stored English labels and newer slug keys.
+ */
+function localizeSoilType(
+  value: string | undefined,
+  t: (key: string) => string
+): string {
+  if (!value) return t("plantDetail.wellDraining");
+  const lower = value.toLowerCase().replace(/-/g, " ");
+  if (lower === "hydroponic") return t("plantDetail.hydroponic");
+  if (lower === "leca")        return t("plantDetail.leca");
+  if (lower === "moss")        return t("plantDetail.mossSubstrate");
+  if (lower === "bark")        return t("plantDetail.barkMix");
+  if (lower === "coco")        return t("plantDetail.cocoSoil");
+  if (lower.includes("well") || lower.includes("drain"))
+    return t("plantDetail.wellDraining");
+  if (lower.includes("loam"))
+    return t("plantDetail.loamySoil");
+  if (lower.includes("sand"))
+    return t("plantDetail.sandySoil");
+  if (lower.includes("clay"))
+    return t("plantDetail.claySoil");
+  if (lower.includes("moist") || lower.includes("moisture"))
+    return t("plantDetail.moistSoil");
+  if (lower.includes("peat") || lower.includes("peaty"))
+    return t("plantDetail.peatySoil");
+  // Unknown — may already be localized
+  return value;
 }
 
 function healthMessageKey(score: number): string {
@@ -175,7 +235,8 @@ class PlantDetailErrorBoundary extends React.Component<
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 function PlantDetailScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language;
   const { id } = useLocalSearchParams<{ id: string }>();
   const navigation = useNavigation();
   const router = useRouter();
@@ -346,7 +407,7 @@ function PlantDetailScreen() {
         ...prev.slice(0, 4),
       ]);
 
-      const nextDate = new Date(nextWatering).toLocaleDateString("en-US", {
+      const nextDate = new Date(nextWatering).toLocaleDateString(locale, {
         month: "short",
         day: "numeric",
       });
@@ -533,17 +594,17 @@ function PlantDetailScreen() {
             <CareTile
               icon={<Sun size={20} color={COLORS.warning} />}
               label={t("plantDetail.light")}
-              value={careProfile?.light ?? t("plantDetail.brightIndirect")}
+              value={localizeLight(careProfile?.light as string | undefined, t)}
             />
             <CareTile
               icon={<Leaf size={20} color={COLORS.primary} />}
               label={t("plantDetail.soil")}
-              value={careProfile?.soilType ?? t("plantDetail.wellDraining")}
+              value={localizeSoilType(careProfile?.soilType as string | undefined, t)}
             />
             <CareTile
               icon={<Calendar size={20} color={COLORS.textSecondary} />}
               label={t("plantDetail.added")}
-              value={formatDate(plant.created_at)}
+              value={formatDate(plant.created_at, locale)}
             />
           </View>
         </View>
@@ -574,7 +635,7 @@ function PlantDetailScreen() {
                   <Droplets size={16} color={COLORS.secondary} />
                 </View>
                 <Text style={styles.historyLabel}>{t("plantDetail.watered")}</Text>
-                <Text style={styles.historyDate}>{wateringDateLabel(event.watered_at, t)}</Text>
+                <Text style={styles.historyDate}>{wateringDateLabel(event.watered_at, locale, t)}</Text>
               </View>
             ))
           )}
@@ -631,7 +692,7 @@ function PlantDetailScreen() {
                   <Text style={styles.historyLabel}>
                     {result?.condition ?? d.severity}
                   </Text>
-                  <Text style={styles.historyDate}>{wateringDateLabel(d.created_at, t)}</Text>
+                  <Text style={styles.historyDate}>{wateringDateLabel(d.created_at, locale, t)}</Text>
                   <ChevronRight size={16} color={COLORS.textSecondary} />
                 </TouchableOpacity>
               );
@@ -666,7 +727,7 @@ function PlantDetailScreen() {
               const overallEmoji =
                 p.overall === "good" ? "✅" :
                 p.overall === "warning" ? "⚠️" : "❌";
-              const shortDate = new Date(p.created_at).toLocaleDateString("en-US", {
+              const shortDate = new Date(p.created_at).toLocaleDateString(locale, {
                 month: "short",
                 day: "numeric",
               });
@@ -702,7 +763,7 @@ function PlantDetailScreen() {
         {(() => {
           const intervalDays = plant.fertilizer_interval_days ?? calculateFertilizerInterval(plant.species, new Date().getMonth());
           const nextFertDate = plant.next_fertilizer_at
-            ? new Date(plant.next_fertilizer_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+            ? new Date(plant.next_fertilizer_at).toLocaleDateString(locale, { month: "short", day: "numeric" })
             : t("plantDetail.notSet");
           const isOverdue = plant.next_fertilizer_at && new Date(plant.next_fertilizer_at) <= new Date();
           return (
@@ -757,7 +818,7 @@ function PlantDetailScreen() {
                 <Text style={styles.historyLabel}>
                   {f.fertilizer_type ? f.fertilizer_type.charAt(0).toUpperCase() + f.fertilizer_type.slice(1) : t("plantDetail.fertilized")}
                 </Text>
-                <Text style={styles.historyDate}>{wateringDateLabel(f.fertilized_at, t)}</Text>
+                <Text style={styles.historyDate}>{wateringDateLabel(f.fertilized_at, locale, t)}</Text>
               </View>
             ))
           )}
@@ -795,7 +856,7 @@ function PlantDetailScreen() {
               const recLabel =
                 r.recommendation === "repot_now" ? t("repotting.repotNow") :
                 r.recommendation === "repot_soon" ? t("repotting.repotSoon") : t("repotting.wait");
-              const shortDate = new Date(r.created_at).toLocaleDateString("en-US", {
+              const shortDate = new Date(r.created_at).toLocaleDateString(locale, {
                 month: "short", day: "numeric",
               });
               return (
@@ -853,7 +914,7 @@ function PlantDetailScreen() {
               const recLabel =
                 p.recommendation === "prune_now" ? t("pruning.pruneNow") :
                 p.recommendation === "prune_soon" ? t("pruning.pruneSoon") : t("pruning.wait");
-              const shortDate = new Date(p.created_at).toLocaleDateString("en-US", {
+              const shortDate = new Date(p.created_at).toLocaleDateString(locale, {
                 month: "short", day: "numeric",
               });
               return (
@@ -920,7 +981,7 @@ function PlantDetailScreen() {
                 style={styles.growthPreviewRow}
                 onPress={() => router.push({ pathname: "/growth/[id]", params: { id: plant.id } })}
                 activeOpacity={0.7}
-                accessibilityLabel={`Growth entry from ${formatDate(log.logged_at)}`}
+                accessibilityLabel={`Growth entry from ${formatDate(log.logged_at, locale)}`}
                 accessibilityRole="button"
               >
                 {log.photo_url ? (
@@ -931,7 +992,7 @@ function PlantDetailScreen() {
                   </View>
                 )}
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.historyDate}>{formatDate(log.logged_at)}</Text>
+                  <Text style={styles.historyDate}>{formatDate(log.logged_at, locale)}</Text>
                   {log.height_cm != null && (
                     <Text style={styles.historyLabel}>📏 {log.height_cm} cm</Text>
                   )}
