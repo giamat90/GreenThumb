@@ -29,7 +29,18 @@
     "weatherUnavailable": "Météo indisponible",
     "humidity": "Humidité",
     "rain24h": "Pluie (24h)",
-    "tomorrow": "Demain"
+    "tomorrow": "Demain",
+    "conditionClear": "Dégagé",
+    "conditionClouds": "Nuageux",
+    "conditionRain": "Pluie",
+    "conditionDrizzle": "Bruine",
+    "conditionSnow": "Neige",
+    "conditionThunderstorm": "Orage",
+    "conditionMist": "Brouillard",
+    "weatherBannerRain": "🌧️ Pluie prévue — arrosage des plantes extérieures ajusté",
+    "weatherBannerHeat": "🌡️ Vague de chaleur — les plantes peuvent avoir besoin de plus d'eau",
+    "weatherBannerCold": "❄️ Coup de froid — réduction de la fréquence d'arrosage",
+    "weatherSmartDescription": "Adapter l'arrosage selon la météo en temps réel"
   },
   "myPlants": {
     "myPlants": "Mes plantes",
@@ -620,7 +631,9 @@
     "reminderTime": "Heure du rappel",
     "sendTest": "🔔 Envoyer une notification test",
     "enabled": "Activé",
-    "disabled": "Désactivé"
+    "disabled": "Désactivé",
+    "communityNotifications": "Notifications communauté",
+    "communityNotificationsDesc": "J'aime, commentaires et nouveaux abonnés"
   },
   "community": {
     "tab": "Communauté",

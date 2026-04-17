@@ -19,6 +19,7 @@ import { ArrowLeft, Heart, Send, Share2 } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
 import { COLORS } from "@/constants";
+import { sendCommunityNotification } from "@/lib/communityNotifications";
 import { commentCountUpdates } from "@/lib/communityUpdates";
 import { supabase } from "@/lib/supabase";
 import { useUserStore } from "@/store/user";
@@ -147,6 +148,7 @@ export default function PostDetailScreen() {
         await supabase.from("post_likes").delete().eq("user_id", profile.id).eq("post_id", post.id);
       } else {
         await supabase.from("post_likes").insert({ user_id: profile.id, post_id: post.id });
+        sendCommunityNotification({ type: "like", postId: post.id });
       }
     } catch {
       setPost((p) => p ? { ...p, is_liked: wasLiked, likes_count: p.likes_count + (wasLiked ? 1 : -1) } : p);
@@ -176,6 +178,7 @@ export default function PostDetailScreen() {
       setPost((p) => p ? { ...p, comments_count: p.comments_count + 1 } : p);
       commentCountUpdates.set(post.id, post.comments_count + 1);
       setCommentText("");
+      sendCommunityNotification({ type: "comment", postId: post.id, commentText: commentText.trim() });
     } catch (err) {
       console.warn("post detail: comment failed", err);
     } finally {

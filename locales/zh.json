@@ -29,7 +29,18 @@
     "weatherUnavailable": "天气信息不可用",
     "humidity": "湿度",
     "rain24h": "降雨量（24小时）",
-    "tomorrow": "明天"
+    "tomorrow": "明天",
+    "conditionClear": "晴天",
+    "conditionClouds": "多云",
+    "conditionRain": "雨",
+    "conditionDrizzle": "毛毛雨",
+    "conditionSnow": "雪",
+    "conditionThunderstorm": "雷暴",
+    "conditionMist": "薄雾",
+    "weatherBannerRain": "🌧️ 预计有雨 — 室外植物浇水已调整",
+    "weatherBannerHeat": "🌡️ 热浪来袭 — 植物可能需要额外浇水",
+    "weatherBannerCold": "❄️ 寒流来袭 — 减少浇水频率",
+    "weatherSmartDescription": "根据实时天气调整浇水"
   },
   "myPlants": {
     "myPlants": "我的植物",
@@ -620,7 +631,9 @@
     "reminderTime": "提醒时间",
     "sendTest": "🔔 发送测试通知",
     "enabled": "已启用",
-    "disabled": "已禁用"
+    "disabled": "已禁用",
+    "communityNotifications": "社区通知",
+    "communityNotificationsDesc": "点赞、评论和新关注者"
   },
   "community": {
     "tab": "社区",

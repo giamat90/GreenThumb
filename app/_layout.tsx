@@ -251,6 +251,8 @@ export default function RootLayout() {
           plantId?: string;
           type?: string;
           condition?: string;
+          postId?: string;
+          actorId?: string;
         };
         if (data?.type === "watering" && data.plantId) {
           router.push(`/plant/${data.plantId}`);
@@ -259,6 +261,13 @@ export default function RootLayout() {
             pathname: "/diagnosis/[id]",
             params: { id: data.plantId, isFollowUp: "true", previousCondition: data.condition ?? "" },
           });
+        } else if (
+          (data?.type === "community_like" || data?.type === "community_comment") &&
+          data.postId
+        ) {
+          router.push({ pathname: "/community/post/[id]", params: { id: data.postId } });
+        } else if (data?.type === "community_follow" && data.actorId) {
+          router.push({ pathname: "/community/profile/[id]", params: { id: data.actorId } });
         }
       });
 

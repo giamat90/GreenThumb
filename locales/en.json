@@ -29,7 +29,18 @@
     "weatherUnavailable": "Weather unavailable",
     "humidity": "Humidity",
     "rain24h": "Rain (24h)",
-    "tomorrow": "Tomorrow"
+    "tomorrow": "Tomorrow",
+    "conditionClear": "Clear",
+    "conditionClouds": "Clouds",
+    "conditionRain": "Rain",
+    "conditionDrizzle": "Drizzle",
+    "conditionSnow": "Snow",
+    "conditionThunderstorm": "Thunderstorm",
+    "conditionMist": "Mist",
+    "weatherBannerRain": "🌧️ Rain expected — outdoor plants watering adjusted",
+    "weatherBannerHeat": "🌡️ Heat wave — plants may need extra water",
+    "weatherBannerCold": "❄️ Cold snap — reducing watering frequency",
+    "weatherSmartDescription": "Adjust watering based on live weather"
   },
   "myPlants": {
     "myPlants": "My Plants",
@@ -620,7 +631,9 @@
     "reminderTime": "Reminder Time",
     "sendTest": "🔔 Send Test Notification",
     "enabled": "Enabled",
-    "disabled": "Disabled"
+    "disabled": "Disabled",
+    "communityNotifications": "Community Notifications",
+    "communityNotificationsDesc": "Likes, comments and new followers"
   },
   "community": {
     "tab": "Community",

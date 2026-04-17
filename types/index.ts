@@ -22,6 +22,7 @@ export interface Profile {
   lat: number | null;
   lng: number | null;
   units: UnitSystem;
+  community_notifications?: boolean;
   created_at: string;
 }
 

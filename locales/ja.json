@@ -29,7 +29,18 @@
     "weatherUnavailable": "天気情報なし",
     "humidity": "湿度",
     "rain24h": "雨量（24時間）",
-    "tomorrow": "明日"
+    "tomorrow": "明日",
+    "conditionClear": "晴れ",
+    "conditionClouds": "曇り",
+    "conditionRain": "雨",
+    "conditionDrizzle": "小雨",
+    "conditionSnow": "雪",
+    "conditionThunderstorm": "雷雨",
+    "conditionMist": "霧",
+    "weatherBannerRain": "🌧️ 雨の予報 — 屋外植物の水やりを調整しました",
+    "weatherBannerHeat": "🌡️ 熱波 — 植物に追加の水が必要な場合があります",
+    "weatherBannerCold": "❄️ 急激な冷え込み — 水やり頻度を減らしています",
+    "weatherSmartDescription": "リアルタイムの天気に基づいて水やりを調整"
   },
   "myPlants": {
     "myPlants": "マイプランツ",
@@ -620,7 +631,9 @@
     "reminderTime": "リマインダー時刻",
     "sendTest": "🔔 テスト通知を送信",
     "enabled": "有効",
-    "disabled": "無効"
+    "disabled": "無効",
+    "communityNotifications": "コミュニティ通知",
+    "communityNotificationsDesc": "いいね、コメント、新しいフォロワー"
   },
   "community": {
     "tab": "コミュニティ",

@@ -57,6 +57,13 @@ export function useNotifications(): UseNotificationsResult {
           lightColor: "#6BA83A",
           sound: "default",
         });
+        await Notifications.setNotificationChannelAsync("community", {
+          name: "Community",
+          importance: Notifications.AndroidImportance.DEFAULT,
+          vibrationPattern: [0, 150, 150, 150],
+          lightColor: "#6BA83A",
+          sound: "default",
+        });
       } catch (err) {
         console.warn("useNotifications: could not set notification channel", err);
       }

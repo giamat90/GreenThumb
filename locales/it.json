@@ -29,7 +29,18 @@
     "weatherUnavailable": "Meteo non disponibile",
     "humidity": "Umidità",
     "rain24h": "Pioggia (24h)",
-    "tomorrow": "Domani"
+    "tomorrow": "Domani",
+    "conditionClear": "Sereno",
+    "conditionClouds": "Nuvoloso",
+    "conditionRain": "Pioggia",
+    "conditionDrizzle": "Pioggerella",
+    "conditionSnow": "Neve",
+    "conditionThunderstorm": "Temporale",
+    "conditionMist": "Nebbia",
+    "weatherBannerRain": "🌧️ Pioggia prevista — irrigazione piante esterne adattata",
+    "weatherBannerHeat": "🌡️ Ondata di caldo — le piante potrebbero aver bisogno di più acqua",
+    "weatherBannerCold": "❄️ Freddo improvviso — riduzione della frequenza di irrigazione",
+    "weatherSmartDescription": "Adatta l'irrigazione in base al meteo in tempo reale"
   },
   "myPlants": {
     "myPlants": "Le mie piante",
@@ -620,7 +631,9 @@
     "reminderTime": "Orario promemoria",
     "sendTest": "🔔 Invia notifica di prova",
     "enabled": "Attivo",
-    "disabled": "Disattivo"
+    "disabled": "Disattivo",
+    "communityNotifications": "Notifiche community",
+    "communityNotificationsDesc": "Mi piace, commenti e nuovi follower"
   },
   "community": {
     "tab": "Comunità",

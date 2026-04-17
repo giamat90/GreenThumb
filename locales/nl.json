@@ -29,7 +29,18 @@
     "weatherUnavailable": "Weer niet beschikbaar",
     "humidity": "Luchtvochtigheid",
     "rain24h": "Regen (24u)",
-    "tomorrow": "Morgen"
+    "tomorrow": "Morgen",
+    "conditionClear": "Helder",
+    "conditionClouds": "Bewolkt",
+    "conditionRain": "Regen",
+    "conditionDrizzle": "Motregen",
+    "conditionSnow": "Sneeuw",
+    "conditionThunderstorm": "Onweer",
+    "conditionMist": "Mist",
+    "weatherBannerRain": "🌧️ Regen verwacht — bewatering buitenplanten aangepast",
+    "weatherBannerHeat": "🌡️ Hittegolf — planten hebben mogelijk meer water nodig",
+    "weatherBannerCold": "❄️ Koudegolf — bewateringsfrequentie verlaagd",
+    "weatherSmartDescription": "Bewatering aanpassen op basis van live weersomstandigheden"
   },
   "myPlants": {
     "myPlants": "Mijn Planten",
@@ -620,7 +631,9 @@
     "reminderTime": "Herinneringstijd",
     "sendTest": "🔔 Testmelding sturen",
     "enabled": "Ingeschakeld",
-    "disabled": "Uitgeschakeld"
+    "disabled": "Uitgeschakeld",
+    "communityNotifications": "Community-meldingen",
+    "communityNotificationsDesc": "Likes, reacties en nieuwe volgers"
   },
   "community": {
     "tab": "Community",

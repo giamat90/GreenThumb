@@ -14,11 +14,13 @@ import {
 } from "react-native";
 import type { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Bell, CalendarDays, Clock, RefreshCw } from "lucide-react-native";
+import { Bell, CalendarDays, Clock, Heart, RefreshCw } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
 import { COLORS } from "@/constants";
 import { useProGate } from "@/hooks/useProGate";
+import { supabase } from "@/lib/supabase";
+import { useUserStore } from "@/store/user";
 import { UpgradeModal } from "@/components/ui/UpgradeModal";
 import { usePlantsStore } from "@/store/plants";
 import {
@@ -70,7 +72,12 @@ export function NotificationSettings() {
   const [calendarSyncing, setCalendarSyncing] = useState(false);
   const [lastSynced, setLastSynced] = useState<string | null>(null);
 
-  // Load persisted preferences on mount
+  // ── Community notifications state ──────────────────────────────────────────
+  const { profile, setProfile } = useUserStore();
+  const [communityEnabled, setCommunityEnabled] = useState(true);
+  const [isSavingCommunity, setIsSavingCommunity] = useState(false);
+
+  // Load persisted preferences on mount (and re-sync when profile loads)
   useEffect(() => {
     async function load() {
       const [enabledRaw, hourRaw, minuteRaw, calRaw, lastRaw] = await Promise.all([
@@ -85,9 +92,10 @@ export function NotificationSettings() {
       if (minuteRaw) setReminderMinute(parseInt(minuteRaw, 10));
       setCalendarEnabled(calRaw === "true");
       setLastSynced(lastRaw);
+      setCommunityEnabled(profile?.community_notifications !== false);
     }
     load();
-  }, []);
+  }, [profile]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleToggle(value: boolean) {
     setEnabled(value);
@@ -148,6 +156,26 @@ export function NotificationSettings() {
       Alert.alert(t("common.error"), t("calendar.calendarSyncFailed"));
     } finally {
       setCalendarSyncing(false);
+    }
+  }
+
+  async function handleCommunityToggle(value: boolean) {
+    if (!profile?.id) return;
+    setCommunityEnabled(value);
+    setIsSavingCommunity(true);
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ community_notifications: value })
+        .eq("id", profile.id);
+      if (error) throw error;
+      setProfile({ ...profile, community_notifications: value });
+    } catch (err) {
+      // Revert on failure
+      setCommunityEnabled(!value);
+      console.warn("NotificationSettings: failed to save community_notifications", err);
+    } finally {
+      setIsSavingCommunity(false);
     }
   }
 
@@ -314,6 +342,35 @@ export function NotificationSettings() {
             )}
           </>
         )}
+      </View>
+
+      {/* ── Community Notifications section ───────────────────────────────── */}
+      <Text style={[styles.sectionTitle, { marginTop: 24 }]}>{t("community.tab")}</Text>
+      <View style={styles.card}>
+        <View style={styles.row}>
+          <View style={styles.rowLeft}>
+            <View style={styles.iconWrap}>
+              <Heart size={18} color={COLORS.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.rowLabel}>{t("notifications.communityNotifications")}</Text>
+              <Text style={styles.rowSubLabel}>
+                {t("notifications.communityNotificationsDesc")}
+              </Text>
+            </View>
+          </View>
+          {isSavingCommunity ? (
+            <ActivityIndicator size="small" color={COLORS.primary} />
+          ) : (
+            <Switch
+              value={communityEnabled}
+              onValueChange={handleCommunityToggle}
+              trackColor={{ false: "#E5E7EB", true: COLORS.secondary }}
+              thumbColor="#fff"
+              accessibilityLabel="Toggle community notifications"
+            />
+          )}
+        </View>
       </View>
 
       {/* ── Calendar Sync section ─────────────────────────────────────────── */}

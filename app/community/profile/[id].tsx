@@ -17,6 +17,7 @@ import { ArrowLeft, Leaf } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
 import { COLORS } from "@/constants";
+import { sendCommunityNotification } from "@/lib/communityNotifications";
 import { supabase } from "@/lib/supabase";
 import { useUserStore } from "@/store/user";
 import type { CommunityPost, UserProfile } from "@/types";
@@ -135,6 +136,7 @@ export default function PublicProfileScreen() {
         if (isFollowedBy) setUserPlants([]);
       } else {
         await supabase.from("follows").insert({ follower_id: currentProfile.id, following_id: userId });
+        sendCommunityNotification({ type: "follow", targetUserId: userId });
         // If now mutual, re-fetch plants
         if (isFollowedBy) {
           const { data: plantsData } = await supabase

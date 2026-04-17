@@ -29,7 +29,18 @@
     "weatherUnavailable": "Clima indisponível",
     "humidity": "Umidade",
     "rain24h": "Chuva (24h)",
-    "tomorrow": "Amanhã"
+    "tomorrow": "Amanhã",
+    "conditionClear": "Céu limpo",
+    "conditionClouds": "Nublado",
+    "conditionRain": "Chuva",
+    "conditionDrizzle": "Garoa",
+    "conditionSnow": "Neve",
+    "conditionThunderstorm": "Tempestade",
+    "conditionMist": "Névoa",
+    "weatherBannerRain": "🌧️ Chuva esperada — rega das plantas ao ar livre ajustada",
+    "weatherBannerHeat": "🌡️ Onda de calor — as plantas podem precisar de mais água",
+    "weatherBannerCold": "❄️ Queda de temperatura — reduzindo a frequência de rega",
+    "weatherSmartDescription": "Ajuste a rega com base no clima em tempo real"
   },
   "myPlants": {
     "myPlants": "Minhas plantas",
@@ -620,7 +631,9 @@
     "reminderTime": "Horário do lembrete",
     "sendTest": "🔔 Enviar notificação de teste",
     "enabled": "Ativado",
-    "disabled": "Desativado"
+    "disabled": "Desativado",
+    "communityNotifications": "Notificações da comunidade",
+    "communityNotificationsDesc": "Curtidas, comentários e novos seguidores"
   },
   "community": {
     "tab": "Comunidade",
