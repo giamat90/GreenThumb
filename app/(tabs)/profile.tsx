@@ -99,11 +99,17 @@ export default function ProfileScreen() {
   async function handleToggleUnits() {
     if (!profile?.id) return;
     const newUnits: UnitSystem = profile.units === 'imperial' ? 'metric' : 'imperial';
+    // Optimistic update
+    setProfile({ ...profile, units: newUnits });
     const { error } = await supabase
       .from("profiles")
       .update({ units: newUnits })
       .eq("id", profile.id);
-    if (!error) setProfile({ ...profile, units: newUnits });
+    if (error) {
+      // Revert on failure
+      setProfile({ ...profile, units: profile.units });
+      Alert.alert(t("common.error"), error.message);
+    }
   }
 
   function handleEditCity() {
