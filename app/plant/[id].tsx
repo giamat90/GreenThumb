@@ -92,6 +92,8 @@ function localizeLight(
   const lower = value.toLowerCase();
   if (lower.includes("bright") && (lower.includes("indirect") || lower.includes("filtered") || lower.includes("diffuse")))
     return t("plantDetail.brightIndirect");
+  if (lower.includes("indirect"))
+    return t("plantDetail.brightIndirect");
   if (lower.includes("full sun") || (lower.includes("direct") && lower.includes("sun")))
     return t("plantDetail.fullSun");
   if (lower.includes("low light"))
