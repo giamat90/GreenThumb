@@ -566,17 +566,17 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   modalCard: {
-    width: "100%",
+    width: SCREEN_WIDTH - 48,
     backgroundColor: "#fff",
     borderRadius: 20,
     overflow: "hidden",
   },
   modalPhoto: {
-    width: "100%",
+    width: SCREEN_WIDTH - 48,
     height: 280,
   },
   modalPhotoPlaceholder: {
-    width: "100%",
+    width: SCREEN_WIDTH - 48,
     height: 280,
     backgroundColor: COLORS.lightgreen,
     alignItems: "center",
