@@ -9,10 +9,11 @@ import { corsHeaders } from "./cors.ts";
 const EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send";
 
 interface RequestBody {
-  type: "like" | "comment" | "follow";
-  postId?: string;       // required for like / comment
-  targetUserId?: string; // required for follow
-  commentText?: string;  // optional for comment
+  type: "like" | "comment" | "follow" | "kudos";
+  postId?: string;        // required for like / comment
+  targetUserId?: string;  // required for follow
+  plantId?: string;       // required for kudos
+  commentText?: string;   // optional for comment
 }
 
 serve(async (req: Request) => {
@@ -46,7 +47,8 @@ serve(async (req: Request) => {
 
     // ── 2. Parse body ──────────────────────────────────────────────────────
     const body: RequestBody = await req.json();
-    const { type, postId, targetUserId, commentText } = body;
+    const { type, postId, targetUserId, plantId, commentText } = body;
+    let plantName: string | null = null;
 
     // ── 3. Determine recipientId ───────────────────────────────────────────
     let recipientId: string | null = null;
@@ -72,6 +74,21 @@ serve(async (req: Request) => {
         });
       }
       recipientId = targetUserId;
+    } else if (type === "kudos") {
+      if (!plantId) {
+        return new Response(JSON.stringify({ error: "plantId required" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { data: plant } = await admin
+        .from("plants")
+        .select("user_id, name")
+        .eq("id", plantId)
+        .maybeSingle();
+      const p = plant as { user_id: string; name: string | null } | null;
+      recipientId = p?.user_id ?? null;
+      plantName = p?.name ?? "your plant";
     }
 
     if (!recipientId) {
@@ -146,10 +163,15 @@ serve(async (req: Request) => {
       notifBody = `${handle}: ${preview}`;
       notifType = "community_comment";
       notifData.postId = postId!;
-    } else {
+    } else if (type === "follow") {
       title = "👤 New follower";
       notifBody = `${handle} started following you`;
       notifType = "community_follow";
+    } else {
+      title = "🌱 New kudos";
+      notifBody = `${handle} gave kudos to ${plantName ?? "your plant"}`;
+      notifType = "community_kudos";
+      notifData.plantId = plantId!;
     }
 
     notifData.type = notifType;

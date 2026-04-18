@@ -231,7 +231,8 @@
     "newFertilizer": "Bemesting registreren",
     "newRepotting": "Nieuwe verpotcheck",
     "newPruning": "Nieuwe snoeicheck",
-    "newGrowth": "Groei registreren"
+    "newGrowth": "Groei registreren",
+    "kudosReceived": "Ontvangen kudos"
   },
   "profile": {
     "profile": "Profiel",
@@ -689,7 +690,10 @@
     "sharedVia": "Gedeeld via GreenThumb - AI Plantenverzorging\nhttps://play.google.com/store/apps/details?id=com.giamat90.greenthumb",
     "plantsSection": "Planten",
     "noPlantsYet": "Nog geen planten",
-    "mutualFollowersOnly": "Zichtbaar voor wederzijdse volgers"
+    "mutualFollowersOnly": "Zichtbaar voor wederzijdse volgers",
+    "kudos": "Kudos",
+    "giveKudos": "Kudos geven",
+    "removeKudos": "Kudos verwijderen"
   },
   "seasonal": {
     "seasonalTips": "Seizoenstips",

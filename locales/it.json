@@ -231,7 +231,8 @@
     "newFertilizer": "Registra concimazione",
     "newRepotting": "Nuovo controllo rinvaso",
     "newPruning": "Nuovo controllo potatura",
-    "newGrowth": "Registra crescita"
+    "newGrowth": "Registra crescita",
+    "kudosReceived": "Kudos ricevuti"
   },
   "profile": {
     "profile": "Profilo",
@@ -689,7 +690,10 @@
     "sharedVia": "Condiviso da GreenThumb - Cura delle Piante con AI\nhttps://play.google.com/store/apps/details?id=com.giamat90.greenthumb",
     "plantsSection": "Piante",
     "noPlantsYet": "Nessuna pianta ancora",
-    "mutualFollowersOnly": "Visibile ai follower reciproci"
+    "mutualFollowersOnly": "Visibile ai follower reciproci",
+    "kudos": "Kudos",
+    "giveKudos": "Invia kudos",
+    "removeKudos": "Rimuovi kudos"
   },
   "seasonal": {
     "seasonalTips": "Consigli Stagionali",

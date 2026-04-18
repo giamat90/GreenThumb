@@ -231,7 +231,8 @@
     "newFertilizer": "Düngung erfassen",
     "newRepotting": "Neuer Umtopf-Check",
     "newPruning": "Neuer Schnitt-Check",
-    "newGrowth": "Wachstum erfassen"
+    "newGrowth": "Wachstum erfassen",
+    "kudosReceived": "Erhaltene Kudos"
   },
   "profile": {
     "profile": "Profil",
@@ -689,7 +690,10 @@
     "sharedVia": "Geteilt von GreenThumb - KI-Pflanzenpflege\nhttps://play.google.com/store/apps/details?id=com.giamat90.greenthumb",
     "plantsSection": "Pflanzen",
     "noPlantsYet": "Noch keine Pflanzen",
-    "mutualFollowersOnly": "Nur für gegenseitige Follower sichtbar"
+    "mutualFollowersOnly": "Nur für gegenseitige Follower sichtbar",
+    "kudos": "Kudos",
+    "giveKudos": "Kudos geben",
+    "removeKudos": "Kudos entfernen"
   },
   "seasonal": {
     "seasonalTips": "Saisonale Tipps",

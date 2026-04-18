@@ -3,7 +3,8 @@ import { supabase } from "@/lib/supabase";
 type CommunityNotifPayload =
   | { type: "like"; postId: string }
   | { type: "comment"; postId: string; commentText: string }
-  | { type: "follow"; targetUserId: string };
+  | { type: "follow"; targetUserId: string }
+  | { type: "kudos"; plantId: string };
 
 /**
  * Fire-and-forget call to the notify-community edge function.

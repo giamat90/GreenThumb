@@ -13,11 +13,12 @@ import {
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useNavigation } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ArrowLeft, Leaf } from "lucide-react-native";
+import { ArrowLeft, Leaf, Sprout } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
 import { COLORS } from "@/constants";
 import { sendCommunityNotification } from "@/lib/communityNotifications";
+import { fetchKudoedPlantIds, togglePlantKudos } from "@/lib/plantKudos";
 import { supabase } from "@/lib/supabase";
 import { useUserStore } from "@/store/user";
 import type { CommunityPost, UserProfile } from "@/types";
@@ -31,6 +32,7 @@ type PlantPreview = {
   species: string | null;
   photo_url: string | null;
   health_score: number;
+  kudos_count: number;
 };
 
 export default function PublicProfileScreen() {
@@ -46,6 +48,7 @@ export default function PublicProfileScreen() {
   const [isFollowing, setIsFollowing] = useState(false);
   const [isFollowedBy, setIsFollowedBy] = useState(false);
   const [userPlants, setUserPlants] = useState<PlantPreview[]>([]);
+  const [kudoedPlantIds, setKudoedPlantIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [followLoading, setFollowLoading] = useState(false);
 
@@ -106,12 +109,18 @@ export default function PublicProfileScreen() {
       if (isOwnProfile || isMutual) {
         const { data: plantsData } = await supabase
           .from("plants")
-          .select("id, name, species, photo_url, health_score")
+          .select("id, name, species, photo_url, health_score, kudos_count")
           .eq("user_id", userId)
           .order("created_at", { ascending: false });
-        setUserPlants((plantsData as PlantPreview[]) ?? []);
+        const plants = (plantsData ?? []) as PlantPreview[];
+        setUserPlants(plants);
+        if (!isOwnProfile && plants.length > 0) {
+          const kudoed = await fetchKudoedPlantIds(currentProfile.id, plants.map((p) => p.id));
+          setKudoedPlantIds(kudoed);
+        }
       } else {
         setUserPlants([]);
+        setKudoedPlantIds(new Set());
       }
     } catch (err) {
       console.warn("profile: fetch failed", err);
@@ -141,10 +150,15 @@ export default function PublicProfileScreen() {
         if (isFollowedBy) {
           const { data: plantsData } = await supabase
             .from("plants")
-            .select("id, name, species, photo_url, health_score")
+            .select("id, name, species, photo_url, health_score, kudos_count")
             .eq("user_id", userId)
             .order("created_at", { ascending: false });
-          setUserPlants((plantsData as PlantPreview[]) ?? []);
+          const plants = (plantsData ?? []) as PlantPreview[];
+          setUserPlants(plants);
+          if (plants.length > 0) {
+            const kudoed = await fetchKudoedPlantIds(currentProfile.id, plants.map((p) => p.id));
+            setKudoedPlantIds(kudoed);
+          }
         }
       }
     } catch {
@@ -153,6 +167,36 @@ export default function PublicProfileScreen() {
       setFollowLoading(false);
     }
   }, [currentProfile, userId, isFollowing, isFollowedBy]);
+
+  const handlePlantKudos = useCallback(async (plant: PlantPreview) => {
+    if (!currentProfile || isOwnProfile) return;
+    const wasKudoed = kudoedPlantIds.has(plant.id);
+    const next = new Set(kudoedPlantIds);
+    if (wasKudoed) next.delete(plant.id); else next.add(plant.id);
+    setKudoedPlantIds(next);
+    setUserPlants((prev) =>
+      prev.map((p) =>
+        p.id === plant.id
+          ? { ...p, kudos_count: p.kudos_count + (wasKudoed ? -1 : 1) }
+          : p
+      )
+    );
+    try {
+      await togglePlantKudos(plant.id, currentProfile.id, wasKudoed);
+      if (!wasKudoed) {
+        sendCommunityNotification({ type: "kudos", plantId: plant.id });
+      }
+    } catch {
+      setKudoedPlantIds(kudoedPlantIds);
+      setUserPlants((prev) =>
+        prev.map((p) =>
+          p.id === plant.id
+            ? { ...p, kudos_count: p.kudos_count + (wasKudoed ? 1 : -1) }
+            : p
+        )
+      );
+    }
+  }, [currentProfile, isOwnProfile, kudoedPlantIds]);
 
   if (loading) {
     return (
@@ -245,37 +289,56 @@ export default function PublicProfileScreen() {
                   showsHorizontalScrollIndicator={false}
                   contentContainerStyle={styles.plantsRow}
                 >
-                  {userPlants.map((plant) => (
-                    <View key={plant.id} style={styles.plantCard}>
-                      {plant.photo_url ? (
-                        <Image source={{ uri: plant.photo_url }} style={styles.plantCardPhoto} />
-                      ) : (
-                        <View style={styles.plantCardPhotoPlaceholder}>
-                          <Leaf size={24} color={COLORS.primary} />
+                  {userPlants.map((plant) => {
+                    const isKudoed = kudoedPlantIds.has(plant.id);
+                    return (
+                      <View key={plant.id} style={styles.plantCard}>
+                        {plant.photo_url ? (
+                          <Image source={{ uri: plant.photo_url }} style={styles.plantCardPhoto} />
+                        ) : (
+                          <View style={styles.plantCardPhotoPlaceholder}>
+                            <Leaf size={24} color={COLORS.primary} />
+                          </View>
+                        )}
+                        <Text style={styles.plantCardName} numberOfLines={1}>{plant.name}</Text>
+                        {plant.species ? (
+                          <Text style={styles.plantCardSpecies} numberOfLines={1}>{plant.species}</Text>
+                        ) : null}
+                        <View style={styles.plantCardHealthBar}>
+                          <View
+                            style={[
+                              styles.plantCardHealthFill,
+                              {
+                                width: `${plant.health_score}%` as `${number}%`,
+                                backgroundColor:
+                                  plant.health_score >= 70
+                                    ? COLORS.primary
+                                    : plant.health_score >= 40
+                                    ? "#F59E0B"
+                                    : COLORS.danger,
+                              },
+                            ]}
+                          />
                         </View>
-                      )}
-                      <Text style={styles.plantCardName} numberOfLines={1}>{plant.name}</Text>
-                      {plant.species ? (
-                        <Text style={styles.plantCardSpecies} numberOfLines={1}>{plant.species}</Text>
-                      ) : null}
-                      <View style={styles.plantCardHealthBar}>
-                        <View
-                          style={[
-                            styles.plantCardHealthFill,
-                            {
-                              width: `${plant.health_score}%` as `${number}%`,
-                              backgroundColor:
-                                plant.health_score >= 70
-                                  ? COLORS.primary
-                                  : plant.health_score >= 40
-                                  ? "#F59E0B"
-                                  : COLORS.danger,
-                            },
-                          ]}
-                        />
+                        {/* Kudos row */}
+                        <TouchableOpacity
+                          style={styles.plantCardKudosRow}
+                          onPress={isOwnProfile ? undefined : () => handlePlantKudos(plant)}
+                          activeOpacity={isOwnProfile ? 1 : 0.7}
+                          accessibilityRole={isOwnProfile ? "none" : "button"}
+                        >
+                          <Sprout
+                            size={12}
+                            color={isKudoed ? COLORS.primary : COLORS.textSecondary}
+                            fill={isKudoed ? COLORS.primary : "transparent"}
+                          />
+                          <Text style={[styles.plantCardKudosCount, isKudoed && { color: COLORS.primary }]}>
+                            {plant.kudos_count}
+                          </Text>
+                        </TouchableOpacity>
                       </View>
-                    </View>
-                  ))}
+                    );
+                  })}
                 </ScrollView>
               </View>
             )}
@@ -404,6 +467,18 @@ const styles = StyleSheet.create({
   plantCardHealthFill: {
     height: 3,
     borderRadius: 2,
+  },
+  plantCardKudosRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    paddingHorizontal: 8,
+    marginTop: 5,
+  },
+  plantCardKudosCount: {
+    fontSize: 11,
+    color: COLORS.textSecondary,
+    fontWeight: "600",
   },
 
   divider: { height: 1, backgroundColor: "#EFEFEF", marginTop: 8 },

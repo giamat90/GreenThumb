@@ -231,7 +231,8 @@
     "newFertilizer": "施肥を記録",
     "newRepotting": "新しい植え替えチェック",
     "newPruning": "新しい剪定チェック",
-    "newGrowth": "成長を記録"
+    "newGrowth": "成長を記録",
+    "kudosReceived": "受け取ったKudos"
   },
   "profile": {
     "profile": "プロフィール",
@@ -689,7 +690,10 @@
     "sharedVia": "GreenThumb - AI植物ケアから共有\nhttps://play.google.com/store/apps/details?id=com.giamat90.greenthumb",
     "plantsSection": "植物",
     "noPlantsYet": "まだ植物がありません",
-    "mutualFollowersOnly": "相互フォロワーのみ表示"
+    "mutualFollowersOnly": "相互フォロワーのみ表示",
+    "kudos": "Kudos",
+    "giveKudos": "Kudosを贈る",
+    "removeKudos": "Kudosを取り消す"
   },
   "seasonal": {
     "seasonalTips": "季節のヒント",

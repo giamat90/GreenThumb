@@ -231,7 +231,8 @@
     "newFertilizer": "Registrar fertilización",
     "newRepotting": "Nueva comprobación de trasplante",
     "newPruning": "Nueva comprobación de poda",
-    "newGrowth": "Registrar crecimiento"
+    "newGrowth": "Registrar crecimiento",
+    "kudosReceived": "Kudos recibidos"
   },
   "profile": {
     "profile": "Perfil",
@@ -689,7 +690,10 @@
     "sharedVia": "Compartido desde GreenThumb - Cuidado de Plantas con IA\nhttps://play.google.com/store/apps/details?id=com.giamat90.greenthumb",
     "plantsSection": "Plantas",
     "noPlantsYet": "Aún no hay plantas",
-    "mutualFollowersOnly": "Visible para seguidores mutuos"
+    "mutualFollowersOnly": "Visible para seguidores mutuos",
+    "kudos": "Kudos",
+    "giveKudos": "Dar kudos",
+    "removeKudos": "Quitar kudos"
   },
   "seasonal": {
     "seasonalTips": "Consejos de Temporada",

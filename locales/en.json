@@ -231,7 +231,8 @@
     "newFertilizer": "Log fertilizer",
     "newRepotting": "New repotting check",
     "newPruning": "New pruning check",
-    "newGrowth": "Log growth"
+    "newGrowth": "Log growth",
+    "kudosReceived": "Kudos received"
   },
   "profile": {
     "profile": "Profile",
@@ -689,7 +690,10 @@
     "sharedVia": "Shared from GreenThumb - AI Plant Care\nhttps://play.google.com/store/apps/details?id=com.giamat90.greenthumb",
     "plantsSection": "Plants",
     "noPlantsYet": "No plants yet",
-    "mutualFollowersOnly": "Visible to mutual followers"
+    "mutualFollowersOnly": "Visible to mutual followers",
+    "kudos": "Kudos",
+    "giveKudos": "Give kudos",
+    "removeKudos": "Remove kudos"
   },
   "seasonal": {
     "seasonalTips": "Seasonal Tips",

@@ -231,7 +231,8 @@
     "newFertilizer": "Zapisz nawożenie",
     "newRepotting": "Nowe sprawdzenie przesadzania",
     "newPruning": "Nowe sprawdzenie przycinania",
-    "newGrowth": "Zapisz wzrost"
+    "newGrowth": "Zapisz wzrost",
+    "kudosReceived": "Otrzymane kudos"
   },
   "profile": {
     "profile": "Profil",
@@ -689,7 +690,10 @@
     "sharedVia": "Udostępniono z GreenThumb - Pielęgnacja Roślin z AI\nhttps://play.google.com/store/apps/details?id=com.giamat90.greenthumb",
     "plantsSection": "Rośliny",
     "noPlantsYet": "Brak roślin",
-    "mutualFollowersOnly": "Widoczne dla wzajemnych obserwujących"
+    "mutualFollowersOnly": "Widoczne dla wzajemnych obserwujących",
+    "kudos": "Kudos",
+    "giveKudos": "Daj kudos",
+    "removeKudos": "Cofnij kudos"
   },
   "seasonal": {
     "seasonalTips": "Sezonowe Porady",

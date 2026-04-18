@@ -231,7 +231,8 @@
     "newFertilizer": "记录施肥",
     "newRepotting": "新换盆检查",
     "newPruning": "新修剪检查",
-    "newGrowth": "记录生长"
+    "newGrowth": "记录生长",
+    "kudosReceived": "收到的点赞"
   },
   "profile": {
     "profile": "个人资料",
@@ -689,7 +690,10 @@
     "sharedVia": "来自GreenThumb - AI植物护理的分享\nhttps://play.google.com/store/apps/details?id=com.giamat90.greenthumb",
     "plantsSection": "植物",
     "noPlantsYet": "暂无植物",
-    "mutualFollowersOnly": "仅互相关注的用户可见"
+    "mutualFollowersOnly": "仅互相关注的用户可见",
+    "kudos": "Kudos",
+    "giveKudos": "送出Kudos",
+    "removeKudos": "撤回Kudos"
   },
   "seasonal": {
     "seasonalTips": "季节建议",

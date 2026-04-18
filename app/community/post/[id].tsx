@@ -14,12 +14,13 @@ import {
 import { Stack, useLocalSearchParams } from "expo-router";
 import { useNavigation } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ArrowLeft, Heart, Send, Share2 } from "lucide-react-native";
+import { ArrowLeft, Heart, Send, Share2, Sprout } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
 import { COLORS } from "@/constants";
 import { sendCommunityNotification } from "@/lib/communityNotifications";
 import { commentCountUpdates } from "@/lib/communityUpdates";
+import { fetchKudoedPlantIds, togglePlantKudos } from "@/lib/plantKudos";
 import { supabase } from "@/lib/supabase";
 import { useUserStore } from "@/store/user";
 import type { CommunityPost, PostComment } from "@/types";
@@ -47,6 +48,8 @@ export default function PostDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [currentUserUsername, setCurrentUserUsername] = useState<string | undefined>(undefined);
+  const [plantKudosCount, setPlantKudosCount] = useState(0);
+  const [hasKudoedPlant, setHasKudoedPlant] = useState(false);
   const flatListRef = useRef<FlatList>(null);
   const preKeyboardOffsetRef = useRef(0);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
@@ -89,10 +92,11 @@ export default function PostDetailScreen() {
         .eq("id", row.user_id as string)
         .maybeSingle();
 
+      const resolvedPlantId = row.plant_id as string | null;
       setPost({
         id: row.id as string,
         user_id: row.user_id as string,
-        plant_id: row.plant_id as string | null,
+        plant_id: resolvedPlantId,
         photo_url: row.photo_url as string,
         caption: row.caption as string | null,
         likes_count: row.likes_count as number,
@@ -104,6 +108,17 @@ export default function PostDetailScreen() {
         plant_name: (row.plants as Record<string, unknown> | null)?.name as string | null | undefined,
         is_liked: !!likeResult.data,
       });
+
+      // Fetch plant kudos data if this post has a tagged plant
+      if (resolvedPlantId && row.user_id !== profile.id) {
+        const [plantResult, kudoedSet] = await Promise.all([
+          supabase.from("plants").select("kudos_count").eq("id", resolvedPlantId).maybeSingle(),
+          fetchKudoedPlantIds(profile.id, [resolvedPlantId]),
+        ]);
+        const kc = (plantResult.data as { kudos_count: number } | null)?.kudos_count ?? 0;
+        setPlantKudosCount(kc);
+        setHasKudoedPlant(kudoedSet.has(resolvedPlantId));
+      }
 
       // Fetch commenter usernames separately.
       // Always include the current user's ID so their username is available
@@ -180,6 +195,22 @@ export default function PostDetailScreen() {
       setPost((p) => p ? { ...p, is_liked: wasLiked, likes_count: p.likes_count + (wasLiked ? 1 : -1) } : p);
     }
   }, [profile, post]);
+
+  const handleKudos = useCallback(async () => {
+    if (!profile || !post?.plant_id || post.user_id === profile.id) return;
+    const wasKudoed = hasKudoedPlant;
+    setHasKudoedPlant(!wasKudoed);
+    setPlantKudosCount((c) => c + (wasKudoed ? -1 : 1));
+    try {
+      await togglePlantKudos(post.plant_id, profile.id, wasKudoed);
+      if (!wasKudoed) {
+        sendCommunityNotification({ type: "kudos", plantId: post.plant_id });
+      }
+    } catch {
+      setHasKudoedPlant(wasKudoed);
+      setPlantKudosCount((c) => c + (wasKudoed ? 1 : -1));
+    }
+  }, [profile, post, hasKudoedPlant]);
 
   const handleSubmitComment = useCallback(async () => {
     if (!profile || !post || !commentText.trim()) return;
@@ -280,6 +311,28 @@ export default function PostDetailScreen() {
               </TouchableOpacity>
             </View>
 
+            {/* Kudos row — only for posts with a tagged plant, not own posts */}
+            {post.plant_id && post.user_id !== profile?.id && (
+              <TouchableOpacity
+                style={styles.kudosRow}
+                onPress={handleKudos}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+              >
+                <Sprout
+                  size={20}
+                  color={hasKudoedPlant ? COLORS.primary : COLORS.textSecondary}
+                  fill={hasKudoedPlant ? COLORS.primary : "transparent"}
+                />
+                <Text style={[styles.actionCount, hasKudoedPlant && { color: COLORS.primary }]}>
+                  {plantKudosCount}
+                </Text>
+                {post.plant_name ? (
+                  <Text style={styles.kudosPlantName}>· {post.plant_name}</Text>
+                ) : null}
+              </TouchableOpacity>
+            )}
+
             {/* Caption */}
             {post.caption && (
               <View style={styles.captionRow}>
@@ -352,6 +405,13 @@ const styles = StyleSheet.create({
   },
   actionBtn: { flexDirection: "row", alignItems: "center", gap: 6 },
   actionCount: { fontSize: 14, fontWeight: "600", color: COLORS.textSecondary },
+  kudosRow: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    paddingHorizontal: 12, paddingBottom: 10, backgroundColor: "#fff",
+  },
+  kudosPlantName: {
+    fontSize: 14, color: COLORS.textSecondary,
+  },
   captionRow: {
     paddingHorizontal: 16, paddingBottom: 8, flexDirection: "row",
     flexWrap: "wrap", backgroundColor: "#fff",
