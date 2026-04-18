@@ -423,9 +423,11 @@ export default function PublicProfileScreen() {
                     activeOpacity={0.75}
                   >
                     <Sprout size={18} color={isKudoed ? "#fff" : COLORS.primary} fill={isKudoed ? "#fff" : "transparent"} />
-                    <Text style={[styles.modalKudosBtnText, isKudoed && styles.modalKudosBtnTextActive]}>
-                      {selectedPlant.kudos_count > 0 ? `${selectedPlant.kudos_count} · ` : ""}{isKudoed ? t("community.removeKudos") : t("community.giveKudos")}
-                    </Text>
+                    {selectedPlant.kudos_count > 0 && (
+                      <Text style={[styles.modalKudosBtnText, isKudoed && styles.modalKudosBtnTextActive]}>
+                        {selectedPlant.kudos_count}
+                      </Text>
+                    )}
                   </TouchableOpacity>
                 );
               })() : (
