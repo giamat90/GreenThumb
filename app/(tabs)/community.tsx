@@ -25,8 +25,6 @@ import { ResponsiveContainer } from "@/components/ui/ResponsiveContainer";
 import { useResponsive } from "@/hooks/useResponsive";
 import { supabase } from "@/lib/supabase";
 import { useUserStore } from "@/store/user";
-import { useProGate } from "@/hooks/useProGate";
-import { UpgradeModal } from "@/components/ui/UpgradeModal";
 import type { CommunityPost } from "@/types";
 
 const PAGE_SIZE = 20;
@@ -299,7 +297,6 @@ export default function CommunityScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { profile } = useUserStore();
-  const { requirePro, upgradeModalVisible, lockedFeatureName, closeUpgradeModal } = useProGate();
   const { isMobile, isDesktop } = useResponsive();
   const numColumns = isDesktop ? 2 : 1;
 
@@ -532,12 +529,11 @@ export default function CommunityScreen() {
 
   const handleFabPress = useCallback(() => {
     if (activeTab === "discover") {
-      if (!requirePro(t("paywall.featureCommunity"))) return;
       router.push("/community/new-post");
     } else {
       Share.share({ message: t("community.inviteMessage") });
     }
-  }, [activeTab, requirePro, router, t]);
+  }, [activeTab, router, t]);
 
   const [fabHeight, setFabHeight] = useState(0);
 
@@ -666,15 +662,6 @@ export default function CommunityScreen() {
         </TouchableOpacity>
       </View>
 
-      <UpgradeModal
-        visible={upgradeModalVisible}
-        featureName={lockedFeatureName}
-        onClose={closeUpgradeModal}
-        onUpgrade={() => {
-          closeUpgradeModal();
-          router.push("/paywall");
-        }}
-      />
     </View>
     </ResponsiveContainer>
   );
