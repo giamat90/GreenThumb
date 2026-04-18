@@ -308,10 +308,12 @@ export default function PublicProfileScreen() {
                             <Leaf size={24} color={COLORS.primary} />
                           </View>
                         )}
-                        <Text style={styles.plantCardName} numberOfLines={1}>{plant.name}</Text>
-                        {plant.species ? (
-                          <Text style={styles.plantCardSpecies} numberOfLines={1}>{plant.species}</Text>
-                        ) : null}
+                        <View style={styles.plantCardTextBlock}>
+                          <Text style={styles.plantCardName} numberOfLines={1}>{plant.name}</Text>
+                          <Text style={styles.plantCardSpecies} numberOfLines={1}>
+                            {plant.species ?? ""}
+                          </Text>
+                        </View>
                         <View style={styles.plantCardHealthBar}>
                           <View
                             style={[
@@ -515,17 +517,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  plantCardTextBlock: {
+    height: 42,
+    justifyContent: "center",
+    paddingHorizontal: 10,
+    marginTop: 8,
+  },
   plantCardName: {
     fontSize: 13,
     fontWeight: "700",
     color: COLORS.textPrimary,
-    marginTop: 8,
-    paddingHorizontal: 10,
   },
   plantCardSpecies: {
     fontSize: 11,
     color: COLORS.textSecondary,
-    paddingHorizontal: 10,
     marginTop: 1,
   },
   plantCardHealthBar: {
