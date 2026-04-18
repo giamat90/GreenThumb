@@ -1,10 +1,13 @@
 import { Tabs, useRouter } from "expo-router";
-import { Home, Leaf, Camera, CalendarDays, Users } from "lucide-react-native";
+import { Home, Leaf, CalendarDays, Users, Camera } from "lucide-react-native";
 import { TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 import { COLORS } from "@/constants";
+import { useProGate } from "@/hooks/useProGate";
+import { UpgradeModal } from "@/components/ui/UpgradeModal";
 
-// ─── Custom center tab button for the Identify CTA ────────────────────────────
+// ─── Custom center tab button — New Post CTA ──────────────────────────────────
 
 /**
  * Raised circular green button that sits above the tab bar.
@@ -14,45 +17,54 @@ import { COLORS } from "@/constants";
  * occurs when the tab bar re-renders during an Android back-gesture animation
  * and React Navigation's onPress callback tries to read transitional state.
  */
-function IdentifyTabButton() {
+function NewPostTabButton() {
   const router = useRouter();
+  const { t } = useTranslation();
+  const { requirePro, upgradeModalVisible, lockedFeatureName, closeUpgradeModal } = useProGate();
 
   function handlePress() {
-    router.push("/(tabs)/identify");
+    if (!requirePro(t("paywall.featureCommunity"))) return;
+    router.push("/community/new-post");
   }
 
   return (
-    <TouchableOpacity
-      onPress={handlePress}
-      accessibilityLabel="Identify a plant with your camera"
-      accessibilityRole="button"
-      style={{
-        flex: 1,
-        alignItems: "center",
-        justifyContent: "center",
-        // Raise the button above the tab bar to create the "floating" effect
-        marginTop: -22,
-      }}
-    >
-      <View
+    <>
+      <TouchableOpacity
+        onPress={handlePress}
+        accessibilityLabel={t("community.sharePost")}
+        accessibilityRole="button"
         style={{
-          width: 62,
-          height: 62,
-          borderRadius: 31,
-          backgroundColor: COLORS.primary,
+          flex: 1,
           alignItems: "center",
           justifyContent: "center",
-          // Subtle shadow matching the primary green for depth
-          shadowColor: COLORS.primary,
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.4,
-          shadowRadius: 8,
-          elevation: 8,
+          marginTop: -22,
         }}
       >
-        <Camera size={26} color="white" />
-      </View>
-    </TouchableOpacity>
+        <View
+          style={{
+            width: 62,
+            height: 62,
+            borderRadius: 31,
+            backgroundColor: COLORS.primary,
+            alignItems: "center",
+            justifyContent: "center",
+            shadowColor: COLORS.primary,
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.4,
+            shadowRadius: 8,
+            elevation: 8,
+          }}
+        >
+          <Camera size={26} color="white" />
+        </View>
+      </TouchableOpacity>
+      <UpgradeModal
+        visible={upgradeModalVisible}
+        featureName={lockedFeatureName}
+        onClose={closeUpgradeModal}
+        onUpgrade={() => { closeUpgradeModal(); router.push("/paywall"); }}
+      />
+    </>
   );
 }
 
@@ -95,12 +107,12 @@ export default function TabLayout() {
         }}
       />
 
-      {/* Identify — special center button, no icon/label from the default renderer */}
+      {/* Center button — new post; identify screen still reachable from Home */}
       <Tabs.Screen
         name="identify"
         options={{
-          title: "Identify",
-          tabBarButton: () => <IdentifyTabButton />,
+          title: "",
+          tabBarButton: () => <NewPostTabButton />,
         }}
       />
 
