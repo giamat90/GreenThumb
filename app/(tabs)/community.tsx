@@ -6,6 +6,7 @@ import {
   FlatList,
   TouchableOpacity,
   Image,
+  Alert,
   ActivityIndicator,
   StyleSheet,
   RefreshControl,
@@ -13,7 +14,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Heart, MessageCircle, Plus, Share2, Sprout, Users } from "lucide-react-native";
+import { Heart, MessageCircle, MoreVertical, Plus, Share2, Sprout, Users } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
 import { COLORS } from "@/constants";
@@ -66,6 +67,7 @@ function PostCard({
   onShare,
   onProfile,
   onKudos,
+  onDelete,
 }: {
   post: CommunityPost;
   currentUserId: string;
@@ -74,9 +76,22 @@ function PostCard({
   onShare: (postId: string) => void;
   onProfile: (userId: string) => void;
   onKudos: (post: CommunityPost) => void;
+  onDelete: (postId: string) => void;
 }) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
+
+  const handleMenu = () => {
+    Alert.alert("", "", [
+      { text: t("community.deletePost"), style: "destructive", onPress: () => {
+        Alert.alert(t("community.deletePost"), t("community.confirmDeletePost"), [
+          { text: t("plantDetail.cancel"), style: "cancel" },
+          { text: t("plantDetail.delete"), style: "destructive", onPress: () => onDelete(post.id) },
+        ]);
+      }},
+      { text: t("plantDetail.cancel"), style: "cancel" },
+    ]);
+  };
   const caption = post.caption ?? "";
   const isLong = caption.length > 120;
   const displayCaption = !isLong || expanded ? caption : caption.slice(0, 120) + "…";
@@ -97,6 +112,11 @@ function PostCard({
           )}
         </View>
         <Text style={styles.postTime}>{timeAgo(post.created_at, t)}</Text>
+        {post.user_id === currentUserId && (
+          <TouchableOpacity onPress={handleMenu} hitSlop={10} style={styles.postMoreBtn}>
+            <MoreVertical size={18} color={COLORS.textSecondary} />
+          </TouchableOpacity>
+        )}
       </TouchableOpacity>
 
       {/* Photo */}
@@ -500,6 +520,12 @@ export default function CommunityScreen() {
     await Share.share({ message });
   }, [discoverPosts, followingPosts]);
 
+  const handleDeletePost = useCallback(async (postId: string) => {
+    setDiscoverPosts((prev) => prev.filter((p) => p.id !== postId));
+    setFollowingPosts((prev) => prev.filter((p) => p.id !== postId));
+    await supabase.from("posts").delete().eq("id", postId);
+  }, []);
+
   const handleProfile = useCallback((userId: string) => {
     router.push({ pathname: "/community/profile/[id]", params: { id: userId } });
   }, [router]);
@@ -541,6 +567,7 @@ export default function CommunityScreen() {
               onShare={handleShare}
               onProfile={handleProfile}
               onKudos={handleKudos}
+              onDelete={handleDeletePost}
             />
           );
           return isDesktop
@@ -723,6 +750,9 @@ const styles = StyleSheet.create({
   postTime: {
     fontSize: 12,
     color: COLORS.textSecondary,
+  },
+  postMoreBtn: {
+    paddingLeft: 6,
   },
   postPhoto: {
     width: "100%",
