@@ -35,7 +35,9 @@
       "Bash(git diff:*)",
       "Bash(git log:*)",
       "Bash(git show:*)",
-      "Bash(cmd.exe:*)"
+      "Bash(cmd.exe:*)",
+      "Bash(wait b1bc2z5rv *)",
+      "Read(//c/Users/giaco/AppData/Local/Temp/claude/C--Workspace-GiaMat90-GreenThumb/38bd4f44-c96e-4329-afb8-72f46b992388/tasks/**)"
     ]
   }
 }
