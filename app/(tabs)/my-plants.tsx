@@ -6,6 +6,7 @@ import {
   Alert,
   StyleSheet,
   Animated,
+  PanResponder,
   TouchableOpacity,
   RefreshControl,
   Modal,
@@ -13,7 +14,7 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { SlidersHorizontal, Droplets, Heart, Leaf, X, Check, Plus } from "lucide-react-native";
+import { SlidersHorizontal, Droplets, Heart, Leaf, Trash2, X, Check, Plus } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
 import { COLORS } from "@/constants";
@@ -24,7 +25,7 @@ import { usePlantsStore } from "@/store/plants";
 import { useUserStore } from "@/store/user";
 import { useWeather } from "@/hooks/useWeather";
 import { supabase } from "@/lib/supabase";
-import { rescheduleReminderForPlant } from "@/lib/notifications";
+import { rescheduleReminderForPlant, cancelWateringReminder } from "@/lib/notifications";
 import { PlantCard } from "@/components/plants/PlantCard";
 import { EmptyPlants } from "@/components/plants/EmptyPlants";
 import type { PlantWithStatus } from "@/hooks/usePlants";
@@ -110,6 +111,60 @@ function StatPill({
   );
 }
 
+// ─── Swipeable plant card ─────────────────────────────────────────────────────
+
+const SWIPE_THRESHOLD = 90;
+
+function SwipeablePlantCard({
+  plant,
+  onPress,
+  onWaterPress,
+  onDelete,
+}: {
+  plant: PlantWithStatus;
+  onPress: () => void;
+  onWaterPress: () => void;
+  onDelete: () => void;
+}) {
+  const translateX = useRef(new Animated.Value(0)).current;
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gs) =>
+        Math.abs(gs.dx) > 8 && Math.abs(gs.dx) > Math.abs(gs.dy) * 1.5,
+      onPanResponderMove: (_, gs) => {
+        if (gs.dx < 0) translateX.setValue(gs.dx);
+      },
+      onPanResponderRelease: (_, gs) => {
+        if (gs.dx < -SWIPE_THRESHOLD) {
+          Animated.timing(translateX, {
+            toValue: -500,
+            duration: 180,
+            useNativeDriver: true,
+          }).start(onDelete);
+        } else {
+          Animated.spring(translateX, {
+            toValue: 0,
+            useNativeDriver: true,
+            bounciness: 6,
+          }).start();
+        }
+      },
+    })
+  ).current;
+
+  return (
+    <View style={styles.swipeWrapper}>
+      <View style={styles.deleteBackground}>
+        <Trash2 size={22} color="#fff" />
+      </View>
+      <Animated.View style={{ transform: [{ translateX }] }} {...panResponder.panHandlers}>
+        <PlantCard plant={plant} onPress={onPress} onWaterPress={onWaterPress} />
+      </Animated.View>
+    </View>
+  );
+}
+
 // ─── Filter / sort types ──────────────────────────────────────────────────────
 
 type SortOption = "name_asc" | "name_desc" | "needs_water" | "health_asc" | "recently_added";
@@ -129,7 +184,7 @@ export default function MyPlantsScreen() {
   const { isDesktop } = useResponsive();
   const numColumns = isDesktop ? 2 : 1;
   const { profile } = useUserStore();
-  const { updatePlant } = usePlantsStore();
+  const { updatePlant, removePlant } = usePlantsStore();
   const { plants, isLoading, refetch } = usePlants();
   const { weather } = useWeather();
   const [bannerVisible, setBannerVisible] = useState(false);
@@ -285,15 +340,26 @@ export default function MyPlantsScreen() {
     [profile, updatePlant, t]
   );
 
+  const handleDeletePlant = useCallback(
+    async (plant: PlantWithStatus) => {
+      const notifId = await AsyncStorage.getItem(`watering_notif_${plant.id}`);
+      if (notifId) await cancelWateringReminder(notifId);
+      removePlant(plant.id);
+      await supabase.from("plants").delete().eq("id", plant.id);
+    },
+    [removePlant]
+  );
+
   // ── Render ────────────────────────────────────────────────────────────────
 
   const renderItem = useCallback(
     ({ item }: { item: PlantWithStatus }) => (
       <View style={isDesktop ? { flex: 1, margin: 4 } : undefined}>
-        <PlantCard
+        <SwipeablePlantCard
           plant={item}
           onPress={() => router.push(`/plant/${item.id}`)}
           onWaterPress={() => handleWaterPress(item)}
+          onDelete={() => handleDeletePlant(item)}
         />
       </View>
     ),
@@ -729,5 +795,21 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: "#1D4ED8",
     marginRight: 8,
+  },
+  swipeWrapper: {
+    position: "relative",
+    overflow: "hidden",
+    borderRadius: 24,
+  },
+  deleteBackground: {
+    position: "absolute",
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: 80,
+    backgroundColor: COLORS.danger,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 24,
   },
 });
