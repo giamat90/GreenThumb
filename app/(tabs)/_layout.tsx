@@ -1,5 +1,5 @@
 import { Tabs, useRouter } from "expo-router";
-import { Home, Leaf, CalendarDays, Users, Camera } from "lucide-react-native";
+import { Home, Leaf, CalendarDays, Users, Plus } from "lucide-react-native";
 import { TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
@@ -46,7 +46,7 @@ function NewPostTabButton() {
           elevation: 8,
         }}
       >
-        <Camera size={26} color="white" />
+        <Plus size={28} color="white" />
       </View>
     </TouchableOpacity>
   );

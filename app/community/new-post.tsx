@@ -45,13 +45,6 @@ export default function NewPostScreen() {
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const keyboardHeightRef = useRef(0);
 
-  // Auto-show camera/gallery picker on mount so user doesn't need an extra tap
-  useEffect(() => {
-    const timer = setTimeout(() => handlePickPhoto(), 300);
-    return () => clearTimeout(timer);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   useEffect(() => {
     const show = Keyboard.addListener("keyboardDidShow", (e) => {
       keyboardHeightRef.current = e.endCoordinates.height;
