@@ -14,7 +14,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Heart, MessageCircle, MoreVertical, Plus, Share2, Sprout, Users } from "lucide-react-native";
+import { Heart, MessageCircle, MoreVertical, Share2, Sprout, Users } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
 import { COLORS } from "@/constants";
@@ -527,16 +527,6 @@ export default function CommunityScreen() {
     router.push({ pathname: "/community/profile/[id]", params: { id: userId } });
   }, [router]);
 
-  const handleFabPress = useCallback(() => {
-    if (activeTab === "discover") {
-      router.push("/community/new-post");
-    } else {
-      Share.share({ message: t("community.inviteMessage") });
-    }
-  }, [activeTab, router, t]);
-
-  const [fabHeight, setFabHeight] = useState(0);
-
   // ── Derived per-tab values for the active feed ───────────────────────────────
   const isDiscover = activeTab === "discover";
   const loading = isDiscover ? discoverLoading : followingLoading;
@@ -570,7 +560,7 @@ export default function CommunityScreen() {
             ? <View style={{ flex: 1, maxWidth: "49%" }}>{card}</View>
             : card;
         }}
-        contentContainerStyle={{ paddingBottom: fabHeight + 16 }}
+        contentContainerStyle={{ paddingBottom: 16 }}
         refreshControl={
           <RefreshControl
             refreshing={visible ? refreshing : false}
@@ -642,25 +632,6 @@ export default function CommunityScreen() {
       {renderFeed(discoverPosts, isDiscover, "discover")}
       {renderFeed(followingPosts, !isDiscover, "following")}
 
-      {/* FAB */}
-      <View
-        style={[styles.fab, { bottom: insets.bottom + 24 }]}
-        onLayout={(e) => setFabHeight(e.nativeEvent.layout.height + 24 + insets.bottom)}
-      >
-        <TouchableOpacity
-          style={styles.fabButton}
-          onPress={handleFabPress}
-          activeOpacity={0.85}
-          accessibilityLabel={activeTab === "discover" ? t("community.sharePost") : t("community.inviteFriends")}
-          accessibilityRole="button"
-        >
-          {activeTab === "discover" ? (
-            <Plus size={26} color="#fff" />
-          ) : (
-            <Share2 size={24} color="#fff" />
-          )}
-        </TouchableOpacity>
-      </View>
 
     </View>
     </ResponsiveContainer>
