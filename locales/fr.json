@@ -693,7 +693,13 @@
     "mutualFollowersOnly": "Visible par les abonnés mutuels",
     "kudos": "Kudos",
     "giveKudos": "Donner des kudos",
-    "removeKudos": "Retirer les kudos"
+    "removeKudos": "Retirer les kudos",
+    "editCaption": "Modifier la légende",
+    "deletePost": "Supprimer la publication",
+    "editComment": "Modifier le commentaire",
+    "deleteComment": "Supprimer le commentaire",
+    "confirmDeletePost": "Supprimer cette publication ? Cette action est irréversible.",
+    "confirmDeleteComment": "Supprimer ce commentaire ?"
   },
   "seasonal": {
     "seasonalTips": "Conseils Saisonniers",

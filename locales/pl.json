@@ -693,7 +693,13 @@
     "mutualFollowersOnly": "Widoczne dla wzajemnych obserwujących",
     "kudos": "Kudos",
     "giveKudos": "Daj kudos",
-    "removeKudos": "Cofnij kudos"
+    "removeKudos": "Cofnij kudos",
+    "editCaption": "Edytuj opis",
+    "deletePost": "Usuń post",
+    "editComment": "Edytuj komentarz",
+    "deleteComment": "Usuń komentarz",
+    "confirmDeletePost": "Usunąć ten post? Tej operacji nie można cofnąć.",
+    "confirmDeleteComment": "Usunąć ten komentarz?"
   },
   "seasonal": {
     "seasonalTips": "Sezonowe Porady",

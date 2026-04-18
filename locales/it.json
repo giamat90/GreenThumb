@@ -693,7 +693,13 @@
     "mutualFollowersOnly": "Visibile ai follower reciproci",
     "kudos": "Kudos",
     "giveKudos": "Invia kudos",
-    "removeKudos": "Rimuovi kudos"
+    "removeKudos": "Rimuovi kudos",
+    "editCaption": "Modifica didascalia",
+    "deletePost": "Elimina post",
+    "editComment": "Modifica commento",
+    "deleteComment": "Elimina commento",
+    "confirmDeletePost": "Eliminare questo post? L'operazione non può essere annullata.",
+    "confirmDeleteComment": "Eliminare questo commento?"
   },
   "seasonal": {
     "seasonalTips": "Consigli Stagionali",

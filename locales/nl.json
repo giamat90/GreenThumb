@@ -693,7 +693,13 @@
     "mutualFollowersOnly": "Zichtbaar voor wederzijdse volgers",
     "kudos": "Kudos",
     "giveKudos": "Kudos geven",
-    "removeKudos": "Kudos verwijderen"
+    "removeKudos": "Kudos verwijderen",
+    "editCaption": "Bijschrift bewerken",
+    "deletePost": "Bericht verwijderen",
+    "editComment": "Reactie bewerken",
+    "deleteComment": "Reactie verwijderen",
+    "confirmDeletePost": "Dit bericht verwijderen? Dit kan niet ongedaan worden gemaakt.",
+    "confirmDeleteComment": "Deze reactie verwijderen?"
   },
   "seasonal": {
     "seasonalTips": "Seizoenstips",

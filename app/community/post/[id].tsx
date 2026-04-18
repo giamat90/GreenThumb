@@ -6,6 +6,8 @@ import {
   TouchableOpacity,
   TextInput,
   Image,
+  Modal,
+  Alert,
   ActivityIndicator,
   StyleSheet,
   Keyboard,
@@ -14,7 +16,7 @@ import {
 import { Stack, useLocalSearchParams } from "expo-router";
 import { useNavigation } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ArrowLeft, Heart, Send, Share2, Sprout } from "lucide-react-native";
+import { ArrowLeft, Heart, MoreVertical, Send, Share2, Sprout } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
 import { COLORS } from "@/constants";
@@ -54,6 +56,12 @@ export default function PostDetailScreen() {
   const preKeyboardOffsetRef = useRef(0);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const keyboardHeightRef = useRef(0);
+
+  // Edit/delete state
+  const [editCaptionVisible, setEditCaptionVisible] = useState(false);
+  const [editCaptionText, setEditCaptionText] = useState("");
+  const [editingComment, setEditingComment] = useState<PostComment | null>(null);
+  const [editCommentText, setEditCommentText] = useState("");
 
   const fetchPost = useCallback(async () => {
     if (!postId || !profile) return;
@@ -212,6 +220,56 @@ export default function PostDetailScreen() {
     }
   }, [profile, post, hasKudoedPlant]);
 
+  const handleCaptionMenu = useCallback(() => {
+    Alert.alert("", "", [
+      { text: t("community.editCaption"), onPress: () => { setEditCaptionText(post?.caption ?? ""); setEditCaptionVisible(true); } },
+      { text: t("community.deletePost"), style: "destructive", onPress: () => {
+        Alert.alert(t("community.deletePost"), t("community.confirmDeletePost"), [
+          { text: t("plantDetail.cancel"), style: "cancel" },
+          { text: t("plantDetail.delete"), style: "destructive", onPress: async () => {
+            await supabase.from("posts").delete().eq("id", post!.id);
+            navigation.goBack();
+          }},
+        ]);
+      }},
+      { text: t("plantDetail.cancel"), style: "cancel" },
+    ]);
+  }, [post, t, navigation]);
+
+  const handleSaveCaption = useCallback(async () => {
+    if (!post) return;
+    const newCaption = editCaptionText.trim();
+    await supabase.from("posts").update({ caption: newCaption }).eq("id", post.id);
+    setPost((p) => p ? { ...p, caption: newCaption } : p);
+    setEditCaptionVisible(false);
+  }, [post, editCaptionText]);
+
+  const handleCommentMenu = useCallback((comment: PostComment) => {
+    Alert.alert("", "", [
+      { text: t("community.editComment"), onPress: () => { setEditCommentText(comment.content); setEditingComment(comment); } },
+      { text: t("community.deleteComment"), style: "destructive", onPress: () => {
+        Alert.alert(t("community.deleteComment"), t("community.confirmDeleteComment"), [
+          { text: t("plantDetail.cancel"), style: "cancel" },
+          { text: t("plantDetail.delete"), style: "destructive", onPress: async () => {
+            await supabase.from("post_comments").delete().eq("id", comment.id);
+            setComments((prev) => prev.filter((c) => c.id !== comment.id));
+            setPost((p) => p ? { ...p, comments_count: Math.max(0, p.comments_count - 1) } : p);
+          }},
+        ]);
+      }},
+      { text: t("plantDetail.cancel"), style: "cancel" },
+    ]);
+  }, [t]);
+
+  const handleSaveComment = useCallback(async () => {
+    if (!editingComment) return;
+    const newContent = editCommentText.trim();
+    if (!newContent) return;
+    await supabase.from("post_comments").update({ content: newContent }).eq("id", editingComment.id);
+    setComments((prev) => prev.map((c) => c.id === editingComment.id ? { ...c, content: newContent } : c));
+    setEditingComment(null);
+  }, [editingComment, editCommentText]);
+
   const handleSubmitComment = useCallback(async () => {
     if (!profile || !post || !commentText.trim()) return;
     setSubmitting(true);
@@ -338,7 +396,19 @@ export default function PostDetailScreen() {
               <View style={styles.captionRow}>
                 <Text style={styles.captionUsername}>{post.username} </Text>
                 <Text style={styles.captionText}>{post.caption}</Text>
+                {post.user_id === profile?.id && (
+                  <TouchableOpacity onPress={handleCaptionMenu} hitSlop={10} style={styles.moreBtn}>
+                    <MoreVertical size={16} color={COLORS.textSecondary} />
+                  </TouchableOpacity>
+                )}
               </View>
+            )}
+
+            {/* Own post menu when no caption */}
+            {!post.caption && post.user_id === profile?.id && (
+              <TouchableOpacity onPress={handleCaptionMenu} style={styles.noCaptionMenu}>
+                <MoreVertical size={16} color={COLORS.textSecondary} />
+              </TouchableOpacity>
             )}
 
             {/* Plant tag */}
@@ -351,9 +421,16 @@ export default function PostDetailScreen() {
         }
         renderItem={({ item }) => (
           <View style={styles.commentRow}>
-            <Text style={styles.commentUsername}>{item.username ?? "User"} </Text>
-            <Text style={styles.commentContent}>{item.content}</Text>
-            <Text style={styles.commentTime}>{timeAgo(item.created_at)}</Text>
+            <View style={styles.commentMain}>
+              <Text style={styles.commentUsername}>{item.username ?? "User"} </Text>
+              <Text style={styles.commentContent}>{item.content}</Text>
+              <Text style={styles.commentTime}>{timeAgo(item.created_at)}</Text>
+            </View>
+            {item.user_id === profile?.id && (
+              <TouchableOpacity onPress={() => handleCommentMenu(item)} hitSlop={10} style={styles.commentMoreBtn}>
+                <MoreVertical size={15} color={COLORS.textSecondary} />
+              </TouchableOpacity>
+            )}
           </View>
         )}
         ListEmptyComponent={
@@ -385,6 +462,46 @@ export default function PostDetailScreen() {
           )}
         </TouchableOpacity>
       </View>
+
+      {/* Edit caption modal */}
+      <Modal visible={editCaptionVisible} transparent animationType="fade" onRequestClose={() => setEditCaptionVisible(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setEditCaptionVisible(false)}>
+          <TouchableOpacity activeOpacity={1} style={styles.editModal} onPress={() => {}}>
+            <Text style={styles.editModalTitle}>{t("community.editCaption")}</Text>
+            <TextInput
+              style={styles.editModalInput}
+              value={editCaptionText}
+              onChangeText={setEditCaptionText}
+              multiline
+              autoFocus
+              placeholderTextColor={COLORS.textSecondary}
+            />
+            <TouchableOpacity style={styles.editModalSave} onPress={handleSaveCaption}>
+              <Text style={styles.editModalSaveText}>{t("plantDetail.save")}</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Edit comment modal */}
+      <Modal visible={editingComment !== null} transparent animationType="fade" onRequestClose={() => setEditingComment(null)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setEditingComment(null)}>
+          <TouchableOpacity activeOpacity={1} style={styles.editModal} onPress={() => {}}>
+            <Text style={styles.editModalTitle}>{t("community.editComment")}</Text>
+            <TextInput
+              style={styles.editModalInput}
+              value={editCommentText}
+              onChangeText={setEditCommentText}
+              multiline
+              autoFocus
+              placeholderTextColor={COLORS.textSecondary}
+            />
+            <TouchableOpacity style={styles.editModalSave} onPress={handleSaveComment}>
+              <Text style={styles.editModalSaveText}>{t("plantDetail.save")}</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -414,10 +531,12 @@ const styles = StyleSheet.create({
   },
   captionRow: {
     paddingHorizontal: 16, paddingBottom: 8, flexDirection: "row",
-    flexWrap: "wrap", backgroundColor: "#fff",
+    alignItems: "flex-start", backgroundColor: "#fff",
   },
   captionUsername: { fontSize: 14, fontWeight: "700", color: COLORS.textPrimary },
-  captionText: { fontSize: 14, color: COLORS.textPrimary, lineHeight: 20, flex: 1 },
+  captionText: { fontSize: 14, color: COLORS.textPrimary, lineHeight: 20, flex: 1, flexWrap: "wrap" },
+  moreBtn: { paddingLeft: 8, paddingTop: 2 },
+  noCaptionMenu: { paddingHorizontal: 16, paddingBottom: 8, backgroundColor: "#fff", alignItems: "flex-end" },
   plantTag: {
     paddingHorizontal: 16, paddingBottom: 12,
     fontSize: 13, color: COLORS.secondary, backgroundColor: "#fff",
@@ -430,7 +549,10 @@ const styles = StyleSheet.create({
   commentRow: {
     paddingHorizontal: 16, paddingVertical: 10,
     borderBottomWidth: 1, borderBottomColor: "#F3F4F6",
+    flexDirection: "row", alignItems: "flex-start",
   },
+  commentMain: { flex: 1 },
+  commentMoreBtn: { paddingLeft: 8, paddingTop: 2 },
   commentUsername: { fontSize: 14, fontWeight: "700", color: COLORS.textPrimary },
   commentContent: { fontSize: 14, color: COLORS.textPrimary, lineHeight: 20 },
   commentTime: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
@@ -448,4 +570,26 @@ const styles = StyleSheet.create({
     fontSize: 14, color: COLORS.textPrimary,
   },
   sendBtn: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
+  modalOverlay: {
+    flex: 1, backgroundColor: "rgba(0,0,0,0.5)",
+    alignItems: "center", justifyContent: "center", padding: 24,
+  },
+  editModal: {
+    width: "100%", backgroundColor: "#fff", borderRadius: 16, padding: 20,
+  },
+  editModalTitle: {
+    fontSize: 16, fontWeight: "700", color: COLORS.textPrimary, marginBottom: 12,
+  },
+  editModalInput: {
+    backgroundColor: COLORS.cream, borderRadius: 10, padding: 12,
+    fontSize: 14, color: COLORS.textPrimary, minHeight: 80,
+    textAlignVertical: "top",
+  },
+  editModalSave: {
+    marginTop: 12, backgroundColor: COLORS.primary, borderRadius: 24,
+    paddingVertical: 12, alignItems: "center",
+  },
+  editModalSaveText: {
+    color: "#fff", fontWeight: "700", fontSize: 15,
+  },
 });

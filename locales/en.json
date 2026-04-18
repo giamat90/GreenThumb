@@ -693,7 +693,13 @@
     "mutualFollowersOnly": "Visible to mutual followers",
     "kudos": "Kudos",
     "giveKudos": "Give kudos",
-    "removeKudos": "Remove kudos"
+    "removeKudos": "Remove kudos",
+    "editCaption": "Edit caption",
+    "deletePost": "Delete post",
+    "editComment": "Edit comment",
+    "deleteComment": "Delete comment",
+    "confirmDeletePost": "Delete this post? This cannot be undone.",
+    "confirmDeleteComment": "Delete this comment?"
   },
   "seasonal": {
     "seasonalTips": "Seasonal Tips",

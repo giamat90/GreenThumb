@@ -693,7 +693,13 @@
     "mutualFollowersOnly": "Visible para seguidores mutuos",
     "kudos": "Kudos",
     "giveKudos": "Dar kudos",
-    "removeKudos": "Quitar kudos"
+    "removeKudos": "Quitar kudos",
+    "editCaption": "Editar descripción",
+    "deletePost": "Eliminar publicación",
+    "editComment": "Editar comentario",
+    "deleteComment": "Eliminar comentario",
+    "confirmDeletePost": "¿Eliminar esta publicación? Esta acción no se puede deshacer.",
+    "confirmDeleteComment": "¿Eliminar este comentario?"
   },
   "seasonal": {
     "seasonalTips": "Consejos de Temporada",

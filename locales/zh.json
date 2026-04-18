@@ -693,7 +693,13 @@
     "mutualFollowersOnly": "仅互相关注的用户可见",
     "kudos": "Kudos",
     "giveKudos": "送出Kudos",
-    "removeKudos": "撤回Kudos"
+    "removeKudos": "撤回Kudos",
+    "editCaption": "编辑说明",
+    "deletePost": "删除帖子",
+    "editComment": "编辑评论",
+    "deleteComment": "删除评论",
+    "confirmDeletePost": "删除此帖子？此操作无法撤销。",
+    "confirmDeleteComment": "删除此评论？"
   },
   "seasonal": {
     "seasonalTips": "季节建议",
