@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
+  Modal,
   ActivityIndicator,
   StyleSheet,
   Dimensions,
@@ -13,7 +14,7 @@ import {
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useNavigation } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ArrowLeft, Leaf, Sprout } from "lucide-react-native";
+import { ArrowLeft, Leaf, Sprout, X } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
 import { COLORS } from "@/constants";
@@ -49,6 +50,7 @@ export default function PublicProfileScreen() {
   const [isFollowedBy, setIsFollowedBy] = useState(false);
   const [userPlants, setUserPlants] = useState<PlantPreview[]>([]);
   const [kudoedPlantIds, setKudoedPlantIds] = useState<Set<string>>(new Set());
+  const [selectedPlantId, setSelectedPlantId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [followLoading, setFollowLoading] = useState(false);
 
@@ -211,6 +213,7 @@ export default function PublicProfileScreen() {
   const postCount = posts.length;
   const isMutualFollow = isFollowing && isFollowedBy;
   const showPlants = isOwnProfile || isMutualFollow;
+  const selectedPlant = userPlants.find((p) => p.id === selectedPlantId) ?? null;
 
   return (
     <View style={styles.screen}>
@@ -292,7 +295,12 @@ export default function PublicProfileScreen() {
                   {userPlants.map((plant) => {
                     const isKudoed = kudoedPlantIds.has(plant.id);
                     return (
-                      <View key={plant.id} style={styles.plantCard}>
+                      <TouchableOpacity
+                        key={plant.id}
+                        style={styles.plantCard}
+                        activeOpacity={0.85}
+                        onPress={() => setSelectedPlantId(plant.id)}
+                      >
                         {plant.photo_url ? (
                           <Image source={{ uri: plant.photo_url }} style={styles.plantCardPhoto} />
                         ) : (
@@ -336,7 +344,7 @@ export default function PublicProfileScreen() {
                             {plant.kudos_count}
                           </Text>
                         </TouchableOpacity>
-                      </View>
+                      </TouchableOpacity>
                     );
                   })}
                 </ScrollView>
@@ -365,6 +373,72 @@ export default function PublicProfileScreen() {
           </View>
         }
       />
+
+      {/* Plant detail modal */}
+      <Modal
+        visible={selectedPlantId !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSelectedPlantId(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <TouchableOpacity style={styles.modalClose} onPress={() => setSelectedPlantId(null)} hitSlop={12}>
+              <X size={20} color={COLORS.textPrimary} />
+            </TouchableOpacity>
+            {selectedPlant?.photo_url ? (
+              <Image source={{ uri: selectedPlant.photo_url }} style={styles.modalPhoto} resizeMode="cover" />
+            ) : (
+              <View style={styles.modalPhotoPlaceholder}>
+                <Leaf size={48} color={COLORS.primary} />
+              </View>
+            )}
+            <View style={styles.modalContent}>
+              <Text style={styles.modalName}>{selectedPlant?.name}</Text>
+              {selectedPlant?.species ? (
+                <Text style={styles.modalSpecies}>{selectedPlant.species}</Text>
+              ) : null}
+              <View style={styles.modalHealthBar}>
+                <View
+                  style={[
+                    styles.modalHealthFill,
+                    {
+                      width: `${selectedPlant?.health_score ?? 0}%` as `${number}%`,
+                      backgroundColor:
+                        (selectedPlant?.health_score ?? 0) >= 70
+                          ? COLORS.primary
+                          : (selectedPlant?.health_score ?? 0) >= 40
+                          ? "#F59E0B"
+                          : COLORS.danger,
+                    },
+                  ]}
+                />
+              </View>
+              {!isOwnProfile && selectedPlant ? (
+                <TouchableOpacity
+                  style={styles.modalKudosRow}
+                  onPress={() => handlePlantKudos(selectedPlant)}
+                  activeOpacity={0.7}
+                >
+                  <Sprout
+                    size={16}
+                    color={kudoedPlantIds.has(selectedPlant.id) ? COLORS.primary : COLORS.textSecondary}
+                    fill={kudoedPlantIds.has(selectedPlant.id) ? COLORS.primary : "transparent"}
+                  />
+                  <Text style={[styles.modalKudosCount, kudoedPlantIds.has(selectedPlant.id) && { color: COLORS.primary }]}>
+                    {selectedPlant.kudos_count}
+                  </Text>
+                </TouchableOpacity>
+              ) : (
+                <View style={styles.modalKudosRow}>
+                  <Sprout size={16} color={COLORS.textSecondary} />
+                  <Text style={styles.modalKudosCount}>{selectedPlant?.kudos_count ?? 0}</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -484,4 +558,77 @@ const styles = StyleSheet.create({
   divider: { height: 1, backgroundColor: "#EFEFEF", marginTop: 8 },
   emptyGrid: { padding: 40, alignItems: "center" },
   emptyText: { fontSize: 15, color: COLORS.textSecondary },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
+  modalCard: {
+    width: "100%",
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    overflow: "hidden",
+  },
+  modalClose: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    zIndex: 10,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "rgba(255,255,255,0.9)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalPhoto: {
+    width: "100%",
+    height: 280,
+  },
+  modalPhotoPlaceholder: {
+    width: "100%",
+    height: 280,
+    backgroundColor: COLORS.lightgreen,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalContent: {
+    padding: 16,
+  },
+  modalName: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: COLORS.textPrimary,
+  },
+  modalSpecies: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    fontStyle: "italic",
+    marginTop: 2,
+  },
+  modalHealthBar: {
+    height: 4,
+    backgroundColor: "#E5E7EB",
+    borderRadius: 2,
+    marginTop: 12,
+    overflow: "hidden",
+  },
+  modalHealthFill: {
+    height: 4,
+    borderRadius: 2,
+  },
+  modalKudosRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 12,
+  },
+  modalKudosCount: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    fontWeight: "600",
+  },
 });
