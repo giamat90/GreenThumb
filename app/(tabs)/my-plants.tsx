@@ -158,7 +158,7 @@ function SwipeablePlantCard({
       <View style={styles.deleteBackground}>
         <Trash2 size={22} color="#fff" />
       </View>
-      <Animated.View style={{ transform: [{ translateX }] }} {...panResponder.panHandlers}>
+      <Animated.View style={{ transform: [{ translateX }], width: "100%" }} {...panResponder.panHandlers}>
         <PlantCard plant={plant} onPress={onPress} onWaterPress={onWaterPress} />
       </Animated.View>
     </View>
@@ -805,7 +805,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     right: 0,
     top: 0,
-    bottom: 0,
+    bottom: 12,
     width: 80,
     backgroundColor: COLORS.danger,
     alignItems: "center",
