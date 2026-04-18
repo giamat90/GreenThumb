@@ -330,17 +330,17 @@ export default function PublicProfileScreen() {
                         </View>
                         {/* Kudos row */}
                         <TouchableOpacity
-                          style={styles.plantCardKudosRow}
+                          style={[styles.plantCardKudosRow, isKudoed && styles.plantCardKudosRowActive]}
                           onPress={isOwnProfile ? undefined : () => handlePlantKudos(plant)}
                           activeOpacity={isOwnProfile ? 1 : 0.7}
                           accessibilityRole={isOwnProfile ? "none" : "button"}
                         >
                           <Sprout
-                            size={12}
-                            color={isKudoed ? COLORS.primary : COLORS.textSecondary}
-                            fill={isKudoed ? COLORS.primary : "transparent"}
+                            size={14}
+                            color={isKudoed ? "#fff" : COLORS.primary}
+                            fill={isKudoed ? "#fff" : "transparent"}
                           />
-                          <Text style={[styles.plantCardKudosCount, isKudoed && { color: COLORS.primary }]}>
+                          <Text style={[styles.plantCardKudosCount, isKudoed && styles.plantCardKudosCountActive]}>
                             {plant.kudos_count}
                           </Text>
                         </TouchableOpacity>
@@ -412,23 +412,22 @@ export default function PublicProfileScreen() {
                   ]}
                 />
               </View>
-              {!isOwnProfile && selectedPlant ? (
-                <TouchableOpacity
-                  style={styles.modalKudosRow}
-                  onPress={() => handlePlantKudos(selectedPlant)}
-                  activeOpacity={0.7}
-                >
-                  <Sprout
-                    size={16}
-                    color={kudoedPlantIds.has(selectedPlant.id) ? COLORS.primary : COLORS.textSecondary}
-                    fill={kudoedPlantIds.has(selectedPlant.id) ? COLORS.primary : "transparent"}
-                  />
-                  <Text style={[styles.modalKudosCount, kudoedPlantIds.has(selectedPlant.id) && { color: COLORS.primary }]}>
-                    {selectedPlant.kudos_count}
-                  </Text>
-                </TouchableOpacity>
-              ) : (
-                <View style={styles.modalKudosRow}>
+              {!isOwnProfile && selectedPlant ? (() => {
+                const isKudoed = kudoedPlantIds.has(selectedPlant.id);
+                return (
+                  <TouchableOpacity
+                    style={[styles.modalKudosBtn, isKudoed && styles.modalKudosBtnActive]}
+                    onPress={() => handlePlantKudos(selectedPlant)}
+                    activeOpacity={0.75}
+                  >
+                    <Sprout size={18} color={isKudoed ? "#fff" : COLORS.primary} fill={isKudoed ? "#fff" : "transparent"} />
+                    <Text style={[styles.modalKudosBtnText, isKudoed && styles.modalKudosBtnTextActive]}>
+                      {selectedPlant.kudos_count > 0 ? `${selectedPlant.kudos_count} · ` : ""}{isKudoed ? t("community.removeKudos") : t("community.giveKudos")}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })() : (
+                <View style={styles.modalKudosReadOnly}>
                   <Sprout size={16} color={COLORS.textSecondary} />
                   <Text style={styles.modalKudosCount}>{selectedPlant?.kudos_count ?? 0}</Text>
                 </View>
@@ -494,47 +493,47 @@ const styles = StyleSheet.create({
     paddingBottom: 4,
   },
   plantCard: {
-    width: 100,
+    width: 130,
     backgroundColor: COLORS.cream,
     borderRadius: 14,
     overflow: "hidden",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
+    shadowOpacity: 0.08,
     shadowRadius: 4,
-    elevation: 1,
-    paddingBottom: 8,
+    elevation: 2,
+    paddingBottom: 10,
   },
   plantCardPhoto: {
-    width: 100,
-    height: 80,
+    width: 130,
+    height: 110,
   },
   plantCardPhotoPlaceholder: {
-    width: 100,
-    height: 80,
+    width: 130,
+    height: 110,
     backgroundColor: COLORS.lightgreen,
     alignItems: "center",
     justifyContent: "center",
   },
   plantCardName: {
-    fontSize: 12,
-    fontWeight: "600",
+    fontSize: 13,
+    fontWeight: "700",
     color: COLORS.textPrimary,
-    marginTop: 6,
-    paddingHorizontal: 8,
+    marginTop: 8,
+    paddingHorizontal: 10,
   },
   plantCardSpecies: {
-    fontSize: 10,
+    fontSize: 11,
     color: COLORS.textSecondary,
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
     marginTop: 1,
   },
   plantCardHealthBar: {
     height: 3,
     backgroundColor: "#E5E7EB",
     borderRadius: 2,
-    marginHorizontal: 8,
-    marginTop: 6,
+    marginHorizontal: 10,
+    marginTop: 8,
     overflow: "hidden",
   },
   plantCardHealthFill: {
@@ -544,14 +543,26 @@ const styles = StyleSheet.create({
   plantCardKudosRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 3,
-    paddingHorizontal: 8,
-    marginTop: 5,
+    justifyContent: "center",
+    gap: 4,
+    marginHorizontal: 10,
+    marginTop: 8,
+    paddingVertical: 5,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: COLORS.primary,
+  },
+  plantCardKudosRowActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
   },
   plantCardKudosCount: {
-    fontSize: 11,
-    color: COLORS.textSecondary,
-    fontWeight: "600",
+    fontSize: 12,
+    color: COLORS.primary,
+    fontWeight: "700",
+  },
+  plantCardKudosCountActive: {
+    color: "#fff",
   },
 
   divider: { height: 1, backgroundColor: "#EFEFEF", marginTop: 8 },
@@ -607,7 +618,30 @@ const styles = StyleSheet.create({
     height: 4,
     borderRadius: 2,
   },
-  modalKudosRow: {
+  modalKudosBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 16,
+    paddingVertical: 12,
+    borderRadius: 24,
+    borderWidth: 1.5,
+    borderColor: COLORS.primary,
+  },
+  modalKudosBtnActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  modalKudosBtnText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: COLORS.primary,
+  },
+  modalKudosBtnTextActive: {
+    color: "#fff",
+  },
+  modalKudosReadOnly: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
