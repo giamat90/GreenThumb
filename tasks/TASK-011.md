@@ -1,6 +1,6 @@
 # TASK-011: Plant-level Kudos system
 
-## Status: IN_PROGRESS
+## Status: DONE
 
 ## Overview
 Add a **Kudos** gesture attributed to the plant itself (not to a post). A plant accumulates a single kudos counter across every public post it is tagged in and across every mutual-follower profile view. Kudos is free for all users (no Pro gate), one-per-viewer-per-plant, toggleable. The plant owner receives a push notification using the same pipeline as likes/comments. This reuses the existing denormalized-count + trigger pattern and the existing `notify-community` edge function.
@@ -351,6 +351,20 @@ Wait for Giacomo's confirmation that the deploy succeeded before marking the tas
 
 ## Dependencies
 None — all prerequisite infrastructure exists (`post_likes` pattern, `notify-community` edge function, mutual-follower plant RLS at migration 019).
+
+## Implementation notes
+
+- Created `supabase/migrations/022_plant_kudos.sql` with table, triggers, three RLS policies on `plant_kudos`, and a new `plants` SELECT policy for public-post plants. The `plants.kudos_count` column defaults to 0 and is kept in sync by AFTER INSERT/DELETE triggers.
+- Created `lib/plantKudos.ts` with `togglePlantKudos` (insert/delete) and `fetchKudoedPlantIds` (bulk Set lookup). Both helpers are used across all four UI integration points.
+- Extended `lib/communityNotifications.ts` with `{ type: "kudos"; plantId: string }` union member — no other changes to the fire-and-forget convention.
+- Extended `supabase/functions/notify-community/index.ts`: added `plantId` to `RequestBody`, `let plantName` scoped in the handler, `kudos` branch in recipient-resolution (reads `plants.user_id + name`), and `kudos` branch in content-building. The existing self-notification and preference checks apply unchanged.
+- Community feed (`app/(tabs)/community.tsx`): `enrichRows` now also fetches `kudos_count` from plants and calls `fetchKudoedPlantIds` in parallel. `PostCard` receives a new `onKudos` prop. A `kudosRow` is rendered below the action bar when `post.plant_id` is set and `post.user_id !== currentUserId`. `handleKudos` applies optimistic updates to **both** discover and following feeds (a plant may appear in both).
+- Post detail (`app/community/post/[id].tsx`): kudos state fetched in parallel after post load, only for posts with `plant_id` that aren't own posts. Sprout + count rendered below like/share bar.
+- Profile carousel (`app/community/profile/[id].tsx`): `PlantPreview` type extended with `kudos_count`. Plants fetch updated to include `kudos_count`. `kudoedPlantIds` state tracks which plants the viewer has kudoed. `handlePlantKudos` wires optimistic toggle + notification. Plants re-fetched after following triggers also include kudos data. Kudos row on each card is tappable only when `!isOwnProfile`.
+- Plant detail (`app/plant/[id].tsx`): `Sprout` icon added to imports. A `kudosStatRow` with count + `plantDetail.kudosReceived` label is shown inside the health card whenever `kudos_count > 0`. The current screen is owner-only (plants Zustand store), so this is always a read-only stat in practice.
+- All 10 locale files updated with `plantDetail.kudosReceived` and `community.kudos/giveKudos/removeKudos`. JSON validity confirmed with Node.js parse.
+- `Sprout` icon confirmed present in lucide-react-native@0.575.0 (dist/cjs/icons/sprout.js).
+- TypeScript check: zero new errors from modified files; all pre-existing errors are unrelated.
 
 ## Notes
 - **Why plant-level, not post-level**: likes already cover post-level appreciation. The distinction of kudos is that it lives on the *plant* — so multiple posts about the same plant share one kudos counter, and the counter shows up on the plant itself (profile carousel, plant detail) rather than being trapped inside a single post's life cycle.
