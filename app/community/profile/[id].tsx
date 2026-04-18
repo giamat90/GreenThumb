@@ -14,7 +14,7 @@ import {
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useNavigation } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ArrowLeft, Leaf, Sprout, X } from "lucide-react-native";
+import { ArrowLeft, Leaf, Sprout } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
 import { COLORS } from "@/constants";
@@ -381,11 +381,9 @@ export default function PublicProfileScreen() {
         animationType="fade"
         onRequestClose={() => setSelectedPlantId(null)}
       >
-        <View style={styles.modalOverlay}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setSelectedPlantId(null)}>
+          <TouchableOpacity activeOpacity={1} onPress={() => {}}>
           <View style={styles.modalCard}>
-            <TouchableOpacity style={styles.modalClose} onPress={() => setSelectedPlantId(null)} hitSlop={12}>
-              <X size={20} color={COLORS.textPrimary} />
-            </TouchableOpacity>
             {selectedPlant?.photo_url ? (
               <Image source={{ uri: selectedPlant.photo_url }} style={styles.modalPhoto} resizeMode="cover" />
             ) : (
@@ -437,7 +435,8 @@ export default function PublicProfileScreen() {
               )}
             </View>
           </View>
-        </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
       </Modal>
     </View>
   );
@@ -571,18 +570,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderRadius: 20,
     overflow: "hidden",
-  },
-  modalClose: {
-    position: "absolute",
-    top: 12,
-    right: 12,
-    zIndex: 10,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "rgba(255,255,255,0.9)",
-    alignItems: "center",
-    justifyContent: "center",
   },
   modalPhoto: {
     width: "100%",
