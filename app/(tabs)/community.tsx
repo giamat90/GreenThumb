@@ -550,6 +550,9 @@ export default function CommunityScreen() {
   const handleReact = useCallback(async (postId: string, type: ReactionType | null) => {
     if (!profile) return;
 
+    const existingPost = discoverPosts.find((p) => p.id === postId) ?? followingPosts.find((p) => p.id === postId);
+    const hadReaction = !!(existingPost?.user_reaction);
+
     const update = (prev: CommunityPost[]) =>
       prev.map((p) => {
         if (p.id !== postId) return p;
@@ -583,12 +586,15 @@ export default function CommunityScreen() {
           { post_id: postId, user_id: profile.id, reaction_type: type },
           { onConflict: "post_id,user_id" }
         );
+        if (!hadReaction) {
+          sendCommunityNotification({ type: "like", postId });
+        }
       }
     } catch {
       setDiscoverPosts(revert);
       setFollowingPosts(revert);
     }
-  }, [profile]);
+  }, [profile, discoverPosts, followingPosts]);
 
   const handleKudos = useCallback(async (post: CommunityPost) => {
     if (!profile || !post.plant_id) return;

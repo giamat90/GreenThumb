@@ -224,6 +224,9 @@ export default function PostDetailScreen() {
           { post_id: post.id, user_id: profile.id, reaction_type: type },
           { onConflict: "post_id,user_id" }
         );
+        if (!oldReaction) {
+          sendCommunityNotification({ type: "like", postId: post.id });
+        }
       }
     } catch {
       setPost((p) => p ? { ...p, user_reaction: oldReaction, reaction_counts: oldCounts, is_liked: !!oldReaction } : p);
