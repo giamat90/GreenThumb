@@ -1,35 +1,40 @@
-import { Tabs, useRouter } from "expo-router";
-import { Home, Leaf, CalendarDays, Users, Plus } from "lucide-react-native";
+import { Tabs, useRouter, usePathname } from "expo-router";
+import { Home, Leaf, CalendarDays, Users, Plus, Camera } from "lucide-react-native";
 import { TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { COLORS } from "@/constants";
 
-// ─── Custom center tab button — New Post CTA ──────────────────────────────────
+// ─── Custom center tab button — context-aware CTA ────────────────────────────
 
 /**
  * Raised circular green button that sits above the tab bar.
- * Uses its own useRouter call instead of React Navigation's props-provided
- * onPress, so it is fully decoupled from the tab navigator's internal state.
- * This prevents the "Cannot read property 'stale' of undefined" crash that
- * occurs when the tab bar re-renders during an Android back-gesture animation
- * and React Navigation's onPress callback tries to read transitional state.
+ * Uses its own useRouter/usePathname calls instead of React Navigation's
+ * props-provided onPress, so it is fully decoupled from the tab navigator's
+ * internal state. This prevents the "Cannot read property 'stale' of undefined"
+ * crash that occurs when the tab bar re-renders during an Android back-gesture
+ * animation and React Navigation's onPress callback tries to read transitional state.
+ *
+ * Icon/action adapts to the active tab:
+ *   Community → Plus icon → new-post screen
+ *   All other tabs → Camera icon → Plant ID identify screen
  */
-function NewPostTabButton() {
+function CenterTabButton() {
   const router = useRouter();
   const { t } = useTranslation();
+  const pathname = usePathname();
+
+  const isCommunity = pathname.includes("/community");
+  const Icon = isCommunity ? Plus : Camera;
+  const label = isCommunity ? t("community.sharePost") : "Scan a Plant";
+  const destination = isCommunity ? "/community/new-post" : "/identify";
 
   return (
     <TouchableOpacity
-      onPress={() => router.push("/community/new-post")}
-      accessibilityLabel={t("community.sharePost")}
+      onPress={() => router.push(destination)}
+      accessibilityLabel={label}
       accessibilityRole="button"
-      style={{
-        flex: 1,
-        alignItems: "center",
-        justifyContent: "center",
-        marginTop: -22,
-      }}
+      style={{ flex: 1, alignItems: "center", justifyContent: "center", marginTop: -22 }}
     >
       <View
         style={{
@@ -46,7 +51,7 @@ function NewPostTabButton() {
           elevation: 8,
         }}
       >
-        <Plus size={28} color="white" />
+        <Icon size={28} color="white" />
       </View>
     </TouchableOpacity>
   );
@@ -91,12 +96,12 @@ export default function TabLayout() {
         }}
       />
 
-      {/* Center button — new post; identify screen still reachable from Home */}
+      {/* Center button — Camera (Plant ID) everywhere, Plus (new post) on Community */}
       <Tabs.Screen
         name="identify"
         options={{
           title: "",
-          tabBarButton: () => <NewPostTabButton />,
+          tabBarButton: () => <CenterTabButton />,
         }}
       />
 

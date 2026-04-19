@@ -16,6 +16,7 @@ import { CalendarDays, Droplets, Leaf, Stethoscope, Trash2 } from "lucide-react-
 import { COLORS } from "@/constants";
 import { ResponsiveContainer } from "@/components/ui/ResponsiveContainer";
 import { supabase } from "@/lib/supabase";
+import { sendCommunityNotification } from "@/lib/communityNotifications";
 import { usePlantsStore } from "@/store/plants";
 import type { Plant } from "@/types";
 
@@ -252,6 +253,7 @@ export default function CalendarScreen() {
           .eq("plant_id", entry.plant.id)
           .not("follow_up_date", "is", null);
         setDiagnosisFollowUps((prev) => prev.filter((d) => d.plant_id !== entry.plant.id));
+        sendCommunityNotification({ type: "task_completed", plantId: entry.plant.id, plantName: entry.plant.name, taskType: "follow_up" });
       }
     } catch {
       // Revert optimistic update on error

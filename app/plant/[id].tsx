@@ -31,6 +31,7 @@ import { useTranslation } from "react-i18next";
 import { COLORS } from "@/constants";
 import { supabase } from "@/lib/supabase";
 import { rescheduleReminderForPlant, cancelWateringReminder } from "@/lib/notifications";
+import { sendCommunityNotification } from "@/lib/communityNotifications";
 import { calculateFertilizerInterval } from "@/lib/fertilizer";
 import { usePlantsStore } from "@/store/plants";
 import { useUserStore } from "@/store/user";
@@ -396,6 +397,7 @@ function PlantDetailScreen() {
         health_score: newHealth,
       };
       rescheduleReminderForPlant(updatedPlant).catch(console.warn);
+      sendCommunityNotification({ type: "task_completed", plantId: plant.id, plantName: plant.name, taskType: "watering" });
 
       // Prepend the new event to local history
       setWateringHistory((prev) => [

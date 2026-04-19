@@ -19,6 +19,7 @@ import { useTranslation } from "react-i18next";
 import { COLORS } from "@/constants";
 import { supabase } from "@/lib/supabase";
 import { rescheduleFertilizerReminderForPlant } from "@/lib/notifications";
+import { sendCommunityNotification } from "@/lib/communityNotifications";
 import { calculateFertilizerInterval } from "@/lib/fertilizer";
 import { usePlantsStore } from "@/store/plants";
 import { useUserStore } from "@/store/user";
@@ -110,6 +111,7 @@ export default function FertilizerScreen() {
         next_fertilizer_at: nextFertilizerAt,
         fertilizer_type: selectedType,
       }).catch(console.warn);
+      sendCommunityNotification({ type: "task_completed", plantId: plant.id, plantName: plant.name, taskType: "fertilizing" });
 
       const nextDateStr = nextDate.toLocaleDateString(i18n.language, {
         month: "short",

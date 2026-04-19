@@ -9,11 +9,13 @@ import { corsHeaders } from "./cors.ts";
 const EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send";
 
 interface RequestBody {
-  type: "like" | "comment" | "follow" | "kudos";
+  type: "like" | "comment" | "follow" | "kudos" | "task_completed";
   postId?: string;        // required for like / comment
   targetUserId?: string;  // required for follow
-  plantId?: string;       // required for kudos
+  plantId?: string;       // required for kudos / task_completed
   commentText?: string;   // optional for comment
+  plantName?: string;     // required for task_completed
+  taskType?: "watering" | "fertilizing" | "follow_up"; // required for task_completed
 }
 
 serve(async (req: Request) => {
@@ -47,8 +49,8 @@ serve(async (req: Request) => {
 
     // ── 2. Parse body ──────────────────────────────────────────────────────
     const body: RequestBody = await req.json();
-    const { type, postId, targetUserId, plantId, commentText } = body;
-    let plantName: string | null = null;
+    const { type, postId, targetUserId, plantId, commentText, plantName: bodyPlantName, taskType } = body;
+    let plantName: string | null = bodyPlantName ?? null;
 
     // ── 3. Determine recipientId ───────────────────────────────────────────
     let recipientId: string | null = null;
@@ -89,6 +91,74 @@ serve(async (req: Request) => {
       const p = plant as { user_id: string; name: string | null } | null;
       recipientId = p?.user_id ?? null;
       plantName = p?.name ?? "your plant";
+    }
+
+    // ── task_completed: fan-out to all followers ──────────────────────────
+    if (type === "task_completed") {
+      if (!plantId || !taskType) {
+        return new Response(JSON.stringify({ error: "plantId and taskType required" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { data: actorProfileData } = await admin
+        .from("user_profiles")
+        .select("username")
+        .eq("id", actorId)
+        .maybeSingle();
+      const actorHandle = `@${(actorProfileData as { username: string | null } | null)?.username ?? "Someone"}`;
+
+      const { data: followers } = await admin
+        .from("follows")
+        .select("follower_id")
+        .eq("following_id", actorId);
+
+      if (!followers?.length) {
+        return new Response(JSON.stringify({ ok: true, skipped: "no followers" }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const followerIds = (followers as { follower_id: string }[]).map((f) => f.follower_id);
+      const { data: followerProfiles } = await admin
+        .from("profiles")
+        .select("push_token, community_notifications")
+        .in("id", followerIds);
+
+      const taskLabel = taskType === "watering"
+        ? "watered"
+        : taskType === "fertilizing"
+        ? "fertilized"
+        : "cared for";
+      const resolvedPlantName = plantName ?? "a plant";
+      const notifTitle = "🌱 Plant care";
+      const notifBody = `${actorHandle} just ${taskLabel} ${resolvedPlantName}!`;
+
+      const messages = (followerProfiles as { push_token: string | null; community_notifications: boolean | null }[] ?? [])
+        .filter((p) => p.push_token && p.community_notifications !== false)
+        .map((p) => ({
+          to: p.push_token,
+          title: notifTitle,
+          body: notifBody,
+          data: { type: "task_completed", plantId, actorId },
+          sound: "default",
+          channelId: "community",
+        }));
+
+      if (messages.length) {
+        await fetch(EXPO_PUSH_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(messages),
+        });
+      }
+
+      return new Response(JSON.stringify({ ok: true, sent: messages.length }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     if (!recipientId) {
