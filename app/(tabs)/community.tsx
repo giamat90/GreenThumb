@@ -14,13 +14,18 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Heart, MessageCircle, MoreVertical, Share2, Sprout, Users } from "lucide-react-native";
+import { MessageCircle, MoreVertical, Share2, Sprout, Users } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
 import { COLORS } from "@/constants";
 import { commentCountUpdates } from "@/lib/communityUpdates";
 import { fetchKudoedPlantIds, togglePlantKudos } from "@/lib/plantKudos";
 import { sendCommunityNotification } from "@/lib/communityNotifications";
+import {
+  REACTIONS, REACTION_ORDER, DEFAULT_REACTION, getBadgeTier, EMPTY_COUNTS,
+  type ReactionType, type ReactionCounts,
+} from "@/lib/reactions";
+import { ReactionPicker } from "@/components/community/ReactionPicker";
 import { ResponsiveContainer } from "@/components/ui/ResponsiveContainer";
 import { useResponsive } from "@/hooks/useResponsive";
 import { supabase } from "@/lib/supabase";
@@ -60,7 +65,7 @@ function UserAvatar({ username, avatarUrl, size = 36 }: { username?: string; ava
 function PostCard({
   post,
   currentUserId,
-  onLike,
+  onReact,
   onComment,
   onShare,
   onProfile,
@@ -69,7 +74,7 @@ function PostCard({
 }: {
   post: CommunityPost;
   currentUserId: string;
-  onLike: (postId: string, isLiked: boolean) => void;
+  onReact: (postId: string, type: ReactionType | null) => void;
   onComment: (postId: string) => void;
   onShare: (postId: string) => void;
   onProfile: (userId: string) => void;
@@ -78,6 +83,13 @@ function PostCard({
 }) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
+  const [pickerVisible, setPickerVisible] = useState(false);
+  const [pickerAnchor, setPickerAnchor] = useState({ pageX: 0, pageY: 0, width: 0, height: 0 });
+  const reactionBtnRef = useRef<View>(null);
+
+  const userReaction = (post.user_reaction as ReactionType | null | undefined) ?? null;
+  const counts = post.reaction_counts ?? { ...EMPTY_COUNTS };
+  const totalReactions = Object.values(counts).reduce((a, b) => a + b, 0);
 
   const handleMenu = () => {
     Alert.alert("", "", [
@@ -90,6 +102,32 @@ function PostCard({
       { text: t("plantDetail.cancel"), style: "cancel" },
     ]);
   };
+
+  const handleQuickTap = () => {
+    if (!userReaction) {
+      onReact(post.id, DEFAULT_REACTION);
+    } else if (userReaction === DEFAULT_REACTION) {
+      onReact(post.id, null);
+    }
+    // if non-default active reaction: quick tap does nothing — must long press to change
+  };
+
+  const handleLongPress = () => {
+    reactionBtnRef.current?.measure((_x, _y, width, height, pageX, pageY) => {
+      setPickerAnchor({ pageX, pageY, width, height });
+      setPickerVisible(true);
+    });
+  };
+
+  const handlePickerSelect = (type: ReactionType) => {
+    setPickerVisible(false);
+    if (userReaction === type) {
+      onReact(post.id, null); // toggle off
+    } else {
+      onReact(post.id, type);
+    }
+  };
+
   const caption = post.caption ?? "";
   const isLong = caption.length > 120;
   const displayCaption = !isLong || expanded ? caption : caption.slice(0, 120) + "…";
@@ -104,7 +142,12 @@ function PostCard({
       >
         <UserAvatar username={post.username} avatarUrl={post.avatar_url} />
         <View style={styles.postHeaderInfo}>
-          <Text style={styles.postUsername}>{post.username ?? t("community.postedBy")}</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+            <Text style={styles.postUsername}>{post.username ?? t("community.postedBy")}</Text>
+            {post.author_badge_emoji ? (
+              <Text style={styles.badgeEmoji}>{post.author_badge_emoji}</Text>
+            ) : null}
+          </View>
           {post.plant_name && (
             <Text style={styles.plantTag}>{t("community.plantTag", { name: post.plant_name })}</Text>
           )}
@@ -124,22 +167,27 @@ function PostCard({
         resizeMode="cover"
       />
 
-      {/* Actions */}
+      {/* Actions row */}
       <View style={styles.postActions}>
-        <TouchableOpacity
-          style={styles.actionBtn}
-          onPress={() => onLike(post.id, !!post.is_liked)}
-          activeOpacity={0.7}
-        >
-          <Heart
-            size={22}
-            color={post.is_liked ? COLORS.danger : COLORS.textSecondary}
-            fill={post.is_liked ? COLORS.danger : "transparent"}
-          />
-          <Text style={[styles.actionCount, post.is_liked && styles.actionCountLiked]}>
-            {post.likes_count}
-          </Text>
-        </TouchableOpacity>
+        {/* Reaction button */}
+        <View ref={reactionBtnRef} collapsable={false}>
+          <TouchableOpacity
+            style={styles.actionBtn}
+            onPress={handleQuickTap}
+            onLongPress={handleLongPress}
+            delayLongPress={400}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.reactionEmoji, !userReaction && { opacity: 0.45 }]}>
+              {userReaction ? REACTIONS[userReaction].emoji : REACTIONS.sprouting.emoji}
+            </Text>
+            {totalReactions > 0 && (
+              <Text style={[styles.actionCount, !!userReaction && styles.actionCountActive]}>
+                {totalReactions}
+              </Text>
+            )}
+          </TouchableOpacity>
+        </View>
 
         <TouchableOpacity
           style={styles.actionBtn}
@@ -159,7 +207,21 @@ function PostCard({
         </TouchableOpacity>
       </View>
 
-      {/* Kudos row — only shown when post has a tagged plant */}
+      {/* Reaction bar — individual counts per type */}
+      {totalReactions > 0 && (
+        <View style={styles.reactionBar}>
+          {REACTION_ORDER.filter((type) => counts[type] > 0).map((type) => (
+            <View key={type} style={[styles.reactionPill, userReaction === type && styles.reactionPillActive]}>
+              <Text style={styles.reactionPillEmoji}>{REACTIONS[type].emoji}</Text>
+              <Text style={[styles.reactionPillCount, userReaction === type && styles.reactionPillCountActive]}>
+                {counts[type]}
+              </Text>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {/* Plant kudos row — only shown when post has a tagged plant */}
       {post.plant_id && post.user_id !== currentUserId && (
         <TouchableOpacity
           style={styles.kudosRow}
@@ -194,6 +256,17 @@ function PostCard({
           </Text>
         </View>
       )}
+
+      <ReactionPicker
+        visible={pickerVisible}
+        anchorPageX={pickerAnchor.pageX}
+        anchorPageY={pickerAnchor.pageY}
+        anchorWidth={pickerAnchor.width}
+        anchorHeight={pickerAnchor.height}
+        currentReaction={userReaction}
+        onSelect={handlePickerSelect}
+        onDismiss={() => setPickerVisible(false)}
+      />
     </View>
   );
 }
@@ -228,24 +301,55 @@ async function enrichRows(
 ): Promise<CommunityPost[]> {
   if (rows.length === 0) return [];
 
-  const { data: likedData } = await supabase
-    .from("post_likes")
-    .select("post_id")
-    .eq("user_id", userId);
-  const likedIds = new Set((likedData ?? []).map((l: { post_id: string }) => l.post_id));
+  const postIds  = rows.map((r) => r.id as string);
+  const authorIds = [...new Set(rows.map((r) => r.user_id as string))];
 
-  const userIds = [...new Set(rows.map((r) => r.user_id as string))];
-  const profileMap: Record<string, Record<string, unknown>> = {};
-  if (userIds.length > 0) {
-    const { data: profilesData } = await supabase
-      .from("user_profiles")
-      .select("id, username, avatar_url")
-      .in("id", userIds);
-    for (const up of profilesData ?? []) {
-      profileMap[(up as Record<string, unknown>).id as string] = up as Record<string, unknown>;
-    }
+  const [
+    userReactionsResult,
+    reactionCountsResult,
+    profilesResult,
+    kudosTotalsResult,
+  ] = await Promise.all([
+    supabase.from("post_reactions").select("post_id, reaction_type").eq("user_id", userId).in("post_id", postIds),
+    supabase.from("post_reaction_counts").select("*").in("post_id", postIds),
+    supabase.from("user_profiles").select("id, username, avatar_url").in("id", authorIds),
+    supabase.from("user_kudos_total").select("user_id, total_kudos").in("user_id", authorIds),
+  ]);
+
+  // post_id → user's reaction type
+  const userReactionMap: Record<string, ReactionType> = {};
+  for (const r of userReactionsResult.data ?? []) {
+    userReactionMap[(r as { post_id: string; reaction_type: string }).post_id] =
+      (r as { post_id: string; reaction_type: string }).reaction_type as ReactionType;
   }
 
+  // post_id → counts
+  const countsMap: Record<string, ReactionCounts & { total: number }> = {};
+  for (const c of reactionCountsResult.data ?? []) {
+    const rc = c as { post_id: string; sprouting: number; blooming: number; hydrated: number; green_thumb: number; total: number };
+    countsMap[rc.post_id] = {
+      sprouting: rc.sprouting,
+      blooming: rc.blooming,
+      hydrated: rc.hydrated,
+      green_thumb: rc.green_thumb,
+      total: rc.total,
+    };
+  }
+
+  // author_id → username/avatar
+  const profileMap: Record<string, Record<string, unknown>> = {};
+  for (const up of profilesResult.data ?? []) {
+    profileMap[(up as Record<string, unknown>).id as string] = up as Record<string, unknown>;
+  }
+
+  // author_id → kudos total → badge emoji
+  const badgeMap: Record<string, string | null> = {};
+  for (const k of kudosTotalsResult.data ?? []) {
+    const kk = k as { user_id: string; total_kudos: number };
+    badgeMap[kk.user_id] = getBadgeTier(kk.total_kudos)?.emoji ?? null;
+  }
+
+  // Plant kudos (existing system — still used in kudos row)
   const plantIds = [
     ...new Set(rows.map((r) => r.plant_id as string | null).filter(Boolean) as string[]),
   ];
@@ -270,6 +374,7 @@ async function enrichRows(
     const up = profileMap[row.user_id as string] ?? null;
     const pid = row.plant_id as string | null;
     const plantInfo = pid ? plantMap[pid] : null;
+    const counts = countsMap[row.id as string];
     return {
       id: row.id as string,
       user_id: row.user_id as string,
@@ -283,9 +388,12 @@ async function enrichRows(
       username: up?.username as string | undefined,
       avatar_url: up?.avatar_url as string | null | undefined,
       plant_name: plantInfo?.name ?? null,
-      is_liked: likedIds.has(row.id as string),
+      is_liked: false,
       plant_kudos_count: plantInfo?.kudos_count ?? 0,
       has_kudoed_plant: pid ? kudoedSet.has(pid) : false,
+      user_reaction: userReactionMap[row.id as string] ?? null,
+      reaction_counts: counts ? { sprouting: counts.sprouting, blooming: counts.blooming, hydrated: counts.hydrated, green_thumb: counts.green_thumb } : { ...EMPTY_COUNTS },
+      author_badge_emoji: badgeMap[row.user_id as string] ?? null,
     };
   });
 }
@@ -439,28 +547,42 @@ export default function CommunityScreen() {
     }
   }, [activeTab, discoverLoading, discoverHasMore, followingLoading, followingHasMore, fetchDiscover, fetchFollowing]);
 
-  const handleLike = useCallback(async (postId: string, isLiked: boolean) => {
+  const handleReact = useCallback(async (postId: string, type: ReactionType | null) => {
     if (!profile) return;
+
     const update = (prev: CommunityPost[]) =>
-      prev.map((p) =>
-        p.id === postId
-          ? { ...p, is_liked: !isLiked, likes_count: p.likes_count + (isLiked ? -1 : 1) }
-          : p
-      );
+      prev.map((p) => {
+        if (p.id !== postId) return p;
+        const oldReaction = (p.user_reaction as ReactionType | null | undefined) ?? null;
+        const oldCounts = p.reaction_counts ?? { ...EMPTY_COUNTS };
+        const newCounts = { ...oldCounts };
+        if (oldReaction) newCounts[oldReaction] = Math.max(0, newCounts[oldReaction] - 1);
+        if (type)         newCounts[type]        = (newCounts[type] ?? 0) + 1;
+        return { ...p, user_reaction: type, reaction_counts: newCounts };
+      });
+
     const revert = (prev: CommunityPost[]) =>
-      prev.map((p) =>
-        p.id === postId
-          ? { ...p, is_liked: isLiked, likes_count: p.likes_count + (isLiked ? 1 : -1) }
-          : p
-      );
-    // Optimistic update on both feeds (post may appear in both)
+      prev.map((p) => {
+        if (p.id !== postId) return p;
+        const oldReaction = (p.user_reaction as ReactionType | null | undefined) ?? null;
+        const curCounts = p.reaction_counts ?? { ...EMPTY_COUNTS };
+        const revertedCounts = { ...curCounts };
+        if (type)         revertedCounts[type]        = Math.max(0, revertedCounts[type] - 1);
+        if (oldReaction)  revertedCounts[oldReaction] = (revertedCounts[oldReaction] ?? 0) + 1;
+        return { ...p, user_reaction: oldReaction, reaction_counts: revertedCounts };
+      });
+
     setDiscoverPosts(update);
     setFollowingPosts(update);
+
     try {
-      if (isLiked) {
-        await supabase.from("post_likes").delete().eq("user_id", profile.id).eq("post_id", postId);
+      if (!type) {
+        await supabase.from("post_reactions").delete().eq("user_id", profile.id).eq("post_id", postId);
       } else {
-        await supabase.from("post_likes").insert({ user_id: profile.id, post_id: postId });
+        await supabase.from("post_reactions").upsert(
+          { post_id: postId, user_id: profile.id, reaction_type: type },
+          { onConflict: "post_id,user_id" }
+        );
       }
     } catch {
       setDiscoverPosts(revert);
@@ -548,7 +670,7 @@ export default function CommunityScreen() {
             <PostCard
               post={item}
               currentUserId={profile?.id ?? ""}
-              onLike={handleLike}
+              onReact={handleReact}
               onComment={handleComment}
               onShare={handleShare}
               onProfile={handleProfile}
@@ -732,8 +854,45 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontWeight: "600",
   },
-  actionCountLiked: {
-    color: COLORS.danger,
+  actionCountActive: {
+    color: COLORS.primary,
+    fontWeight: "700",
+  },
+  reactionEmoji: {
+    fontSize: 22,
+  },
+  reactionBar: {
+    flexDirection: "row",
+    paddingHorizontal: 12,
+    paddingBottom: 8,
+    gap: 6,
+    flexWrap: "wrap",
+  },
+  reactionPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: COLORS.cream,
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    gap: 3,
+  },
+  reactionPillActive: {
+    backgroundColor: COLORS.lightgreen,
+  },
+  reactionPillEmoji: {
+    fontSize: 13,
+  },
+  reactionPillCount: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: COLORS.textSecondary,
+  },
+  reactionPillCountActive: {
+    color: COLORS.primary,
+  },
+  badgeEmoji: {
+    fontSize: 13,
   },
   kudosRow: {
     flexDirection: "row",

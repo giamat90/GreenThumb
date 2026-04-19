@@ -699,7 +699,17 @@
     "editComment": "编辑评论",
     "deleteComment": "删除评论",
     "confirmDeletePost": "删除此帖子？此操作无法撤销。",
-    "confirmDeleteComment": "删除此评论？"
+    "confirmDeleteComment": "删除此评论？",
+    "reaction_sprouting": "发芽",
+    "reaction_blooming": "盛开",
+    "reaction_hydrated": "水分充足",
+    "reaction_green_thumb": "绿拇指",
+    "badge_seedling": "幼苗",
+    "badge_plant_parent": "植物父母",
+    "badge_hydrated": "水分充足者",
+    "badge_green_thumb": "绿拇指",
+    "kudos_count": "{{count}} 点赞",
+    "your_badge": "你的徽章"
   },
   "seasonal": {
     "seasonalTips": "季节建议",

@@ -699,7 +699,17 @@
     "editComment": "Edytuj komentarz",
     "deleteComment": "Usuń komentarz",
     "confirmDeletePost": "Usunąć ten post? Tej operacji nie można cofnąć.",
-    "confirmDeleteComment": "Usunąć ten komentarz?"
+    "confirmDeleteComment": "Usunąć ten komentarz?",
+    "reaction_sprouting": "Kiełkowanie",
+    "reaction_blooming": "Kwitnienie",
+    "reaction_hydrated": "Nawodniona",
+    "reaction_green_thumb": "Zielony kciuk",
+    "badge_seedling": "Sadzonka",
+    "badge_plant_parent": "Rodzic roślin",
+    "badge_hydrated": "Nawodniony",
+    "badge_green_thumb": "Zielony Kciuk",
+    "kudos_count": "{{count}} kudosów",
+    "your_badge": "Twoja odznaka"
   },
   "seasonal": {
     "seasonalTips": "Sezonowe Porady",

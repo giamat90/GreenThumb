@@ -699,7 +699,17 @@
     "editComment": "Modifier le commentaire",
     "deleteComment": "Supprimer le commentaire",
     "confirmDeletePost": "Supprimer cette publication ? Cette action est irréversible.",
-    "confirmDeleteComment": "Supprimer ce commentaire ?"
+    "confirmDeleteComment": "Supprimer ce commentaire ?",
+    "reaction_sprouting": "En germination",
+    "reaction_blooming": "En fleurs",
+    "reaction_hydrated": "Hydratée",
+    "reaction_green_thumb": "Pouce vert",
+    "badge_seedling": "Graine",
+    "badge_plant_parent": "Parent de plante",
+    "badge_hydrated": "Hydraté",
+    "badge_green_thumb": "Pouce Vert",
+    "kudos_count": "{{count}} kudos",
+    "your_badge": "Votre badge"
   },
   "seasonal": {
     "seasonalTips": "Conseils Saisonniers",

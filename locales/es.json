@@ -699,7 +699,17 @@
     "editComment": "Editar comentario",
     "deleteComment": "Eliminar comentario",
     "confirmDeletePost": "¿Eliminar esta publicación? Esta acción no se puede deshacer.",
-    "confirmDeleteComment": "¿Eliminar este comentario?"
+    "confirmDeleteComment": "¿Eliminar este comentario?",
+    "reaction_sprouting": "Brotando",
+    "reaction_blooming": "Floreciendo",
+    "reaction_hydrated": "Hidratada",
+    "reaction_green_thumb": "Pulgar Verde",
+    "badge_seedling": "Semilla",
+    "badge_plant_parent": "Padre de Plantas",
+    "badge_hydrated": "Hidratado",
+    "badge_green_thumb": "Pulgar Verde",
+    "kudos_count": "{{count}} kudos",
+    "your_badge": "Tu insignia"
   },
   "seasonal": {
     "seasonalTips": "Consejos de Temporada",

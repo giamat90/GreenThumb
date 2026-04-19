@@ -174,6 +174,10 @@ export interface CommunityPost {
   is_liked?: boolean;
   plant_kudos_count?: number;
   has_kudoed_plant?: boolean;
+  // reaction system
+  user_reaction?: string | null;
+  reaction_counts?: { sprouting: number; blooming: number; hydrated: number; green_thumb: number };
+  author_badge_emoji?: string | null;
 }
 
 export interface PostComment {

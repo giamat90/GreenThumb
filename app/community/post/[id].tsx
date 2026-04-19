@@ -16,13 +16,18 @@ import {
 import { Stack, useLocalSearchParams } from "expo-router";
 import { useNavigation } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ArrowLeft, Heart, MoreVertical, Send, Share2, Sprout } from "lucide-react-native";
+import { ArrowLeft, MoreVertical, Send, Share2, Sprout } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
 import { COLORS } from "@/constants";
 import { sendCommunityNotification } from "@/lib/communityNotifications";
 import { commentCountUpdates } from "@/lib/communityUpdates";
 import { fetchKudoedPlantIds, togglePlantKudos } from "@/lib/plantKudos";
+import {
+  REACTIONS, REACTION_ORDER, DEFAULT_REACTION, EMPTY_COUNTS,
+  type ReactionType, type ReactionCounts,
+} from "@/lib/reactions";
+import { ReactionPicker } from "@/components/community/ReactionPicker";
 import { supabase } from "@/lib/supabase";
 import { useUserStore } from "@/store/user";
 import type { CommunityPost, PostComment } from "@/types";
@@ -52,6 +57,9 @@ export default function PostDetailScreen() {
   const [currentUserUsername, setCurrentUserUsername] = useState<string | undefined>(undefined);
   const [plantKudosCount, setPlantKudosCount] = useState(0);
   const [hasKudoedPlant, setHasKudoedPlant] = useState(false);
+  const [pickerVisible, setPickerVisible] = useState(false);
+  const [pickerAnchor, setPickerAnchor] = useState({ pageX: 0, pageY: 0, width: 0, height: 0 });
+  const reactionBtnRef = useRef<View>(null);
   const flatListRef = useRef<FlatList>(null);
   const preKeyboardOffsetRef = useRef(0);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
@@ -71,7 +79,7 @@ export default function PostDetailScreen() {
       // Avoid joining user_profiles directly: posts.user_id has two FKs
       // (auth.users + user_profiles) which causes PostgREST to fail silently.
       // Mirror the enrichment pattern from community.tsx instead.
-      const [postResult, commentsResult, likeResult] = await Promise.all([
+      const [postResult, commentsResult, reactionResult, reactionCountsResult] = await Promise.all([
         supabase
           .from("posts")
           .select("*, plants(name)")
@@ -83,9 +91,14 @@ export default function PostDetailScreen() {
           .eq("post_id", postId)
           .order("created_at", { ascending: true }),
         supabase
-          .from("post_likes")
-          .select("id")
+          .from("post_reactions")
+          .select("reaction_type")
           .eq("user_id", profile.id)
+          .eq("post_id", postId)
+          .maybeSingle(),
+        supabase
+          .from("post_reaction_counts")
+          .select("*")
           .eq("post_id", postId)
           .maybeSingle(),
       ]);
@@ -101,6 +114,11 @@ export default function PostDetailScreen() {
         .maybeSingle();
 
       const resolvedPlantId = row.plant_id as string | null;
+      const userReaction = (reactionResult.data as { reaction_type: string } | null)?.reaction_type as ReactionType | null ?? null;
+      const rc = reactionCountsResult.data as { sprouting: number; blooming: number; hydrated: number; green_thumb: number } | null;
+      const reactionCounts: ReactionCounts = rc
+        ? { sprouting: rc.sprouting ?? 0, blooming: rc.blooming ?? 0, hydrated: rc.hydrated ?? 0, green_thumb: rc.green_thumb ?? 0 }
+        : { ...EMPTY_COUNTS };
       setPost({
         id: row.id as string,
         user_id: row.user_id as string,
@@ -114,7 +132,9 @@ export default function PostDetailScreen() {
         username: (authorProfile as Record<string, unknown> | null)?.username as string | undefined,
         avatar_url: (authorProfile as Record<string, unknown> | null)?.avatar_url as string | null | undefined,
         plant_name: (row.plants as Record<string, unknown> | null)?.name as string | null | undefined,
-        is_liked: !!likeResult.data,
+        is_liked: !!userReaction,
+        user_reaction: userReaction,
+        reaction_counts: reactionCounts,
       });
 
       // Fetch plant kudos data if this post has a tagged plant
@@ -188,19 +208,25 @@ export default function PostDetailScreen() {
     return () => { show.remove(); hide.remove(); };
   }, []);
 
-  const handleLike = useCallback(async () => {
+  const handleReact = useCallback(async (type: ReactionType | null) => {
     if (!profile || !post) return;
-    const wasLiked = post.is_liked;
-    setPost((p) => p ? { ...p, is_liked: !wasLiked, likes_count: p.likes_count + (wasLiked ? -1 : 1) } : p);
+    const oldReaction = (post.user_reaction as ReactionType | null | undefined) ?? null;
+    const oldCounts = post.reaction_counts ?? { ...EMPTY_COUNTS };
+    const newCounts = { ...oldCounts };
+    if (oldReaction) newCounts[oldReaction] = Math.max(0, newCounts[oldReaction] - 1);
+    if (type)         newCounts[type]        = (newCounts[type] ?? 0) + 1;
+    setPost((p) => p ? { ...p, user_reaction: type, reaction_counts: newCounts, is_liked: !!type } : p);
     try {
-      if (wasLiked) {
-        await supabase.from("post_likes").delete().eq("user_id", profile.id).eq("post_id", post.id);
+      if (!type) {
+        await supabase.from("post_reactions").delete().eq("user_id", profile.id).eq("post_id", post.id);
       } else {
-        await supabase.from("post_likes").insert({ user_id: profile.id, post_id: post.id });
-        sendCommunityNotification({ type: "like", postId: post.id });
+        await supabase.from("post_reactions").upsert(
+          { post_id: post.id, user_id: profile.id, reaction_type: type },
+          { onConflict: "post_id,user_id" }
+        );
       }
     } catch {
-      setPost((p) => p ? { ...p, is_liked: wasLiked, likes_count: p.likes_count + (wasLiked ? 1 : -1) } : p);
+      setPost((p) => p ? { ...p, user_reaction: oldReaction, reaction_counts: oldCounts, is_liked: !!oldReaction } : p);
     }
   }, [profile, post]);
 
@@ -343,16 +369,72 @@ export default function PostDetailScreen() {
 
             {/* Actions */}
             <View style={styles.actions}>
-              <TouchableOpacity style={styles.actionBtn} onPress={handleLike} activeOpacity={0.7}>
-                <Heart
-                  size={24}
-                  color={post.is_liked ? COLORS.danger : COLORS.textSecondary}
-                  fill={post.is_liked ? COLORS.danger : "transparent"}
-                />
-                <Text style={[styles.actionCount, post.is_liked && { color: COLORS.danger }]}>
-                  {post.likes_count}
-                </Text>
-              </TouchableOpacity>
+              {/* Reaction button */}
+              <View ref={reactionBtnRef} collapsable={false}>
+                <TouchableOpacity
+                  style={styles.actionBtn}
+                  onPress={() => {
+                    const cur = (post.user_reaction as ReactionType | null | undefined) ?? null;
+                    if (!cur) handleReact(DEFAULT_REACTION);
+                    else if (cur === DEFAULT_REACTION) handleReact(null);
+                  }}
+                  onLongPress={() => {
+                    reactionBtnRef.current?.measure((_x, _y, w, h, px, py) => {
+                      setPickerAnchor({ pageX: px, pageY: py, width: w, height: h });
+                      setPickerVisible(true);
+                    });
+                  }}
+                  delayLongPress={400}
+                  activeOpacity={0.7}
+                >
+                  {(() => {
+                    const cur = (post.user_reaction as ReactionType | null | undefined) ?? null;
+                    const counts = post.reaction_counts ?? { ...EMPTY_COUNTS };
+                    const total = Object.values(counts).reduce((a, b) => a + b, 0);
+                    return (
+                      <>
+                        <Text style={[{ fontSize: 24 }, !cur && { opacity: 0.45 }]}>
+                          {cur ? REACTIONS[cur].emoji : REACTIONS.sprouting.emoji}
+                        </Text>
+                        {total > 0 && (
+                          <Text style={[styles.actionCount, !!cur && { color: COLORS.primary, fontWeight: "700" }]}>
+                            {total}
+                          </Text>
+                        )}
+                      </>
+                    );
+                  })()}
+                </TouchableOpacity>
+              </View>
+              {/* Reaction bar */}
+              {(() => {
+                const counts = post.reaction_counts ?? { ...EMPTY_COUNTS };
+                const cur = (post.user_reaction as ReactionType | null | undefined) ?? null;
+                return REACTION_ORDER.filter((t) => counts[t] > 0).length > 0 ? (
+                  <View style={{ flexDirection: "row", gap: 6, alignItems: "center" }}>
+                    {REACTION_ORDER.filter((t) => counts[t] > 0).map((t) => (
+                      <View key={t} style={{ flexDirection: "row", alignItems: "center", backgroundColor: cur === t ? COLORS.lightgreen : COLORS.cream, borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2, gap: 2 }}>
+                        <Text style={{ fontSize: 12 }}>{REACTIONS[t].emoji}</Text>
+                        <Text style={{ fontSize: 11, fontWeight: "600", color: cur === t ? COLORS.primary : COLORS.textSecondary }}>{counts[t]}</Text>
+                      </View>
+                    ))}
+                  </View>
+                ) : null;
+              })()}
+              <ReactionPicker
+                visible={pickerVisible}
+                anchorPageX={pickerAnchor.pageX}
+                anchorPageY={pickerAnchor.pageY}
+                anchorWidth={pickerAnchor.width}
+                anchorHeight={pickerAnchor.height}
+                currentReaction={(post.user_reaction as ReactionType | null | undefined) ?? null}
+                onSelect={(type) => {
+                  setPickerVisible(false);
+                  const cur = (post.user_reaction as ReactionType | null | undefined) ?? null;
+                  handleReact(cur === type ? null : type);
+                }}
+                onDismiss={() => setPickerVisible(false)}
+              />
 
               <TouchableOpacity
                 style={styles.actionBtn}

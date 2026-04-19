@@ -699,7 +699,17 @@
     "editComment": "Reactie bewerken",
     "deleteComment": "Reactie verwijderen",
     "confirmDeletePost": "Dit bericht verwijderen? Dit kan niet ongedaan worden gemaakt.",
-    "confirmDeleteComment": "Deze reactie verwijderen?"
+    "confirmDeleteComment": "Deze reactie verwijderen?",
+    "reaction_sprouting": "Kiemend",
+    "reaction_blooming": "Bloeiend",
+    "reaction_hydrated": "Gehydrateerd",
+    "reaction_green_thumb": "Groene duim",
+    "badge_seedling": "Zaailing",
+    "badge_plant_parent": "Plantenouder",
+    "badge_hydrated": "Gehydrateerd",
+    "badge_green_thumb": "Groene Duim",
+    "kudos_count": "{{count}} kudos",
+    "your_badge": "Jouw badge"
   },
   "seasonal": {
     "seasonalTips": "Seizoenstips",

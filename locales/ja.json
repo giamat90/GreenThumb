@@ -699,7 +699,17 @@
     "editComment": "コメントを編集",
     "deleteComment": "コメントを削除",
     "confirmDeletePost": "この投稿を削除しますか？この操作は元に戻せません。",
-    "confirmDeleteComment": "このコメントを削除しますか？"
+    "confirmDeleteComment": "このコメントを削除しますか？",
+    "reaction_sprouting": "発芽中",
+    "reaction_blooming": "開花中",
+    "reaction_hydrated": "水分補給",
+    "reaction_green_thumb": "グリーンサム",
+    "badge_seedling": "新芽",
+    "badge_plant_parent": "植物の親",
+    "badge_hydrated": "水分補給者",
+    "badge_green_thumb": "グリーンサム",
+    "kudos_count": "{{count}} クードス",
+    "your_badge": "あなたのバッジ"
   },
   "seasonal": {
     "seasonalTips": "季節のヒント",

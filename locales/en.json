@@ -699,7 +699,17 @@
     "editComment": "Edit comment",
     "deleteComment": "Delete comment",
     "confirmDeletePost": "Delete this post? This cannot be undone.",
-    "confirmDeleteComment": "Delete this comment?"
+    "confirmDeleteComment": "Delete this comment?",
+    "reaction_sprouting": "Sprouting",
+    "reaction_blooming": "Blooming",
+    "reaction_hydrated": "Hydrated",
+    "reaction_green_thumb": "Green Thumb",
+    "badge_seedling": "Seedling",
+    "badge_plant_parent": "Plant Parent",
+    "badge_hydrated": "Hydrated",
+    "badge_green_thumb": "Green Thumb",
+    "kudos_count": "{{count}} kudos",
+    "your_badge": "Your badge"
   },
   "seasonal": {
     "seasonalTips": "Seasonal Tips",

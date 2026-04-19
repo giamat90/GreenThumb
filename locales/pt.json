@@ -699,7 +699,17 @@
     "editComment": "Editar comentário",
     "deleteComment": "Excluir comentário",
     "confirmDeletePost": "Excluir esta publicação? Essa ação não pode ser desfeita.",
-    "confirmDeleteComment": "Excluir este comentário?"
+    "confirmDeleteComment": "Excluir este comentário?",
+    "reaction_sprouting": "Brotando",
+    "reaction_blooming": "Florescendo",
+    "reaction_hydrated": "Hidratada",
+    "reaction_green_thumb": "Polegar Verde",
+    "badge_seedling": "Semente",
+    "badge_plant_parent": "Pai de Planta",
+    "badge_hydrated": "Hidratado",
+    "badge_green_thumb": "Polegar Verde",
+    "kudos_count": "{{count}} kudos",
+    "your_badge": "Seu crachá"
   },
   "seasonal": {
     "seasonalTips": "Dicas Sazonais",

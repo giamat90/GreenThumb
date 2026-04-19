@@ -699,7 +699,17 @@
     "editComment": "Modifica commento",
     "deleteComment": "Elimina commento",
     "confirmDeletePost": "Eliminare questo post? L'operazione non può essere annullata.",
-    "confirmDeleteComment": "Eliminare questo commento?"
+    "confirmDeleteComment": "Eliminare questo commento?",
+    "reaction_sprouting": "Germoglio",
+    "reaction_blooming": "In fiore",
+    "reaction_hydrated": "Idratata",
+    "reaction_green_thumb": "Pollice verde",
+    "badge_seedling": "Germoglio",
+    "badge_plant_parent": "Plant Parent",
+    "badge_hydrated": "Esperto",
+    "badge_green_thumb": "Pollice Verde",
+    "kudos_count": "{{count}} kudos",
+    "your_badge": "Il tuo badge"
   },
   "seasonal": {
     "seasonalTips": "Consigli Stagionali",

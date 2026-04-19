@@ -699,7 +699,17 @@
     "editComment": "Kommentar bearbeiten",
     "deleteComment": "Kommentar löschen",
     "confirmDeletePost": "Diesen Beitrag löschen? Dies kann nicht rückgängig gemacht werden.",
-    "confirmDeleteComment": "Diesen Kommentar löschen?"
+    "confirmDeleteComment": "Diesen Kommentar löschen?",
+    "reaction_sprouting": "Keimend",
+    "reaction_blooming": "Blühend",
+    "reaction_hydrated": "Hydriert",
+    "reaction_green_thumb": "Grüner Daumen",
+    "badge_seedling": "Sämling",
+    "badge_plant_parent": "Pflanzenelternteil",
+    "badge_hydrated": "Hydratisiert",
+    "badge_green_thumb": "Grüner Daumen",
+    "kudos_count": "{{count}} Kudos",
+    "your_badge": "Dein Abzeichen"
   },
   "seasonal": {
     "seasonalTips": "Saisonale Tipps",
