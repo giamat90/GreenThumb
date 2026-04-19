@@ -1,0 +1,9 @@
+ffmpeg -y -i home.jpeg -vf scale=1024:500:force_original_aspect_ratio=decrease home1024x500.jpeg
+ffmpeg -y -i free-seasional-tips.jpeg -vf scale=1024:500:force_original_aspect_ratio=decrease free-seasional-tips1024x500.jpeg
+ffmpeg -y -i diagnosis-page.jpeg -vf scale=1024:500:force_original_aspect_ratio=decrease diagnosis-page1024x500.jpeg
+ffmpeg -y -i my-plant-sched.jpeg -vf scale=1024:500:force_original_aspect_ratio=decrease my-plant-sched1024x500.jpeg
+ffmpeg -y -i placement-advisor.jpeg -vf scale=1024:500:force_original_aspect_ratio=decrease placement-advisor1024x500.jpeg
+ffmpeg -y -i placement-advisor-2.jpeg -vf scale=1024:500:force_original_aspect_ratio=decrease placement-advisor-21024x500.jpeg
+ffmpeg -y -i plant-sched.jpeg -vf scale=1024:500:force_original_aspect_ratio=decrease plant-sched1024x500.jpeg
+ffmpeg -y -i camera-smart-recognize.jpeg -vf scale=1024:500:force_original_aspect_ratio=decrease camera-smart-recognize1024x500.jpeg
+ffmpeg -y -i camera-smart-recognize-2.jpeg -vf scale=1024:500:force_original_aspect_ratio=decrease camera-smart-recognize-21024x500.jpeg

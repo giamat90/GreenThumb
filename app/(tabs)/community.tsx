@@ -14,15 +14,14 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { MessageCircle, MoreVertical, Share2, Sprout, Users } from "lucide-react-native";
+import { MessageCircle, MoreVertical, Share2, Users } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
 import { COLORS } from "@/constants";
 import { commentCountUpdates } from "@/lib/communityUpdates";
-import { fetchKudoedPlantIds, togglePlantKudos } from "@/lib/plantKudos";
 import { sendCommunityNotification } from "@/lib/communityNotifications";
 import {
-  REACTIONS, REACTION_ORDER, DEFAULT_REACTION, getBadgeTier, EMPTY_COUNTS,
+  REACTIONS, REACTION_ORDER, DEFAULT_REACTION, EMPTY_COUNTS,
   type ReactionType, type ReactionCounts,
 } from "@/lib/reactions";
 import { ReactionPicker } from "@/components/community/ReactionPicker";
@@ -69,7 +68,6 @@ function PostCard({
   onComment,
   onShare,
   onProfile,
-  onKudos,
   onDelete,
 }: {
   post: CommunityPost;
@@ -78,7 +76,6 @@ function PostCard({
   onComment: (postId: string) => void;
   onShare: (postId: string) => void;
   onProfile: (userId: string) => void;
-  onKudos: (post: CommunityPost) => void;
   onDelete: (postId: string) => void;
 }) {
   const { t } = useTranslation();
@@ -144,9 +141,6 @@ function PostCard({
         <View style={styles.postHeaderInfo}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
             <Text style={styles.postUsername}>{post.username ?? t("community.postedBy")}</Text>
-            {post.author_badge_emoji ? (
-              <Text style={styles.badgeEmoji}>{post.author_badge_emoji}</Text>
-            ) : null}
           </View>
           {post.plant_name && (
             <Text style={styles.plantTag}>{t("community.plantTag", { name: post.plant_name })}</Text>
@@ -221,28 +215,6 @@ function PostCard({
         </View>
       )}
 
-      {/* Plant kudos row — only shown when post has a tagged plant */}
-      {post.plant_id && post.user_id !== currentUserId && (
-        <TouchableOpacity
-          style={styles.kudosRow}
-          onPress={() => onKudos(post)}
-          activeOpacity={0.7}
-          accessibilityRole="button"
-        >
-          <Sprout
-            size={18}
-            color={post.has_kudoed_plant ? COLORS.primary : COLORS.textSecondary}
-            fill={post.has_kudoed_plant ? COLORS.primary : "transparent"}
-          />
-          <Text style={[styles.kudosCount, post.has_kudoed_plant && styles.kudosCountActive]}>
-            {post.plant_kudos_count ?? 0}
-          </Text>
-          {post.plant_name ? (
-            <Text style={styles.kudosPlantName} numberOfLines={1}>· {post.plant_name}</Text>
-          ) : null}
-        </TouchableOpacity>
-      )}
-
       {/* Caption */}
       {caption.length > 0 && (
         <View style={styles.captionContainer}>
@@ -308,12 +280,10 @@ async function enrichRows(
     userReactionsResult,
     reactionCountsResult,
     profilesResult,
-    kudosTotalsResult,
   ] = await Promise.all([
     supabase.from("post_reactions").select("post_id, reaction_type").eq("user_id", userId).in("post_id", postIds),
     supabase.from("post_reaction_counts").select("*").in("post_id", postIds),
     supabase.from("user_profiles").select("id, username, avatar_url").in("id", authorIds),
-    supabase.from("user_kudos_total").select("user_id, total_kudos").in("user_id", authorIds),
   ]);
 
   // post_id → user's reaction type
@@ -342,38 +312,22 @@ async function enrichRows(
     profileMap[(up as Record<string, unknown>).id as string] = up as Record<string, unknown>;
   }
 
-  // author_id → kudos total → badge emoji
-  const badgeMap: Record<string, string | null> = {};
-  for (const k of kudosTotalsResult.data ?? []) {
-    const kk = k as { user_id: string; total_kudos: number };
-    badgeMap[kk.user_id] = getBadgeTier(kk.total_kudos)?.emoji ?? null;
-  }
-
-  // Plant kudos (existing system — still used in kudos row)
+  // Plant names for post header tag
   const plantIds = [
     ...new Set(rows.map((r) => r.plant_id as string | null).filter(Boolean) as string[]),
   ];
-  const plantMap: Record<string, { name: string; kudos_count: number }> = {};
-  let kudoedSet = new Set<string>();
+  const plantNameMap: Record<string, string> = {};
   if (plantIds.length > 0) {
-    const [plantsResult, kudoedResult] = await Promise.all([
-      supabase.from("plants").select("id, name, kudos_count").in("id", plantIds),
-      fetchKudoedPlantIds(userId, plantIds),
-    ]);
-    for (const pl of plantsResult.data ?? []) {
+    const { data: plantsData } = await supabase.from("plants").select("id, name").in("id", plantIds);
+    for (const pl of plantsData ?? []) {
       const p = pl as Record<string, unknown>;
-      plantMap[p.id as string] = {
-        name: p.name as string,
-        kudos_count: (p.kudos_count as number) ?? 0,
-      };
+      plantNameMap[p.id as string] = p.name as string;
     }
-    kudoedSet = kudoedResult;
   }
 
   return rows.map((row) => {
     const up = profileMap[row.user_id as string] ?? null;
     const pid = row.plant_id as string | null;
-    const plantInfo = pid ? plantMap[pid] : null;
     const counts = countsMap[row.id as string];
     return {
       id: row.id as string,
@@ -387,13 +341,10 @@ async function enrichRows(
       created_at: row.created_at as string,
       username: up?.username as string | undefined,
       avatar_url: up?.avatar_url as string | null | undefined,
-      plant_name: plantInfo?.name ?? null,
+      plant_name: pid ? (plantNameMap[pid] ?? null) : null,
       is_liked: false,
-      plant_kudos_count: plantInfo?.kudos_count ?? 0,
-      has_kudoed_plant: pid ? kudoedSet.has(pid) : false,
       user_reaction: userReactionMap[row.id as string] ?? null,
       reaction_counts: counts ? { sprouting: counts.sprouting, blooming: counts.blooming, hydrated: counts.hydrated, green_thumb: counts.green_thumb } : { ...EMPTY_COUNTS },
-      author_badge_emoji: badgeMap[row.user_id as string] ?? null,
     };
   });
 }
@@ -596,42 +547,6 @@ export default function CommunityScreen() {
     }
   }, [profile, discoverPosts, followingPosts]);
 
-  const handleKudos = useCallback(async (post: CommunityPost) => {
-    if (!profile || !post.plant_id) return;
-    const wasKudoed = !!post.has_kudoed_plant;
-    const update = (prev: CommunityPost[]) =>
-      prev.map((p) =>
-        p.plant_id === post.plant_id
-          ? {
-              ...p,
-              has_kudoed_plant: !wasKudoed,
-              plant_kudos_count: (p.plant_kudos_count ?? 0) + (wasKudoed ? -1 : 1),
-            }
-          : p
-      );
-    const revert = (prev: CommunityPost[]) =>
-      prev.map((p) =>
-        p.plant_id === post.plant_id
-          ? {
-              ...p,
-              has_kudoed_plant: wasKudoed,
-              plant_kudos_count: (p.plant_kudos_count ?? 0) + (wasKudoed ? 1 : -1),
-            }
-          : p
-      );
-    setDiscoverPosts(update);
-    setFollowingPosts(update);
-    try {
-      await togglePlantKudos(post.plant_id, profile.id, wasKudoed);
-      if (!wasKudoed) {
-        sendCommunityNotification({ type: "kudos", plantId: post.plant_id });
-      }
-    } catch {
-      setDiscoverPosts(revert);
-      setFollowingPosts(revert);
-    }
-  }, [profile]);
-
   const handleComment = useCallback((postId: string) => {
     router.push({ pathname: "/community/post/[id]", params: { id: postId } });
   }, [router]);
@@ -680,7 +595,6 @@ export default function CommunityScreen() {
               onComment={handleComment}
               onShare={handleShare}
               onProfile={handleProfile}
-              onKudos={handleKudos}
               onDelete={handleDeletePost}
             />
           );
@@ -896,29 +810,6 @@ const styles = StyleSheet.create({
   },
   reactionPillCountActive: {
     color: COLORS.primary,
-  },
-  badgeEmoji: {
-    fontSize: 13,
-  },
-  kudosRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 12,
-    paddingBottom: 8,
-    gap: 5,
-  },
-  kudosCount: {
-    fontSize: 13,
-    color: COLORS.textSecondary,
-    fontWeight: "600",
-  },
-  kudosCountActive: {
-    color: COLORS.primary,
-  },
-  kudosPlantName: {
-    fontSize: 13,
-    color: COLORS.textSecondary,
-    flex: 1,
   },
   captionContainer: {
     paddingHorizontal: 12,

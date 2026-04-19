@@ -1,0 +1,1 @@
+npx supabase secrets set PLANT_ID_API_KEY=OL2WTraJ64ZMXV0KjbJAGeYSrNcN9dkawcmyv7WLomoVwN95FX --project-ref uhiyipkjrtqvfvtgerbo

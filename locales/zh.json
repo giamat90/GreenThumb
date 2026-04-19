@@ -221,7 +221,6 @@
     "every2days": "每2天",
     "every5days": "每5天",
     "every10days": "每10天",
-    "everyNDays": "每{{n}}天",
     "placementBtn": "位置",
     "repotBtn": "换盆",
     "growthBtn": "生长",
@@ -231,8 +230,7 @@
     "newFertilizer": "记录施肥",
     "newRepotting": "新换盆检查",
     "newPruning": "新修剪检查",
-    "newGrowth": "记录生长",
-    "kudosReceived": "收到的点赞"
+    "newGrowth": "记录生长"
   },
   "profile": {
     "profile": "个人资料",
@@ -557,7 +555,7 @@
   "identify": {
     "title": "识别植物",
     "subtitle": "拍照或从相册选择",
-    "takePhoto": "拍照",
+    "takePhoto": "拍一张照片",
     "choosePhoto": "选择照片",
     "identifying": "识别中...",
     "results": "识别结果",
@@ -618,7 +616,6 @@
     "speciesPlaceholder": "例如：龟背竹",
     "lowConfidenceSubtitle": "照片质量可能太低，或者该植物可能不常见。",
     "chooseSource": "添加植物",
-    "takePhoto": "拍一张照片",
     "chooseFromGallery": "从相册选择",
     "sourceSubtitle": "您想如何添加植物照片？",
     "galleryPermissionTitle": "需要相册权限",
@@ -691,9 +688,6 @@
     "plantsSection": "植物",
     "noPlantsYet": "暂无植物",
     "mutualFollowersOnly": "仅互相关注的用户可见",
-    "kudos": "Kudos",
-    "giveKudos": "送出Kudos",
-    "removeKudos": "撤回Kudos",
     "editCaption": "编辑说明",
     "deletePost": "删除帖子",
     "editComment": "编辑评论",
@@ -703,13 +697,7 @@
     "reaction_sprouting": "发芽",
     "reaction_blooming": "盛开",
     "reaction_hydrated": "水分充足",
-    "reaction_green_thumb": "绿拇指",
-    "badge_seedling": "幼苗",
-    "badge_plant_parent": "植物父母",
-    "badge_hydrated": "水分充足者",
-    "badge_green_thumb": "绿拇指",
-    "kudos_count": "{{count}} 点赞",
-    "your_badge": "你的徽章"
+    "reaction_green_thumb": "绿拇指"
   },
   "seasonal": {
     "seasonalTips": "季节建议",

@@ -141,7 +141,7 @@
     "readMore": "Meer lezen",
     "readLess": "Minder lezen",
     "due": "Vervaldatum",
-    "everyNDays": "Elke {{n}}d",
+    "everyNDays": "Elke {{n}} dagen",
     "fertilizeButtonType": "Meststoftype",
     "noWateringHistory": "Nog geen watergeschiedenis",
     "noDiagnosesYet": "Nog geen diagnoses — tik op Diagnose om te beginnen",
@@ -221,7 +221,6 @@
     "every2days": "Elke 2 dagen",
     "every5days": "Elke 5 dagen",
     "every10days": "Elke 10 dagen",
-    "everyNDays": "Elke {{n}} dagen",
     "placementBtn": "Plaatsing",
     "repotBtn": "Verpotten",
     "growthBtn": "Groei",
@@ -231,8 +230,7 @@
     "newFertilizer": "Bemesting registreren",
     "newRepotting": "Nieuwe verpotcheck",
     "newPruning": "Nieuwe snoeicheck",
-    "newGrowth": "Groei registreren",
-    "kudosReceived": "Ontvangen kudos"
+    "newGrowth": "Groei registreren"
   },
   "profile": {
     "profile": "Profiel",
@@ -618,7 +616,6 @@
     "speciesPlaceholder": "bijv. Monstera deliciosa",
     "lowConfidenceSubtitle": "De fotokwaliteit is mogelijk te laag of de plant is mogelijk ongewoon.",
     "chooseSource": "Plant toevoegen",
-    "takePhoto": "Foto maken",
     "chooseFromGallery": "Kiezen uit galerij",
     "sourceSubtitle": "Hoe wil je de plantfoto toevoegen?",
     "galleryPermissionTitle": "Galerijontoegang vereist",
@@ -691,9 +688,6 @@
     "plantsSection": "Planten",
     "noPlantsYet": "Nog geen planten",
     "mutualFollowersOnly": "Zichtbaar voor wederzijdse volgers",
-    "kudos": "Kudos",
-    "giveKudos": "Kudos geven",
-    "removeKudos": "Kudos verwijderen",
     "editCaption": "Bijschrift bewerken",
     "deletePost": "Bericht verwijderen",
     "editComment": "Reactie bewerken",
@@ -703,13 +697,7 @@
     "reaction_sprouting": "Kiemend",
     "reaction_blooming": "Bloeiend",
     "reaction_hydrated": "Gehydrateerd",
-    "reaction_green_thumb": "Groene duim",
-    "badge_seedling": "Zaailing",
-    "badge_plant_parent": "Plantenouder",
-    "badge_hydrated": "Gehydrateerd",
-    "badge_green_thumb": "Groene Duim",
-    "kudos_count": "{{count}} kudos",
-    "your_badge": "Jouw badge"
+    "reaction_green_thumb": "Groene duim"
   },
   "seasonal": {
     "seasonalTips": "Seizoenstips",

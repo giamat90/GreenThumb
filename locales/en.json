@@ -141,7 +141,7 @@
     "readMore": "Read more",
     "readLess": "Read less",
     "due": "Due",
-    "everyNDays": "Every {{n}}d",
+    "everyNDays": "Every {{n}} days",
     "fertilizeButtonType": "Fertilizer Type",
     "noWateringHistory": "No watering history yet",
     "noDiagnosesYet": "No diagnoses yet — tap Diagnose to get started",
@@ -221,7 +221,6 @@
     "every2days": "Every 2 days",
     "every5days": "Every 5 days",
     "every10days": "Every 10 days",
-    "everyNDays": "Every {{n}} days",
     "placementBtn": "Placement",
     "repotBtn": "Repot",
     "growthBtn": "Growth",
@@ -231,8 +230,7 @@
     "newFertilizer": "Log fertilizer",
     "newRepotting": "New repotting check",
     "newPruning": "New pruning check",
-    "newGrowth": "Log growth",
-    "kudosReceived": "Kudos received"
+    "newGrowth": "Log growth"
   },
   "profile": {
     "profile": "Profile",
@@ -557,7 +555,7 @@
   "identify": {
     "title": "Identify Plant",
     "subtitle": "Take a photo or choose from your library",
-    "takePhoto": "Take Photo",
+    "takePhoto": "Take a photo",
     "choosePhoto": "Choose Photo",
     "identifying": "Identifying...",
     "results": "Identification Results",
@@ -618,7 +616,6 @@
     "speciesPlaceholder": "e.g. Monstera deliciosa",
     "lowConfidenceSubtitle": "The photo quality may be too low or the plant may be uncommon.",
     "chooseSource": "Add a plant",
-    "takePhoto": "Take a photo",
     "chooseFromGallery": "Choose from gallery",
     "sourceSubtitle": "How would you like to add your plant photo?",
     "galleryPermissionTitle": "Gallery access needed",
@@ -691,9 +688,6 @@
     "plantsSection": "Plants",
     "noPlantsYet": "No plants yet",
     "mutualFollowersOnly": "Visible to mutual followers",
-    "kudos": "Kudos",
-    "giveKudos": "Give kudos",
-    "removeKudos": "Remove kudos",
     "editCaption": "Edit caption",
     "deletePost": "Delete post",
     "editComment": "Edit comment",
@@ -703,13 +697,7 @@
     "reaction_sprouting": "Sprouting",
     "reaction_blooming": "Blooming",
     "reaction_hydrated": "Hydrated",
-    "reaction_green_thumb": "Green Thumb",
-    "badge_seedling": "Seedling",
-    "badge_plant_parent": "Plant Parent",
-    "badge_hydrated": "Hydrated",
-    "badge_green_thumb": "Green Thumb",
-    "kudos_count": "{{count}} kudos",
-    "your_badge": "Your badge"
+    "reaction_green_thumb": "Green Thumb"
   },
   "seasonal": {
     "seasonalTips": "Seasonal Tips",

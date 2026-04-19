@@ -141,7 +141,7 @@
     "readMore": "Leer más",
     "readLess": "Leer menos",
     "due": "Vence",
-    "everyNDays": "Cada {{n}}d",
+    "everyNDays": "Cada {{n}} días",
     "fertilizeButtonType": "Tipo de fertilizante",
     "noWateringHistory": "Sin historial de riego aún",
     "noDiagnosesYet": "Sin diagnósticos — toca Diagnosticar para comenzar",
@@ -221,7 +221,6 @@
     "every2days": "Cada 2 días",
     "every5days": "Cada 5 días",
     "every10days": "Cada 10 días",
-    "everyNDays": "Cada {{n}} días",
     "placementBtn": "Ubicación",
     "repotBtn": "Trasplantar",
     "growthBtn": "Crecimiento",
@@ -231,8 +230,7 @@
     "newFertilizer": "Registrar fertilización",
     "newRepotting": "Nueva comprobación de trasplante",
     "newPruning": "Nueva comprobación de poda",
-    "newGrowth": "Registrar crecimiento",
-    "kudosReceived": "Kudos recibidos"
+    "newGrowth": "Registrar crecimiento"
   },
   "profile": {
     "profile": "Perfil",
@@ -557,7 +555,7 @@
   "identify": {
     "title": "Identificar planta",
     "subtitle": "Toma una foto o elige de tu biblioteca",
-    "takePhoto": "Tomar foto",
+    "takePhoto": "Tomar una foto",
     "choosePhoto": "Elegir foto",
     "identifying": "Identificando...",
     "results": "Resultados de identificación",
@@ -618,7 +616,6 @@
     "speciesPlaceholder": "ej. Monstera deliciosa",
     "lowConfidenceSubtitle": "La calidad de la foto puede ser demasiado baja o la planta puede ser poco común.",
     "chooseSource": "Añadir una planta",
-    "takePhoto": "Tomar una foto",
     "chooseFromGallery": "Elegir de la galería",
     "sourceSubtitle": "¿Cómo quieres agregar la foto de tu planta?",
     "galleryPermissionTitle": "Acceso a la galería necesario",
@@ -691,9 +688,6 @@
     "plantsSection": "Plantas",
     "noPlantsYet": "Aún no hay plantas",
     "mutualFollowersOnly": "Visible para seguidores mutuos",
-    "kudos": "Kudos",
-    "giveKudos": "Dar kudos",
-    "removeKudos": "Quitar kudos",
     "editCaption": "Editar descripción",
     "deletePost": "Eliminar publicación",
     "editComment": "Editar comentario",
@@ -703,13 +697,7 @@
     "reaction_sprouting": "Brotando",
     "reaction_blooming": "Floreciendo",
     "reaction_hydrated": "Hidratada",
-    "reaction_green_thumb": "Pulgar Verde",
-    "badge_seedling": "Semilla",
-    "badge_plant_parent": "Padre de Plantas",
-    "badge_hydrated": "Hidratado",
-    "badge_green_thumb": "Pulgar Verde",
-    "kudos_count": "{{count}} kudos",
-    "your_badge": "Tu insignia"
+    "reaction_green_thumb": "Pulgar Verde"
   },
   "seasonal": {
     "seasonalTips": "Consejos de Temporada",

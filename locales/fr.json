@@ -141,7 +141,7 @@
     "readMore": "Lire plus",
     "readLess": "Lire moins",
     "due": "Échéance",
-    "everyNDays": "Tous les {{n}}j",
+    "everyNDays": "Tous les {{n}} jours",
     "fertilizeButtonType": "Type de fertilisant",
     "noWateringHistory": "Aucun historique d'arrosage",
     "noDiagnosesYet": "Aucun diagnostic — appuyez sur Diagnostiquer pour commencer",
@@ -221,7 +221,6 @@
     "every2days": "Tous les 2 jours",
     "every5days": "Tous les 5 jours",
     "every10days": "Tous les 10 jours",
-    "everyNDays": "Tous les {{n}} jours",
     "placementBtn": "Emplacement",
     "repotBtn": "Rempotage",
     "growthBtn": "Croissance",
@@ -231,8 +230,7 @@
     "newFertilizer": "Enregistrer la fertilisation",
     "newRepotting": "Nouveau contrôle de rempotage",
     "newPruning": "Nouveau contrôle de taille",
-    "newGrowth": "Enregistrer la croissance",
-    "kudosReceived": "Kudos reçus"
+    "newGrowth": "Enregistrer la croissance"
   },
   "profile": {
     "profile": "Profil",
@@ -618,7 +616,6 @@
     "speciesPlaceholder": "ex. Monstera deliciosa",
     "lowConfidenceSubtitle": "La qualité de la photo est peut-être trop faible ou la plante peut être peu commune.",
     "chooseSource": "Ajouter une plante",
-    "takePhoto": "Prendre une photo",
     "chooseFromGallery": "Choisir depuis la galerie",
     "sourceSubtitle": "Comment souhaitez-vous ajouter la photo de votre plante ?",
     "galleryPermissionTitle": "Accès à la galerie requis",
@@ -691,9 +688,6 @@
     "plantsSection": "Plantes",
     "noPlantsYet": "Aucune plante pour l'instant",
     "mutualFollowersOnly": "Visible par les abonnés mutuels",
-    "kudos": "Kudos",
-    "giveKudos": "Donner des kudos",
-    "removeKudos": "Retirer les kudos",
     "editCaption": "Modifier la légende",
     "deletePost": "Supprimer la publication",
     "editComment": "Modifier le commentaire",
@@ -703,13 +697,7 @@
     "reaction_sprouting": "En germination",
     "reaction_blooming": "En fleurs",
     "reaction_hydrated": "Hydratée",
-    "reaction_green_thumb": "Pouce vert",
-    "badge_seedling": "Graine",
-    "badge_plant_parent": "Parent de plante",
-    "badge_hydrated": "Hydraté",
-    "badge_green_thumb": "Pouce Vert",
-    "kudos_count": "{{count}} kudos",
-    "your_badge": "Votre badge"
+    "reaction_green_thumb": "Pouce vert"
   },
   "seasonal": {
     "seasonalTips": "Conseils Saisonniers",

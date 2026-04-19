@@ -221,7 +221,6 @@
     "every2days": "2日ごと",
     "every5days": "5日ごと",
     "every10days": "10日ごと",
-    "everyNDays": "{{n}}日ごと",
     "placementBtn": "配置",
     "repotBtn": "植え替え",
     "growthBtn": "成長",
@@ -231,8 +230,7 @@
     "newFertilizer": "施肥を記録",
     "newRepotting": "新しい植え替えチェック",
     "newPruning": "新しい剪定チェック",
-    "newGrowth": "成長を記録",
-    "kudosReceived": "受け取ったKudos"
+    "newGrowth": "成長を記録"
   },
   "profile": {
     "profile": "プロフィール",
@@ -618,7 +616,6 @@
     "speciesPlaceholder": "例：モンステラ・デリシオサ",
     "lowConfidenceSubtitle": "写真の品質が低すぎるか、珍しい植物の可能性があります。",
     "chooseSource": "植物を追加",
-    "takePhoto": "写真を撮る",
     "chooseFromGallery": "ギャラリーから選ぶ",
     "sourceSubtitle": "植物の写真をどのように追加しますか？",
     "galleryPermissionTitle": "ギャラリーへのアクセスが必要です",
@@ -691,9 +688,6 @@
     "plantsSection": "植物",
     "noPlantsYet": "まだ植物がありません",
     "mutualFollowersOnly": "相互フォロワーのみ表示",
-    "kudos": "Kudos",
-    "giveKudos": "Kudosを贈る",
-    "removeKudos": "Kudosを取り消す",
     "editCaption": "キャプションを編集",
     "deletePost": "投稿を削除",
     "editComment": "コメントを編集",
@@ -703,13 +697,7 @@
     "reaction_sprouting": "発芽中",
     "reaction_blooming": "開花中",
     "reaction_hydrated": "水分補給",
-    "reaction_green_thumb": "グリーンサム",
-    "badge_seedling": "新芽",
-    "badge_plant_parent": "植物の親",
-    "badge_hydrated": "水分補給者",
-    "badge_green_thumb": "グリーンサム",
-    "kudos_count": "{{count}} クードス",
-    "your_badge": "あなたのバッジ"
+    "reaction_green_thumb": "グリーンサム"
   },
   "seasonal": {
     "seasonalTips": "季節のヒント",

@@ -19,7 +19,6 @@ import { useTranslation } from "react-i18next";
 
 import { COLORS } from "@/constants";
 import { sendCommunityNotification } from "@/lib/communityNotifications";
-import { useUserKudos } from "@/hooks/useUserKudos";
 import { supabase } from "@/lib/supabase";
 import { useUserStore } from "@/store/user";
 import type { CommunityPost, UserProfile } from "@/types";
@@ -53,7 +52,6 @@ export default function PublicProfileScreen() {
   const [followLoading, setFollowLoading] = useState(false);
 
   const isOwnProfile = userId === currentProfile?.id;
-  const { kudos, badge } = useUserKudos(userId);
 
   const fetchProfile = useCallback(async () => {
     if (!userId || !currentProfile) return;
@@ -203,19 +201,8 @@ export default function PublicProfileScreen() {
                 </View>
               )}
 
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                <Text style={styles.username}>{username}</Text>
-                {badge && <Text style={{ fontSize: 18 }}>{badge.emoji}</Text>}
-              </View>
+              <Text style={styles.username}>{username}</Text>
               {userProfile?.bio && <Text style={styles.bio}>{userProfile.bio}</Text>}
-
-              {/* Badge + kudos count */}
-              {badge && (
-                <View style={styles.badgeRow}>
-                  <Text style={styles.badgeLabel}>{t(badge.labelKey)}</Text>
-                  <Text style={styles.badgeKudos}>{t("community.kudos_count", { count: kudos })}</Text>
-                </View>
-              )}
 
               {/* Stats */}
               <View style={styles.statsRow}>
@@ -393,9 +380,6 @@ const styles = StyleSheet.create({
   avatarInitials: { fontSize: 28, fontWeight: "700", color: COLORS.primary },
   username: { fontSize: 20, fontWeight: "800", color: COLORS.textPrimary },
   bio: { fontSize: 14, color: COLORS.textSecondary, textAlign: "center", lineHeight: 20 },
-  badgeRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4 },
-  badgeLabel: { fontSize: 13, fontWeight: "700", color: COLORS.primary },
-  badgeKudos: { fontSize: 12, color: COLORS.textSecondary },
   statsRow: { flexDirection: "row", gap: 32, marginTop: 8 },
   stat: { alignItems: "center", gap: 2 },
   statValue: { fontSize: 18, fontWeight: "800", color: COLORS.textPrimary },

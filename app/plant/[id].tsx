@@ -22,7 +22,6 @@ import {
   Trash2,
   Plus,
   Pencil,
-  Sprout,
 } from "lucide-react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -624,14 +623,6 @@ function PlantDetailScreen() {
             <Text style={styles.healthScoreUnit}>/100</Text>
           </View>
           <Text style={styles.healthMessage}>{t(healthMessageKey(plant.health_score))}</Text>
-          {(plant.kudos_count ?? 0) > 0 && (
-            <View style={styles.kudosStatRow}>
-              <Sprout size={14} color={COLORS.primary} fill={COLORS.primary} />
-              <Text style={styles.kudosStatText}>
-                {plant.kudos_count} {t("plantDetail.kudosReceived")}
-              </Text>
-            </View>
-          )}
         </View>
 
         {/* ── Watering history ─────────────────────────────────────────────── */}
@@ -1258,18 +1249,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: COLORS.textSecondary,
   },
-  kudosStatRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    marginTop: 8,
-  },
-  kudosStatText: {
-    fontSize: 13,
-    color: COLORS.primary,
-    fontWeight: "600",
-  },
-
   // ── Watering history ──────────────────────────────────────────────────────
   historyEmpty: {
     fontSize: 14,

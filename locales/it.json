@@ -141,7 +141,7 @@
     "readMore": "Leggi di più",
     "readLess": "Leggi meno",
     "due": "Scadenza",
-    "everyNDays": "Ogni {{n}}g",
+    "everyNDays": "Ogni {{n}} giorni",
     "fertilizeButtonType": "Tipo fertilizzante",
     "noWateringHistory": "Nessuna irrigazione registrata",
     "noDiagnosesYet": "Nessuna diagnosi ancora — tocca Diagnosi per iniziare",
@@ -221,7 +221,6 @@
     "every2days": "Ogni 2 giorni",
     "every5days": "Ogni 5 giorni",
     "every10days": "Ogni 10 giorni",
-    "everyNDays": "Ogni {{n}} giorni",
     "placementBtn": "Posizionamento",
     "repotBtn": "Rinvaso",
     "growthBtn": "Crescita",
@@ -231,8 +230,7 @@
     "newFertilizer": "Registra concimazione",
     "newRepotting": "Nuovo controllo rinvaso",
     "newPruning": "Nuovo controllo potatura",
-    "newGrowth": "Registra crescita",
-    "kudosReceived": "Kudos ricevuti"
+    "newGrowth": "Registra crescita"
   },
   "profile": {
     "profile": "Profilo",
@@ -557,7 +555,7 @@
   "identify": {
     "title": "Identifica pianta",
     "subtitle": "Scatta una foto o scegline una dalla libreria",
-    "takePhoto": "Scatta foto",
+    "takePhoto": "Scatta una foto",
     "choosePhoto": "Scegli foto",
     "identifying": "Identificazione...",
     "results": "Risultati identificazione",
@@ -618,7 +616,6 @@
     "speciesPlaceholder": "es. Monstera deliciosa",
     "lowConfidenceSubtitle": "La qualità della foto potrebbe essere troppo bassa o la pianta potrebbe essere insolita.",
     "chooseSource": "Aggiungi una pianta",
-    "takePhoto": "Scatta una foto",
     "chooseFromGallery": "Scegli dalla galleria",
     "sourceSubtitle": "Come vuoi aggiungere la foto della pianta?",
     "galleryPermissionTitle": "Accesso alla galleria necessario",
@@ -691,9 +688,6 @@
     "plantsSection": "Piante",
     "noPlantsYet": "Nessuna pianta ancora",
     "mutualFollowersOnly": "Visibile ai follower reciproci",
-    "kudos": "Kudos",
-    "giveKudos": "Invia kudos",
-    "removeKudos": "Rimuovi kudos",
     "editCaption": "Modifica didascalia",
     "deletePost": "Elimina post",
     "editComment": "Modifica commento",
@@ -703,13 +697,7 @@
     "reaction_sprouting": "Germoglio",
     "reaction_blooming": "In fiore",
     "reaction_hydrated": "Idratata",
-    "reaction_green_thumb": "Pollice verde",
-    "badge_seedling": "Germoglio",
-    "badge_plant_parent": "Plant Parent",
-    "badge_hydrated": "Esperto",
-    "badge_green_thumb": "Pollice Verde",
-    "kudos_count": "{{count}} kudos",
-    "your_badge": "Il tuo badge"
+    "reaction_green_thumb": "Pollice verde"
   },
   "seasonal": {
     "seasonalTips": "Consigli Stagionali",

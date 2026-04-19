@@ -4,7 +4,6 @@ type CommunityNotifPayload =
   | { type: "like"; postId: string }
   | { type: "comment"; postId: string; commentText: string }
   | { type: "follow"; targetUserId: string }
-  | { type: "kudos"; plantId: string }
   | { type: "task_completed"; plantId: string; plantName: string; taskType: "watering" | "fertilizing" | "follow_up" };
 
 /**

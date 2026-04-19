@@ -141,7 +141,7 @@
     "readMore": "Czytaj więcej",
     "readLess": "Czytaj mniej",
     "due": "Termin",
-    "everyNDays": "Co {{n}}d",
+    "everyNDays": "Co {{n}} dni",
     "fertilizeButtonType": "Typ nawozu",
     "noWateringHistory": "Brak historii podlewania",
     "noDiagnosesYet": "Brak diagnoz — kliknij Diagnoza, aby zacząć",
@@ -221,7 +221,6 @@
     "every2days": "Co 2 dni",
     "every5days": "Co 5 dni",
     "every10days": "Co 10 dni",
-    "everyNDays": "Co {{n}} dni",
     "placementBtn": "Umiejscowienie",
     "repotBtn": "Przesadź",
     "growthBtn": "Wzrost",
@@ -231,8 +230,7 @@
     "newFertilizer": "Zapisz nawożenie",
     "newRepotting": "Nowe sprawdzenie przesadzania",
     "newPruning": "Nowe sprawdzenie przycinania",
-    "newGrowth": "Zapisz wzrost",
-    "kudosReceived": "Otrzymane kudos"
+    "newGrowth": "Zapisz wzrost"
   },
   "profile": {
     "profile": "Profil",
@@ -618,7 +616,6 @@
     "speciesPlaceholder": "np. Monstera deliciosa",
     "lowConfidenceSubtitle": "Jakość zdjęcia może być zbyt niska lub roślina może być rzadka.",
     "chooseSource": "Dodaj roślinę",
-    "takePhoto": "Zrób zdjęcie",
     "chooseFromGallery": "Wybierz z galerii",
     "sourceSubtitle": "Jak chcesz dodać zdjęcie rośliny?",
     "galleryPermissionTitle": "Wymagany dostęp do galerii",
@@ -691,9 +688,6 @@
     "plantsSection": "Rośliny",
     "noPlantsYet": "Brak roślin",
     "mutualFollowersOnly": "Widoczne dla wzajemnych obserwujących",
-    "kudos": "Kudos",
-    "giveKudos": "Daj kudos",
-    "removeKudos": "Cofnij kudos",
     "editCaption": "Edytuj opis",
     "deletePost": "Usuń post",
     "editComment": "Edytuj komentarz",
@@ -703,13 +697,7 @@
     "reaction_sprouting": "Kiełkowanie",
     "reaction_blooming": "Kwitnienie",
     "reaction_hydrated": "Nawodniona",
-    "reaction_green_thumb": "Zielony kciuk",
-    "badge_seedling": "Sadzonka",
-    "badge_plant_parent": "Rodzic roślin",
-    "badge_hydrated": "Nawodniony",
-    "badge_green_thumb": "Zielony Kciuk",
-    "kudos_count": "{{count}} kudosów",
-    "your_badge": "Twoja odznaka"
+    "reaction_green_thumb": "Zielony kciuk"
   },
   "seasonal": {
     "seasonalTips": "Sezonowe Porady",

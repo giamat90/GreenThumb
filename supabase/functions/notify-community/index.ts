@@ -9,10 +9,10 @@ import { corsHeaders } from "./cors.ts";
 const EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send";
 
 interface RequestBody {
-  type: "like" | "comment" | "follow" | "kudos" | "task_completed";
+  type: "like" | "comment" | "follow" | "task_completed";
   postId?: string;        // required for like / comment
   targetUserId?: string;  // required for follow
-  plantId?: string;       // required for kudos / task_completed
+  plantId?: string;       // required for task_completed
   commentText?: string;   // optional for comment
   plantName?: string;     // required for task_completed
   taskType?: "watering" | "fertilizing" | "follow_up"; // required for task_completed
@@ -76,21 +76,6 @@ serve(async (req: Request) => {
         });
       }
       recipientId = targetUserId;
-    } else if (type === "kudos") {
-      if (!plantId) {
-        return new Response(JSON.stringify({ error: "plantId required" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      const { data: plant } = await admin
-        .from("plants")
-        .select("user_id, name")
-        .eq("id", plantId)
-        .maybeSingle();
-      const p = plant as { user_id: string; name: string | null } | null;
-      recipientId = p?.user_id ?? null;
-      plantName = p?.name ?? "your plant";
     }
 
     // ── task_completed: fan-out to all followers ──────────────────────────
@@ -237,11 +222,6 @@ serve(async (req: Request) => {
       title = "👤 New follower";
       notifBody = `${handle} started following you`;
       notifType = "community_follow";
-    } else {
-      title = "🌱 New kudos";
-      notifBody = `${handle} gave kudos to ${plantName ?? "your plant"}`;
-      notifType = "community_kudos";
-      notifData.plantId = plantId!;
     }
 
     notifData.type = notifType;

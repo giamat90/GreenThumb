@@ -39,7 +39,6 @@ export interface Plant {
   last_watered_at: string | null;
   next_watering: string | null;
   health_score: number;
-  kudos_count?: number;
   care_profile: Record<string, unknown> | null;
   notes: string | null;
   created_at: string;
@@ -172,12 +171,9 @@ export interface CommunityPost {
   avatar_url?: string | null;
   plant_name?: string | null;
   is_liked?: boolean;
-  plant_kudos_count?: number;
-  has_kudoed_plant?: boolean;
   // reaction system
   user_reaction?: string | null;
   reaction_counts?: { sprouting: number; blooming: number; hydrated: number; green_thumb: number };
-  author_badge_emoji?: string | null;
 }
 
 export interface PostComment {

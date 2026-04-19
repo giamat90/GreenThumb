@@ -1,0 +1,169 @@
+GreenThumb — Folder Structure
+Generated: 2026-03-23
+(excludes: node_modules, .expo, .git, android, .claude/worktrees)
+
+.
+├── .claude/
+│   └── settings.local.json
+├── .vscode/
+│   ├── extensions.json
+│   └── settings.json
+├── app/
+│   ├── (auth)/
+│   │   ├── _layout.tsx
+│   │   ├── forgot-password.tsx
+│   │   ├── login.tsx
+│   │   ├── onboarding.tsx
+│   │   └── signup.tsx
+│   ├── (tabs)/
+│   │   ├── _layout.tsx
+│   │   ├── calendar.tsx
+│   │   ├── community.tsx
+│   │   ├── identify.tsx
+│   │   ├── index.tsx
+│   │   ├── my-plants.tsx
+│   │   └── profile.tsx
+│   ├── community/
+│   │   ├── new-post.tsx
+│   │   ├── post/
+│   │   │   └── [id].tsx
+│   │   └── profile/
+│   │       └── [id].tsx
+│   ├── diagnosis/
+│   │   └── [id].tsx
+│   ├── growth/
+│   │   └── [id].tsx
+│   ├── placement/
+│   │   └── [id].tsx
+│   ├── plant/
+│   │   └── [id].tsx
+│   ├── pruning/
+│   │   └── [id].tsx
+│   ├── repotting/
+│   │   └── [id].tsx
+│   ├── +html.tsx
+│   ├── +not-found.tsx
+│   ├── _layout.tsx
+│   ├── paywall.tsx
+│   └── seasonal-tips.tsx
+├── assets/
+│   ├── fonts/
+│   │   └── SpaceMono-Regular.ttf
+│   └── images/
+│       ├── android-icon-background.png
+│       ├── android-icon-foreground.png
+│       ├── android-icon-monochrome.png
+│       ├── favicon.png
+│       ├── icon.png
+│       ├── logo.jpeg
+│       ├── logo.png
+│       └── splash-icon.png
+├── components/
+│   ├── camera/
+│   ├── plants/
+│   │   ├── EmptyPlants.tsx
+│   │   └── PlantCard.tsx
+│   └── ui/
+│       ├── ErrorBanner.tsx
+│       ├── ErrorScreen.tsx
+│       ├── NotificationSettings.tsx
+│       ├── ResponsiveContainer.tsx
+│       ├── UpgradeModal.tsx
+│       └── UpgradePrompt.tsx
+├── constants/
+│   └── index.ts
+├── hooks/
+│   ├── useCamera.ts
+│   ├── useNotifications.ts
+│   ├── usePlants.ts
+│   ├── useProGate.ts
+│   ├── useResponsive.ts
+│   └── useWeather.ts
+├── lib/
+│   ├── calendarSync.ts
+│   ├── errorHandling.ts
+│   ├── fertilizer.ts
+│   ├── i18n.ts
+│   ├── imageUtils.ts
+│   ├── notifications.ts
+│   ├── plantid.ts
+│   ├── revenuecat.ts
+│   ├── seasonalTips.ts
+│   ├── supabase.ts
+│   ├── syncWateringSchedules.ts
+│   ├── watering.ts
+│   └── weather.ts
+├── locales/
+│   ├── de.json
+│   ├── en.json
+│   ├── es.json
+│   ├── fr.json
+│   ├── it.json
+│   ├── ja.json
+│   ├── nl.json
+│   ├── pl.json
+│   ├── pt.json
+│   └── zh.json
+├── store/
+│   ├── networkStore.ts
+│   ├── plants.ts
+│   └── user.ts
+├── supabase/
+│   ├── functions/
+│   │   ├── diagnose-plant/
+│   │   │   ├── config.toml
+│   │   │   ├── cors.ts
+│   │   │   └── index.ts
+│   │   ├── identify-plant/
+│   │   │   ├── config.toml
+│   │   │   ├── cors.ts
+│   │   │   └── index.ts
+│   │   ├── placement-advisor/
+│   │   │   ├── config.toml
+│   │   │   ├── cors.ts
+│   │   │   └── index.ts
+│   │   ├── pruning-advisor/
+│   │   │   ├── cors.ts
+│   │   │   └── index.ts
+│   │   ├── repotting-advisor/
+│   │   │   ├── config.toml
+│   │   │   ├── cors.ts
+│   │   │   └── index.ts
+│   │   └── seasonal-tips/
+│   │       ├── cors.ts
+│   │       └── index.ts
+│   └── migrations/
+│       ├── 000_initial_schema.sql
+│       ├── 001_profiles_trigger.sql
+│       ├── 002_storage.sql
+│       ├── 003_push_tokens.sql
+│       ├── 004_placement_history.sql
+│       ├── 005_fertilizer.sql
+│       ├── 006_repotting.sql
+│       ├── 007_growth_tracking.sql
+│       ├── 008_growth_storage.sql
+│       ├── 009_pruning.sql
+│       ├── 010_diagnosis_followup.sql
+│       ├── 011_community.sql
+│       ├── 012_community_fix.sql
+│       ├── 013_seasonal_tips.sql
+│       └── 014_seasonal_tips_plant_ids.sql
+├── types/
+│   └── index.ts
+├── .env                          (gitignored)
+├── .gitignore
+├── app.json
+├── babel.config.js
+├── CONTEXT.md
+├── eas.json
+├── eas-secrets-instructions.md
+├── expo-env.d.ts
+├── global.css
+├── google-services.json
+├── metro.config.js
+├── nativewind-env.d.ts
+├── package.json
+├── package-lock.json
+├── README.md
+├── tailwind.config.js
+└── tsconfig.json

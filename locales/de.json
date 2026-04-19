@@ -141,7 +141,7 @@
     "readMore": "Mehr lesen",
     "readLess": "Weniger lesen",
     "due": "Fällig",
-    "everyNDays": "Alle {{n}}T",
+    "everyNDays": "Alle {{n}} Tage",
     "fertilizeButtonType": "Düngertyp",
     "noWateringHistory": "Noch kein Gießverlauf",
     "noDiagnosesYet": "Noch keine Diagnosen — tippe auf Diagnose",
@@ -221,7 +221,6 @@
     "every2days": "Alle 2 Tage",
     "every5days": "Alle 5 Tage",
     "every10days": "Alle 10 Tage",
-    "everyNDays": "Alle {{n}} Tage",
     "placementBtn": "Standort",
     "repotBtn": "Umtopfen",
     "growthBtn": "Wachstum",
@@ -231,8 +230,7 @@
     "newFertilizer": "Düngung erfassen",
     "newRepotting": "Neuer Umtopf-Check",
     "newPruning": "Neuer Schnitt-Check",
-    "newGrowth": "Wachstum erfassen",
-    "kudosReceived": "Erhaltene Kudos"
+    "newGrowth": "Wachstum erfassen"
   },
   "profile": {
     "profile": "Profil",
@@ -618,7 +616,6 @@
     "speciesPlaceholder": "z.B. Monstera deliciosa",
     "lowConfidenceSubtitle": "Die Fotoqualität ist möglicherweise zu niedrig oder die Pflanze ist selten.",
     "chooseSource": "Pflanze hinzufügen",
-    "takePhoto": "Foto aufnehmen",
     "chooseFromGallery": "Aus Galerie wählen",
     "sourceSubtitle": "Wie möchtest du das Pflanzenfoto hinzufügen?",
     "galleryPermissionTitle": "Galerizugriff benötigt",
@@ -691,9 +688,6 @@
     "plantsSection": "Pflanzen",
     "noPlantsYet": "Noch keine Pflanzen",
     "mutualFollowersOnly": "Nur für gegenseitige Follower sichtbar",
-    "kudos": "Kudos",
-    "giveKudos": "Kudos geben",
-    "removeKudos": "Kudos entfernen",
     "editCaption": "Beschreibung bearbeiten",
     "deletePost": "Beitrag löschen",
     "editComment": "Kommentar bearbeiten",
@@ -703,13 +697,7 @@
     "reaction_sprouting": "Keimend",
     "reaction_blooming": "Blühend",
     "reaction_hydrated": "Hydriert",
-    "reaction_green_thumb": "Grüner Daumen",
-    "badge_seedling": "Sämling",
-    "badge_plant_parent": "Pflanzenelternteil",
-    "badge_hydrated": "Hydratisiert",
-    "badge_green_thumb": "Grüner Daumen",
-    "kudos_count": "{{count}} Kudos",
-    "your_badge": "Dein Abzeichen"
+    "reaction_green_thumb": "Grüner Daumen"
   },
   "seasonal": {
     "seasonalTips": "Saisonale Tipps",
