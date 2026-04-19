@@ -349,7 +349,7 @@ export default function PostDetailScreen() {
                   onPress={() => {
                     const cur = (post.user_reaction as ReactionType | null | undefined) ?? null;
                     if (!cur) handleReact(DEFAULT_REACTION);
-                    else if (cur === DEFAULT_REACTION) handleReact(null);
+                    else handleReact(null);
                   }}
                   onLongPress={() => {
                     reactionBtnRef.current?.measure((_x, _y, w, h, px, py) => {

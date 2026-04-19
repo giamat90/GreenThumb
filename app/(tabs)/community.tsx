@@ -103,10 +103,9 @@ function PostCard({
   const handleQuickTap = () => {
     if (!userReaction) {
       onReact(post.id, DEFAULT_REACTION);
-    } else if (userReaction === DEFAULT_REACTION) {
+    } else {
       onReact(post.id, null);
     }
-    // if non-default active reaction: quick tap does nothing — must long press to change
   };
 
   const handleLongPress = () => {
