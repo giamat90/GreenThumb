@@ -14,12 +14,11 @@ import {
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useNavigation } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ArrowLeft, Leaf, Sprout } from "lucide-react-native";
+import { ArrowLeft, Leaf } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
 import { COLORS } from "@/constants";
 import { sendCommunityNotification } from "@/lib/communityNotifications";
-import { fetchKudoedPlantIds, togglePlantKudos } from "@/lib/plantKudos";
 import { useUserKudos } from "@/hooks/useUserKudos";
 import { supabase } from "@/lib/supabase";
 import { useUserStore } from "@/store/user";
@@ -34,7 +33,6 @@ type PlantPreview = {
   species: string | null;
   photo_url: string | null;
   health_score: number;
-  kudos_count: number;
 };
 
 export default function PublicProfileScreen() {
@@ -50,7 +48,6 @@ export default function PublicProfileScreen() {
   const [isFollowing, setIsFollowing] = useState(false);
   const [isFollowedBy, setIsFollowedBy] = useState(false);
   const [userPlants, setUserPlants] = useState<PlantPreview[]>([]);
-  const [kudoedPlantIds, setKudoedPlantIds] = useState<Set<string>>(new Set());
   const [selectedPlantId, setSelectedPlantId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [followLoading, setFollowLoading] = useState(false);
@@ -113,18 +110,12 @@ export default function PublicProfileScreen() {
       if (isOwnProfile || isMutual) {
         const { data: plantsData } = await supabase
           .from("plants")
-          .select("id, name, species, photo_url, health_score, kudos_count")
+          .select("id, name, species, photo_url, health_score")
           .eq("user_id", userId)
           .order("created_at", { ascending: false });
-        const plants = (plantsData ?? []) as PlantPreview[];
-        setUserPlants(plants);
-        if (!isOwnProfile && plants.length > 0) {
-          const kudoed = await fetchKudoedPlantIds(currentProfile.id, plants.map((p) => p.id));
-          setKudoedPlantIds(kudoed);
-        }
+        setUserPlants((plantsData ?? []) as PlantPreview[]);
       } else {
         setUserPlants([]);
-        setKudoedPlantIds(new Set());
       }
     } catch (err) {
       console.warn("profile: fetch failed", err);
@@ -154,15 +145,10 @@ export default function PublicProfileScreen() {
         if (isFollowedBy) {
           const { data: plantsData } = await supabase
             .from("plants")
-            .select("id, name, species, photo_url, health_score, kudos_count")
+            .select("id, name, species, photo_url, health_score")
             .eq("user_id", userId)
             .order("created_at", { ascending: false });
-          const plants = (plantsData ?? []) as PlantPreview[];
-          setUserPlants(plants);
-          if (plants.length > 0) {
-            const kudoed = await fetchKudoedPlantIds(currentProfile.id, plants.map((p) => p.id));
-            setKudoedPlantIds(kudoed);
-          }
+          setUserPlants((plantsData ?? []) as PlantPreview[]);
         }
       }
     } catch {
@@ -171,36 +157,6 @@ export default function PublicProfileScreen() {
       setFollowLoading(false);
     }
   }, [currentProfile, userId, isFollowing, isFollowedBy]);
-
-  const handlePlantKudos = useCallback(async (plant: PlantPreview) => {
-    if (!currentProfile || isOwnProfile) return;
-    const wasKudoed = kudoedPlantIds.has(plant.id);
-    const next = new Set(kudoedPlantIds);
-    if (wasKudoed) next.delete(plant.id); else next.add(plant.id);
-    setKudoedPlantIds(next);
-    setUserPlants((prev) =>
-      prev.map((p) =>
-        p.id === plant.id
-          ? { ...p, kudos_count: p.kudos_count + (wasKudoed ? -1 : 1) }
-          : p
-      )
-    );
-    try {
-      await togglePlantKudos(plant.id, currentProfile.id, wasKudoed);
-      if (!wasKudoed) {
-        sendCommunityNotification({ type: "kudos", plantId: plant.id });
-      }
-    } catch {
-      setKudoedPlantIds(kudoedPlantIds);
-      setUserPlants((prev) =>
-        prev.map((p) =>
-          p.id === plant.id
-            ? { ...p, kudos_count: p.kudos_count + (wasKudoed ? 1 : -1) }
-            : p
-        )
-      );
-    }
-  }, [currentProfile, isOwnProfile, kudoedPlantIds]);
 
   if (loading) {
     return (
@@ -305,63 +261,44 @@ export default function PublicProfileScreen() {
                   showsHorizontalScrollIndicator={false}
                   contentContainerStyle={styles.plantsRow}
                 >
-                  {userPlants.map((plant) => {
-                    const isKudoed = kudoedPlantIds.has(plant.id);
-                    return (
-                      <TouchableOpacity
-                        key={plant.id}
-                        style={styles.plantCard}
-                        activeOpacity={0.85}
-                        onPress={() => setSelectedPlantId(plant.id)}
-                      >
-                        {plant.photo_url ? (
-                          <Image source={{ uri: plant.photo_url }} style={styles.plantCardPhoto} />
-                        ) : (
-                          <View style={styles.plantCardPhotoPlaceholder}>
-                            <Leaf size={24} color={COLORS.primary} />
-                          </View>
-                        )}
-                        <View style={styles.plantCardTextBlock}>
-                          <Text style={styles.plantCardName} numberOfLines={1}>{plant.name}</Text>
-                          <Text style={styles.plantCardSpecies} numberOfLines={1}>
-                            {plant.species ?? ""}
-                          </Text>
+                  {userPlants.map((plant) => (
+                    <TouchableOpacity
+                      key={plant.id}
+                      style={styles.plantCard}
+                      activeOpacity={0.85}
+                      onPress={() => setSelectedPlantId(plant.id)}
+                    >
+                      {plant.photo_url ? (
+                        <Image source={{ uri: plant.photo_url }} style={styles.plantCardPhoto} />
+                      ) : (
+                        <View style={styles.plantCardPhotoPlaceholder}>
+                          <Leaf size={24} color={COLORS.primary} />
                         </View>
-                        <View style={styles.plantCardHealthBar}>
-                          <View
-                            style={[
-                              styles.plantCardHealthFill,
-                              {
-                                width: `${plant.health_score}%` as `${number}%`,
-                                backgroundColor:
-                                  plant.health_score >= 70
-                                    ? COLORS.primary
-                                    : plant.health_score >= 40
-                                    ? "#F59E0B"
-                                    : COLORS.danger,
-                              },
-                            ]}
-                          />
-                        </View>
-                        {/* Kudos row */}
-                        <TouchableOpacity
-                          style={[styles.plantCardKudosRow, isKudoed && styles.plantCardKudosRowActive]}
-                          onPress={isOwnProfile ? undefined : () => handlePlantKudos(plant)}
-                          activeOpacity={isOwnProfile ? 1 : 0.7}
-                          accessibilityRole={isOwnProfile ? "none" : "button"}
-                        >
-                          <Sprout
-                            size={14}
-                            color={isKudoed ? "#fff" : COLORS.primary}
-                            fill={isKudoed ? "#fff" : "transparent"}
-                          />
-                          <Text style={[styles.plantCardKudosCount, isKudoed && styles.plantCardKudosCountActive]}>
-                            {plant.kudos_count}
-                          </Text>
-                        </TouchableOpacity>
-                      </TouchableOpacity>
-                    );
-                  })}
+                      )}
+                      <View style={styles.plantCardTextBlock}>
+                        <Text style={styles.plantCardName} numberOfLines={1}>{plant.name}</Text>
+                        <Text style={styles.plantCardSpecies} numberOfLines={1}>
+                          {plant.species ?? ""}
+                        </Text>
+                      </View>
+                      <View style={styles.plantCardHealthBar}>
+                        <View
+                          style={[
+                            styles.plantCardHealthFill,
+                            {
+                              width: `${plant.health_score}%` as `${number}%`,
+                              backgroundColor:
+                                plant.health_score >= 70
+                                  ? COLORS.primary
+                                  : plant.health_score >= 40
+                                  ? "#F59E0B"
+                                  : COLORS.danger,
+                            },
+                          ]}
+                        />
+                      </View>
+                    </TouchableOpacity>
+                  ))}
                 </ScrollView>
               </View>
             )}
@@ -427,28 +364,6 @@ export default function PublicProfileScreen() {
                   ]}
                 />
               </View>
-              {!isOwnProfile && selectedPlant ? (() => {
-                const isKudoed = kudoedPlantIds.has(selectedPlant.id);
-                return (
-                  <TouchableOpacity
-                    style={[styles.modalKudosBtn, isKudoed && styles.modalKudosBtnActive]}
-                    onPress={() => handlePlantKudos(selectedPlant)}
-                    activeOpacity={0.75}
-                  >
-                    <Sprout size={18} color={isKudoed ? "#fff" : COLORS.primary} fill={isKudoed ? "#fff" : "transparent"} />
-                    {selectedPlant.kudos_count > 0 && (
-                      <Text style={[styles.modalKudosBtnText, isKudoed && styles.modalKudosBtnTextActive]}>
-                        {selectedPlant.kudos_count}
-                      </Text>
-                    )}
-                  </TouchableOpacity>
-                );
-              })() : (
-                <View style={styles.modalKudosReadOnly}>
-                  <Sprout size={16} color={COLORS.textSecondary} />
-                  <Text style={styles.modalKudosCount}>{selectedPlant?.kudos_count ?? 0}</Text>
-                </View>
-              )}
             </View>
           </View>
           </TouchableOpacity>
@@ -522,7 +437,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 4,
     elevation: 2,
-    paddingBottom: 10,
+    paddingBottom: 12,
   },
   plantCardPhoto: {
     width: 130,
@@ -563,31 +478,6 @@ const styles = StyleSheet.create({
     height: 3,
     borderRadius: 2,
   },
-  plantCardKudosRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 4,
-    marginHorizontal: 10,
-    marginTop: 8,
-    paddingVertical: 5,
-    borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: COLORS.primary,
-  },
-  plantCardKudosRowActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  plantCardKudosCount: {
-    fontSize: 12,
-    color: COLORS.primary,
-    fontWeight: "700",
-  },
-  plantCardKudosCountActive: {
-    color: "#fff",
-  },
-
   divider: { height: 1, backgroundColor: "#EFEFEF", marginTop: 8 },
   emptyGrid: { padding: 40, alignItems: "center" },
   emptyText: { fontSize: 15, color: COLORS.textSecondary },
@@ -640,39 +530,5 @@ const styles = StyleSheet.create({
   modalHealthFill: {
     height: 4,
     borderRadius: 2,
-  },
-  modalKudosBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    marginTop: 16,
-    paddingVertical: 12,
-    borderRadius: 24,
-    borderWidth: 1.5,
-    borderColor: COLORS.primary,
-  },
-  modalKudosBtnActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  modalKudosBtnText: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: COLORS.primary,
-  },
-  modalKudosBtnTextActive: {
-    color: "#fff",
-  },
-  modalKudosReadOnly: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginTop: 12,
-  },
-  modalKudosCount: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    fontWeight: "600",
   },
 });
